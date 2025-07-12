@@ -1,19 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { hostsApi } from './lib/hosts';
+import { collectionsApi } from './lib/collections';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    if (!process.env.DATABASE_URL) {
-      return res.status(500).json({ error: "DATABASE_URL not configured" });
-    }
+    // Test hosts API
+    const hosts = await hostsApi.getAllHosts();
     
-    const { db } = await import('../server/db');
-    const { hosts } = await import('../shared/schema');
-    const { count } = await import('drizzle-orm');
+    // Test collections API
+    const collections = await collectionsApi.getAllCollections();
+    const stats = await collectionsApi.getCollectionStats();
     
-    const result = await db.select({ count: count() }).from(hosts);
     res.json({ 
       message: "Database connected successfully", 
-      hostCount: result[0]?.count || 0,
+      hosts: {
+        count: hosts.length,
+        sample: hosts.slice(0, 3) // First 3 hosts
+      },
+      collections: {
+        count: collections.length,
+        stats: stats,
+        sample: collections.slice(0, 3) // First 3 collections
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
