@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 
 import { supabase } from '@/lib/supabase';
+
 interface UnreadCounts {
   general: number;
   committee: number;

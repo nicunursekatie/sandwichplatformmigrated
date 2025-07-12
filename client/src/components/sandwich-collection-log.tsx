@@ -438,8 +438,10 @@ export default function SandwichCollectionLog() {
       const formData = new FormData();
       formData.append('csvFile', file);
 
-      const response = await // TODO: Implement bulk import with Supabase
-      // Parse CSV/JSON and use supabase.from('sandwich_collections').insert(parsedData);
+      const response = await fetch('/api/sandwich-collections/import', {
+        method: 'POST',
+        body: formData
+      });
 
       if (!response.ok) {
         throw new Error('Upload failed');
