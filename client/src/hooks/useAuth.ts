@@ -37,11 +37,11 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch additional user data from the users table
-  const { data: userData } = useQuery({
-    queryKey: ['user-data', supabaseUser?.id],
+  // Always call useQuery, but with a stable query key
+  const { data: userData, isLoading: userDataLoading } = useQuery({
+    queryKey: ['user-data', supabaseUser?.id || 'no-user'],
     queryFn: async () => {
-      if (!supabaseUser) return null;
+      if (!supabaseUser?.email) return null;
       
       const { data, error } = await supabase
         .from('users')
@@ -56,7 +56,8 @@ export function useAuth() {
       
       return data;
     },
-    enabled: !!supabaseUser,
+    enabled: !!supabaseUser?.email,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   // Combine Supabase auth user with database user data
@@ -74,7 +75,7 @@ export function useAuth() {
   return {
     user,
     session,
-    isLoading,
+    isLoading: isLoading || userDataLoading,
     isAuthenticated: !!session,
     error: null,
   };
