@@ -436,8 +436,9 @@ export function DataManagementDashboard() {
                 <Button
                   onClick={async () => {
                     try {
-                      const response = await // TODO: Implement data export with Supabase
-      // Fetch all data and format for export;
+                      // TODO: Implement data export with Supabase
+                      // Fetch all data and format for export
+                      const response = await fetch('/api/export-full-dataset');
                       if (!response.ok) throw new Error('Export failed');
                       
                       const blob = await response.blob();

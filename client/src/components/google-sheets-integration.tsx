@@ -48,8 +48,9 @@ export function GoogleSheetsIntegration() {
   const importFromSheet = async () => {
     setIsImporting(true);
     try {
-      const response = await // TODO: Implement Google Sheets import
+      // TODO: Implement Google Sheets import
       // Fetch from Google Sheets API and insert to Supabase;
+      const response = { result: { preview: [], imported: 0, skipped: 0 } };
       
       setImportResult(response.result);
       
@@ -79,8 +80,9 @@ export function GoogleSheetsIntegration() {
   const exportToSheet = async () => {
     setIsExporting(true);
     try {
-      const response = await // TODO: Implement Google Sheets export
+      // TODO: Implement Google Sheets export
       // Fetch from Supabase and update Google Sheets;
+      const response = { result: { exported: 0 } };
       
       toast({
         title: "Export Complete",

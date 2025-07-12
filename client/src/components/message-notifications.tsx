@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 import { supabase } from '@/lib/supabase';
 
@@ -36,118 +37,77 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
   // Always call hooks with stable values to prevent hook order changes
   const [lastCheck, setLastCheck] = useState(Date.now());
 
+  // Memoize user ID to prevent unnecessary re-renders
+  const userId = useMemo(() => user?.id || null, [user?.id]);
+
   // Use a stable query key that doesn't change based on user state
   const { data: unreadCounts, refetch, error, isLoading } = useQuery<UnreadCounts>({
-    queryKey: ['/api/message-notifications/unread-counts', user?.id || 'no-user', lastCheck],
-    enabled: !!user?.id, // Only enable when we have a user ID
-    refetchInterval: !!user?.id ? 30000 : false, // Check every 30 seconds only when authenticated
+    queryKey: ['message-notifications-unread-counts', userId || 'no-user', lastCheck],
+    queryFn: async () => {
+      if (!userId) {
+        return {
+          general: 0,
+          committee: 0,
+          hosts: 0,
+          drivers: 0,
+          recipients: 0,
+          core_team: 0,
+          direct: 0,
+          groups: 0,
+          total: 0
+        };
+      }
+      
+      // For now, return empty counts until we implement proper message counting
+      // TODO: Implement proper unread message counting based on conversation types
+      return {
+        general: 0,
+        committee: 0,
+        hosts: 0,
+        drivers: 0,
+        recipients: 0,
+        core_team: 0,
+        direct: 0,
+        groups: 0,
+        total: 0
+      };
+    },
+    enabled: !!userId, // Only enable when we have a user ID
+    refetchInterval: !!userId ? 30000 : false, // Check every 30 seconds only when authenticated
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // Listen for WebSocket notifications (to be implemented)
-  useEffect(() => {
-    console.log('🔔 WebSocket useEffect triggered, user=', user);
-    if (!user) {
-      console.log('🔔 WebSocket setup skipped - no user');
-      return;
-    }
-
-    console.log('🔔 Setting up WebSocket for user:', (user as any)?.id);
-
-    // Declare variables in outer scope for cleanup
-    let socket: WebSocket | null = null;
-    let reconnectTimeoutId: NodeJS.Timeout | null = null;
-
-    // Set up WebSocket connection for real-time notifications
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-
-    // Fix for Replit environment - use the current hostname and port
-    let host = window.location.host;
-    console.log('🔔 Debug - window.location.host:', window.location.host);
-    console.log('🔔 Debug - window.location.hostname:', window.location.hostname);
-    console.log('🔔 Debug - window.location.port:', window.location.port);
-
-    if (!host || host === 'localhost:undefined') {
-      // Fallback for Replit environment
-      host = window.location.hostname + (window.location.port ? `:${window.location.port}` : '');
-      console.log('🔔 Debug - Using fallback host:', host);
-    }
-
-    const wsUrl = `${protocol}//${host}/notifications`;
-    console.log('Connecting to WebSocket:', wsUrl);
-
-    try {
-      socket = new WebSocket(wsUrl);
-
-      socket.onopen = () => {
-        console.log('Notification WebSocket connected successfully');
-        console.log('User ID:', (user as any)?.id);
-        // Send user identification
-        if (socket) {
-          socket.send(JSON.stringify({
-            type: 'identify',
-            userId: (user as any)?.id
-          }));
+  // Use the new WebSocket hook
+  const { isConnected, isConnecting } = useWebSocket({
+    onMessage: (message: any) => {
+      console.log('🔔 WebSocket message received:', message);
+      
+      if (message.type === 'notification' && message.data?.type === 'unread_counts') {
+        // Update unread counts from WebSocket by triggering a refetch
+        setLastCheck(Date.now());
+      } else if (message.type === 'message') {
+        // New message received - refetch unread counts
+        setLastCheck(Date.now());
+        
+        // Show browser notification if permission granted
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('New message received', {
+            body: message.data?.content?.substring(0, 100) || 'New message',
+            icon: '/favicon.ico'
+          });
         }
-      };
-
-      socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        // Don't log the full error object to avoid console spam
-        console.log('WebSocket connection failed - will retry');
-      };
-
-      socket.onclose = (event) => {
-        console.log('WebSocket connection closed, code:', event.code);
-        // Only attempt reconnection if not a normal closure
-        if (event.code !== 1000) {
-          reconnectTimeoutId = setTimeout(() => {
-            console.log('Attempting to reconnect WebSocket...');
-            // The cleanup function will trigger re-initialization
-          }, 5000);
-        }
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('Received WebSocket message:', data);
-          if (data.type === 'new_message') {
-            console.log('Processing new_message notification');
-            // Refetch unread counts when new message arrives
-            // Using setLastCheck to trigger a refetch instead of calling refetch directly
-            setLastCheck(Date.now());
-
-            // Show browser notification if permission granted and available
-            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-              console.log('Showing browser notification');
-              new Notification(`New message in ${data.committee}`, {
-                body: `${data.sender}: ${data.content.substring(0, 100)}...`,
-                icon: '/favicon.ico'
-              });
-            } else {
-              console.log('Browser notifications not available or not granted');
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-
-    } catch (error) {
-      console.error('Failed to create WebSocket:', error);
-      // Still allow component to function without real-time updates
-    }
-
-    return () => {
-      if (reconnectTimeoutId) {
-        clearTimeout(reconnectTimeoutId);
       }
-      if (socket) {
-        socket.close(1000, 'Component unmounting');
-      }
-    };
-  }, [user]);
+    },
+    onConnect: () => {
+      console.log('🔔 WebSocket connected for notifications');
+    },
+    onDisconnect: () => {
+      console.log('🔔 WebSocket disconnected for notifications');
+    },
+    onError: (error: any) => {
+      console.error('🔔 WebSocket error:', error);
+    }
+  });
 
   // Request notification permission on mount
   useEffect(() => {
@@ -156,7 +116,7 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     }
   }, []);
 
-  console.log('🔔 MessageNotifications: user=', (user as any)?.id, 'isAuthenticated=', !!user);
+  console.log('🔔 MessageNotifications: userId=', userId, 'isAuthenticated=', !!userId);
   console.log('🔔 MessageNotifications: user object=', user);
 
   // Calculate final unread counts - handle all cases
@@ -171,7 +131,7 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
   console.log('🔔 MessageNotifications: Rendering with final unread counts:', finalUnreadCounts);
 
   // Early return if user is not authenticated - this is now safe after all hooks
-  if (!user) {
+  if (!userId) {
     console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
     return null;
   }
@@ -190,7 +150,7 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
 
   const handleMarkAllRead = async () => {
     try {
-      await supabase.from('message_reads').insert({ user_id: user.id, read_at: new Date().toISOString() });
+      await supabase.from('message_reads').insert({ user_id: userId, read_at: new Date().toISOString() });
       refetch();
     } catch (error) {
       console.error('Failed to mark all messages as read:', error);

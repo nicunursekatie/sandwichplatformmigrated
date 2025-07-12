@@ -27,14 +27,13 @@ export default function Landing() {
       
       // Get total sandwiches
       const { data: collections, error } = await supabase
-        .from('sandwich_collections')
-        .select('sandwich_count, individual_sandwiches');
+        .from('collections')
+        .select('number_of_sandwiches');
       
       if (error) throw error;
       
       const totalSandwiches = collections?.reduce((sum, c) => {
-        // Add both sandwich_count (from groups) and individual_sandwiches
-        return sum + (c.sandwich_count || 0) + (c.individual_sandwiches || 0);
+        return sum + (c.number_of_sandwiches || 0);
       }, 0) || 0;
       
       return {

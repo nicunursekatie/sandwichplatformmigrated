@@ -446,11 +446,9 @@ export default function SandwichCollectionLog() {
         method: 'POST',
         body: formData
       });
-
       if (!response.ok) {
         throw new Error('Upload failed');
       }
-
       return response.json() as Promise<ImportResult>;
     },
     onSuccess: (result: ImportResult) => {

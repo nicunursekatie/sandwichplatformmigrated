@@ -77,8 +77,9 @@ export default function BulkDataManager({
   // Run bulk mapping
   const bulkMapMutation = useMutation({
     mutationFn: async () => {
-      const response = await // TODO: Implement bulk host mapping with Supabase
-      // This requires a custom RPC function or client-side processing;
+      // TODO: Implement bulk host mapping with Supabase
+      // This requires a custom RPC function or client-side processing
+      const response = await fetch('/api/bulk-map-hosts', { method: 'POST' });
       return response.json();
     },
     onSuccess: (result) => {

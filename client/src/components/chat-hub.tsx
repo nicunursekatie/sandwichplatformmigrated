@@ -8,7 +8,7 @@ import HostChat from "@/components/host-chat";
 import DriverChat from "@/components/driver-chat";
 import RecipientChat from "@/components/recipient-chat";
 import CoreTeamChat from "@/components/core-team-chat";
-import { GroupMessaging } from "@/components/group-messaging";
+import { GroupConversation } from "@/components/group-messaging";
 import DirectMessaging from "@/components/direct-messaging";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, USER_ROLES, PERMISSIONS } from "@shared/auth-utils";
@@ -131,7 +131,7 @@ export default function ChatHub() {
       label: "Group Messages",
       description: "Custom group conversations",
       icon: <UsersRound className="h-4 w-4" />,
-      component: <GroupMessaging currentUser={user} />,
+      component: <GroupConversation currentUser={user} groupId={1} groupName="General Group" onBack={() => {}} />,
       color: "bg-primary/10 text-primary",
     });
   }
