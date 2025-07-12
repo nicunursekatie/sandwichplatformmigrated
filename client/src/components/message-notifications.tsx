@@ -44,17 +44,6 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     refetchInterval: isAuthenticated ? 30000 : false, // Check every 30 seconds only when authenticated
   });
 
-  console.log('🔔 MessageNotifications: user=', (user as any)?.id, 'isAuthenticated=', isAuthenticated);
-  console.log('🔔 MessageNotifications: user object=', user);
-
-  // Early return if user is not authenticated to prevent any queries
-  if (!isAuthenticated || !user) {
-    console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
-    return null;
-  }
-
-  console.log('🔔 MessageNotifications: Query state - isLoading:', isLoading, 'error:', error, 'data:', unreadCounts);
-
   // Listen for WebSocket notifications (to be implemented)
   useEffect(() => {
     console.log('🔔 WebSocket useEffect triggered, user=', user);
@@ -166,6 +155,17 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     }
   }, []);
 
+  console.log('🔔 MessageNotifications: user=', (user as any)?.id, 'isAuthenticated=', isAuthenticated);
+  console.log('🔔 MessageNotifications: user object=', user);
+
+  // Early return if user is not authenticated to prevent any queries
+  if (!isAuthenticated || !user) {
+    console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
+    return null;
+  }
+
+  console.log('🔔 MessageNotifications: Query state - isLoading:', isLoading, 'error:', error, 'data:', unreadCounts);
+
   // Show loading state or empty state instead of returning null
   if (isLoading) {
     console.log('🔔 MessageNotifications: Loading unread counts...');
@@ -179,12 +179,6 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
 
   if (!unreadCounts) {
     console.log('🔔 MessageNotifications: No unread counts data, showing empty state');
-    // Show the notification bell even with zero counts for debugging
-    const emptyUnreadCounts = {
-      general: 0, committee: 0, hosts: 0, drivers: 0, recipients: 0,
-      core_team: 0, direct: 0, groups: 0, total: 0
-    };
-    console.log('🔔 MessageNotifications: Using empty counts for debugging');
     // Continue with empty counts instead of returning null
   }
 
@@ -220,7 +214,7 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     return names[committee as keyof typeof names] || committee;
   };
 
-  const navigateToChat = (chatType: string) => {
+  const navigateToChat = () => {
     // Navigate to the appropriate chat page - all chat types go to messages
     window.location.href = '/messages';
   };
@@ -274,7 +268,7 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
               <DropdownMenuItem 
                 key={committee}
                 className="flex items-center justify-between cursor-pointer"
-                onClick={() => navigateToChat(committee)}
+                onClick={() => navigateToChat()}
               >
                 <div className="flex items-center gap-2">
                   <MessageCircle className="h-4 w-4" />
