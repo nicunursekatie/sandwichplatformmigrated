@@ -25,15 +25,38 @@ export default function Landing() {
     queryFn: async () => {
       const { supabase } = await import('@/lib/supabase');
       
-      // Get total sandwiches
+      // Get total sandwiches from the correct table
       const { data: collections, error } = await supabase
-        .from('collections')
-        .select('number_of_sandwiches');
+        .from('sandwich_collections')
+        .select('individual_sandwiches, group_collections');
       
       if (error) throw error;
       
+      // Calculate total sandwiches including both individual and group collections
       const totalSandwiches = collections?.reduce((sum, c) => {
-        return sum + (c.number_of_sandwiches || 0);
+        let sandwichCount = c.individual_sandwiches || 0;
+        
+        // Parse group collections if it's a JSON string
+        if (c.group_collections) {
+          try {
+            const groups = JSON.parse(c.group_collections);
+            if (Array.isArray(groups)) {
+              groups.forEach((group: any) => {
+                sandwichCount += group.count || group.sandwichCount || 0;
+              });
+            }
+          } catch (e) {
+            // Handle text format like "Marketing Team: 8, Development: 6"
+            if (c.group_collections && c.group_collections !== "[]") {
+              const matches = c.group_collections.match(/(\d+)/g);
+              if (matches) {
+                sandwichCount += matches.reduce((sum: number, num: string) => sum + parseInt(num), 0);
+              }
+            }
+          }
+        }
+        
+        return sum + sandwichCount;
       }, 0) || 0;
       
       return {
@@ -266,9 +289,7 @@ export default function Landing() {
       {/* Login Dialog */}
       <Dialog open={showLogin} onOpenChange={setShowLogin}>
         <DialogContent className="sm:max-w-[425px] p-0">
-          <VisuallyHidden>
-            <DialogTitle>Login to The Sandwich Project</DialogTitle>
-          </VisuallyHidden>
+          <DialogTitle className="sr-only">Login to The Sandwich Project</DialogTitle>
           <LoginForm />
         </DialogContent>
       </Dialog>

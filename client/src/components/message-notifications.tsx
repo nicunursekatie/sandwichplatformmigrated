@@ -77,9 +77,9 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // Use Ably for real-time notifications
+  // Use Ably for real-time notifications - always call this hook
   const { isConnected, lastMessage } = useAbly({
-    channelName: `notifications-${userId}`,
+    channelName: userId ? `notifications-${userId}` : 'notifications-no-user',
     eventName: 'notification',
     onMessage: (message: any) => {
       console.log('🔔 Ably notification received:', message);
