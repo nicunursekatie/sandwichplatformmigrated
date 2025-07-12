@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useMessageReads } from "@/hooks/useMessageReads";
 
@@ -69,11 +69,11 @@ export default function CommitteeChat() {
   const getUserName = () => {
     if (userProfile && typeof userProfile === 'object') {
       const profile = userProfile as any;
-      if (profile.displayName) {
-        return profile.displayName;
+      if (profile.display_name) {
+        return profile.display_name;
       }
-      if (profile.firstName) {
-        return profile.firstName;
+      if (profile.first_name) {
+        return profile.first_name;
       }
     }
     if (user && typeof user === 'object' && 'email' in user && user.email) {

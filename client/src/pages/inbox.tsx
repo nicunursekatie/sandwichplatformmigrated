@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessaging } from "@/hooks/useMessaging";
-import { apiRequest } from "@/lib/queryClient";
+
 import { formatDistanceToNow } from "date-fns";
 import { 
   Inbox as InboxIcon, 
@@ -130,7 +130,7 @@ export default function InboxPage() {
 
     try {
       await sendMessage({
-        recipientIds: [selectedMessage.senderId],
+        recipientIds: [selectedMessage.sender_id],
         content: replyContent,
         contextType: selectedMessage.contextType as any,
         contextId: selectedMessage.contextId,
@@ -308,7 +308,7 @@ export default function InboxPage() {
                               {message?.senderName || 'Unknown'}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {message?.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : 'Unknown time'}
+                              {message?.created_at ? formatDistanceToNow(new Date(message.created_at), { addSuffix: true }) : 'Unknown time'}
                             </p>
                           </div>
                         </div>
@@ -363,7 +363,7 @@ export default function InboxPage() {
                   <div>
                     <h3 className="font-semibold">{selectedMessage.senderName || 'Unknown'}</h3>
                     <p className="text-sm text-gray-500">
-                      {formatDistanceToNow(new Date(selectedMessage.createdAt), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(selectedMessage.created_at), { addSuffix: true })}
                       {selectedMessage.editedAt && ' (edited)'}
                     </p>
                   </div>
@@ -420,7 +420,7 @@ export default function InboxPage() {
                   <div 
                     key={message.id} 
                     className={`rounded-lg p-4 ${
-                      message.senderId === (user as any)?.id 
+                      message.sender_id === (user as any)?.id 
                         ? 'bg-blue-50 ml-auto max-w-[80%]' 
                         : 'bg-gray-50 mr-auto max-w-[80%]'
                     }`}
@@ -428,7 +428,7 @@ export default function InboxPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <p className="font-medium text-sm">{message?.senderName || 'Unknown'}</p>
                       <p className="text-xs text-gray-500">
-                        {message?.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : 'Unknown time'}
+                        {message?.created_at ? formatDistanceToNow(new Date(message.created_at), { addSuffix: true }) : 'Unknown time'}
                       </p>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">

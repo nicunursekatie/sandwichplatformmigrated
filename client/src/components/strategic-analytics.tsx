@@ -32,7 +32,7 @@ export default function StrategicAnalytics() {
   const [activeTab, setActiveTab] = useState('highlights');
 
   const { data: collections } = useQuery<SandwichCollection[]>({
-    queryKey: ['/api/sandwich-collections'],
+    queryKey: ["sandwich-collections"],
     select: (data: any) => data?.collections || []
   });
 
@@ -46,7 +46,7 @@ export default function StrategicAnalytics() {
         try {
           const parsed = JSON.parse(groups);
           if (Array.isArray(parsed)) {
-            return parsed.reduce((sum: number, g: any) => sum + (Number(g.sandwichCount) || 0), 0);
+            return parsed.reduce((sum: number, g: any) => sum + (Number(g.sandwich_count) || 0), 0);
           }
           return Number(parsed) || 0;
         } catch {
@@ -54,38 +54,38 @@ export default function StrategicAnalytics() {
         }
       }
       if (Array.isArray(groups)) {
-        return groups.reduce((sum: number, g: any) => sum + (Number(g.sandwichCount) || 0), 0);
+        return groups.reduce((sum: number, g: any) => sum + (Number(g.sandwich_count) || 0), 0);
       }
       return Number(groups) || 0;
     };
 
     // Calculate totals and statistics
     const totalSandwiches = collections.reduce((sum, c) => 
-      sum + (c.individualSandwiches || 0) + parseGroups(c.groupCollections), 0
+      sum + (c.individual_sandwiches || 0) + parseGroups(c.group_collections), 0
     );
 
     const hostStats = collections.reduce((acc, c) => {
-      const host = c.hostName || 'Unknown';
-      const sandwiches = (c.individualSandwiches || 0) + parseGroups(c.groupCollections);
+      const host = c.host_name || 'Unknown';
+      const sandwiches = (c.individual_sandwiches || 0) + parseGroups(c.group_collections);
       
       if (!acc[host]) {
         acc[host] = { total: 0, collections: 0, weeks: new Set() };
       }
       acc[host].total += sandwiches;
       acc[host].collections += 1;
-      acc[host].weeks.add(c.collectionDate?.split('T')[0]);
+      acc[host].weeks.add(c.collection_date?.split('T')[0]);
       
       return acc;
     }, {} as Record<string, { total: number; collections: number; weeks: Set<string> }>);
 
     // Weekly analysis
     const weeklyData = collections.reduce((acc, c) => {
-      const date = new Date(c.collectionDate || '');
+      const date = new Date(c.collection_date || '');
       const weekKey = `${date.getFullYear()}-W${Math.ceil((date.getDate() + new Date(date.getFullYear(), date.getMonth(), 1).getDay()) / 7)}`;
-      const sandwiches = (c.individualSandwiches || 0) + parseGroups(c.groupCollections);
+      const sandwiches = (c.individual_sandwiches || 0) + parseGroups(c.group_collections);
       
       if (!acc[weekKey]) {
-        acc[weekKey] = { total: 0, collections: 0, date: c.collectionDate };
+        acc[weekKey] = { total: 0, collections: 0, date: c.collection_date };
       }
       acc[weekKey].total += sandwiches;
       acc[weekKey].collections += 1;
@@ -98,9 +98,9 @@ export default function StrategicAnalytics() {
 
     // Monthly trends
     const monthlyTrends = collections.reduce((acc, c) => {
-      const date = new Date(c.collectionDate || '');
+      const date = new Date(c.collection_date || '');
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const sandwiches = (c.individualSandwiches || 0) + parseGroups(c.groupCollections);
+      const sandwiches = (c.individual_sandwiches || 0) + parseGroups(c.group_collections);
       
       if (!acc[monthKey]) {
         acc[monthKey] = { month: monthKey, sandwiches: 0, collections: 0 };

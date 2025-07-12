@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { supabaseService } from "@/lib/supabase-service";
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
 import { supabaseService } from "@/lib/supabase-service";
 import type { Host, InsertSandwichCollection } from "@/lib/supabase";
@@ -107,7 +108,7 @@ export default function SandwichCollectionForm() {
   const addGroupRow = () => {
     const newId = Math.random().toString(36).substr(2, 9);
     setGroupCollections([
-      ...groupCollections,
+      ...group_collections,
       { id: newId, groupName: "", sandwichCount: 0 },
     ]);
   };
@@ -145,7 +146,7 @@ export default function SandwichCollectionForm() {
       }
       
       const validGroupCollections = groupCollections.filter(
-        (g) => g.sandwichCount > 0,
+        (g) => g.sandwich_count > 0,
       );
       
       if (validGroupCollections.length === 0) {
@@ -195,14 +196,14 @@ export default function SandwichCollectionForm() {
 
     // Filter for valid group collections (only those with sandwich counts > 0)
     const validGroupCollections = groupCollections.filter(
-      (g) => g.sandwichCount > 0 && g.groupName.trim() !== "",
+      (g) => g.sandwich_count > 0 && g.groupName.trim() !== "",
     );
     const groupCollectionsString =
       validGroupCollections.length > 0
         ? JSON.stringify(
             validGroupCollections.map((g) => ({
               name: g.groupName.trim(),
-              count: g.sandwichCount,
+              count: g.sandwich_count,
             })),
           )
         : "[]";
@@ -215,7 +216,7 @@ export default function SandwichCollectionForm() {
     if (groupOnlyMode) {
       finalHostName = "Groups";
       // In group-only mode, sum all group collections and put in individual sandwiches field
-      const totalGroupSandwiches = validGroupCollections.reduce((sum, group) => sum + group.sandwichCount, 0);
+      const totalGroupSandwiches = validGroupCollections.reduce((sum, group) => sum + group.sandwich_count, 0);
       finalIndividualSandwiches = totalGroupSandwiches;
       finalGroupCollections = groupCollectionsString; // Keep the group breakdown for reference
     }
@@ -389,7 +390,7 @@ export default function SandwichCollectionForm() {
                   type="number"
                   min="0"
                   placeholder="Count"
-                  value={group.sandwichCount || ""}
+                  value={group.sandwich_count || ""}
                   onChange={(e) =>
                     updateGroupCollection(
                       group.id,

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,32 +145,32 @@ export function GroupConversation({ groupId, groupName, groupDescription, onBack
   // Auto-mark group messages as read when viewing group
   const messagesForReads: MessageReadsCompatible[] = displayedMessages.map(msg => ({
     id: msg.id,
-    userId: msg.userId,
-    timestamp: msg.timestamp || msg.createdAt || msg.created_at || new Date().toISOString()
+    userId: msg.user_id,
+    timestamp: msg.timestamp || msg.created_at || msg.created_at || new Date().toISOString()
   }));
   useAutoMarkAsRead("groups", messagesForReads, true);
 
   // Helper functions for user display
   const getUserDisplayName = (userId: string) => {
-    const userFound = groupMembers.find((u: any) => u.userId === userId);
+    const userFound = groupMembers.find((u: any) => u.user_id === userId);
     if (userFound) {
-      if (userFound.firstName && userFound.lastName) {
-        return `${userFound.firstName} ${userFound.lastName}`;
+      if (userFound.first_name && userFound.last_name) {
+        return `${userFound.first_name} ${userFound.last_name}`;
       }
-      if (userFound.firstName) return userFound.firstName;
+      if (userFound.first_name) return userFound.first_name;
       if (userFound.email) return userFound.email.split('@')[0];
     }
     return 'Member';
   };
 
   const getUserInitials = (userId: string) => {
-    const userFound = groupMembers.find((u: any) => u.userId === userId);
+    const userFound = groupMembers.find((u: any) => u.user_id === userId);
     if (userFound) {
-      if (userFound.firstName && userFound.lastName) {
-        return (userFound.firstName[0] + userFound.lastName[0]).toUpperCase();
+      if (userFound.first_name && userFound.last_name) {
+        return (userFound.first_name[0] + userFound.last_name[0]).toUpperCase();
       }
-      if (userFound.firstName) {
-        return userFound.firstName[0].toUpperCase();
+      if (userFound.first_name) {
+        return userFound.first_name[0].toUpperCase();
       }
       if (userFound.email) {
         return userFound.email[0].toUpperCase();
@@ -297,7 +297,7 @@ export function GroupConversation({ groupId, groupName, groupDescription, onBack
   };
 
   const canEditMessage = (message: Message) => {
-    return message.userId === effectiveCurrentUser?.id;
+    return message.user_id === effectiveCurrentUser?.id;
   };
 
   // Show error states
@@ -366,16 +366,16 @@ export function GroupConversation({ groupId, groupName, groupDescription, onBack
                   <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Members:</div>
                   <div className="flex flex-wrap gap-2">
                     {groupMembers.map((member) => (
-                      <div key={member.userId} className="flex items-center gap-1.5 bg-white dark:bg-gray-600 px-2 py-1 rounded-md text-xs">
+                      <div key={member.user_id} className="flex items-center gap-1.5 bg-white dark:bg-gray-600 px-2 py-1 rounded-md text-xs">
                         <Avatar className="h-4 w-4">
                           <AvatarFallback className="text-xs">
-                            {member.firstName?.[0] || member.email?.[0] || '?'}
+                            {member.first_name?.[0] || member.email?.[0] || '?'}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-gray-700 dark:text-gray-200">
-                          {member.firstName && member.lastName 
-                            ? `${member.firstName} ${member.lastName}`
-                            : member.firstName || member.email?.split('@')[0] || 'Member'
+                          {member.first_name && member.last_name 
+                            ? `${member.first_name} ${member.last_name}`
+                            : member.first_name || member.email?.split('@')[0] || 'Member'
                           }
                         </span>
                         {member.role && member.role !== 'member' && (
@@ -408,14 +408,14 @@ export function GroupConversation({ groupId, groupName, groupDescription, onBack
                 <div className="flex gap-3">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-xs">
-                      {message.sender ? message.sender.charAt(0).toUpperCase() : getUserInitials(message.userId)}
+                      {message.sender ? message.sender.charAt(0).toUpperCase() : getUserInitials(message.user_id)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">{message.sender || getUserDisplayName(message.userId)}</span>
+                      <span className="font-medium text-sm">{message.sender || getUserDisplayName(message.user_id)}</span>
                       <span className="text-xs text-gray-500">
-                        {formatDistanceToNow(new Date(message.createdAt || message.created_at || message.timestamp || ''), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(message.created_at || message.created_at || message.timestamp || ''), { addSuffix: true })}
                       </span>
                       {canEditMessage(message) && (
                         <DropdownMenu>

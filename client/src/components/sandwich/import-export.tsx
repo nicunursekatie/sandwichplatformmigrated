@@ -67,10 +67,10 @@ export function ImportExportDialog({ onImport, onExport, isImporting, collection
       const csvContent = [
         headers.join(','),
         ...collections.map(collection => [
-          collection.collectionDate,
-          `"${collection.hostName}"`,
-          collection.individualSandwiches,
-          `"${collection.groupCollections}"`
+          collection.collection_date,
+          `"${collection.host_name}"`,
+          collection.individual_sandwiches,
+          `"${collection.group_collections}"`
         ].join(','))
       ].join('\n');
 

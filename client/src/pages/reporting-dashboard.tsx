@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar, FileText, Mail, Download, Settings, BarChart3, LineChart, PieChart, LogOut } from "lucide-react";
 import { format, subDays, subWeeks, subMonths } from "date-fns";
-import { apiRequest } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 import SimpleNav from "@/components/simple-nav";
 

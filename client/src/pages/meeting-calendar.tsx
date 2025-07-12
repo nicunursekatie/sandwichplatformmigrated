@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Video, Phone, ArrowLeft } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { supabaseService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 

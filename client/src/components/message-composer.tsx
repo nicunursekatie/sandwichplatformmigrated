@@ -42,8 +42,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 
+
+import { supabaseService } from "@/lib/supabase-service";
 interface MessageComposerProps {
   contextType?: "suggestion" | "project" | "task" | "direct";
   contextId?: string;
@@ -73,10 +74,10 @@ export function MessageComposer({
 
   // Fetch users for recipient selection
   const { data: allUsers = [], isError: usersError } = useQuery({
-    queryKey: ["/api/users"],
+    queryKey: ["users"],
     queryFn: async () => {
       try {
-        const response = await apiRequest("GET", "/api/users");
+        const response = await supabaseService.user.getAllUsers();
         return Array.isArray(response) ? response : [];
       } catch (error: any) {
         // If user doesn't have permission to view users, show a helpful message
@@ -95,18 +96,18 @@ export function MessageComposer({
     // Show all users when search is empty or show filtered results
     if (!recipientSearch) return true;
     const searchLower = recipientSearch.toLowerCase();
-    const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     return (
       name.toLowerCase().includes(searchLower) ||
       user.email?.toLowerCase().includes(searchLower) ||
-      user.displayName?.toLowerCase().includes(searchLower)
+      user.display_name?.toLowerCase().includes(searchLower)
     );
   }).slice(0, 10); // Limit to 10 results to avoid overwhelming the UI
 
   // Helper function to get user display name
   const getUserDisplayName = (user: any) => {
-    if (user.displayName) return user.displayName;
-    const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    if (user.display_name) return user.display_name;
+    const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     return name || user.email || 'Unknown User';
   };
 

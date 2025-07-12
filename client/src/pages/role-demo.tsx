@@ -122,7 +122,7 @@ function RoleView({ user }: { user: any }) {
           <div className="flex items-center space-x-3">
             <Icon className="w-8 h-8 text-blue-600" />
             <div>
-              <CardTitle className="text-xl">{user.firstName} {user.lastName}</CardTitle>
+              <CardTitle className="text-xl">{user.first_name} {user.last_name}</CardTitle>
               <CardDescription>{user.email}</CardDescription>
             </div>
             <Badge className={colorClass}>

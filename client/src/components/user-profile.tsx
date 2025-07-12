@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { supabase } from "@/lib/supabase";
 
 const profileSchema = z.object({
@@ -87,9 +87,9 @@ export default function UserProfile() {
     if (userProfile && typeof userProfile === 'object') {
       const profile = userProfile as any;
       profileForm.reset({
-        firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        displayName: profile.displayName || "",
+        firstName: profile.first_name || "",
+        lastName: profile.last_name || "",
+        displayName: profile.display_name || "",
         email: profile.email || "",
       });
     }
@@ -103,9 +103,9 @@ export default function UserProfile() {
       const { error } = await supabase
         .from('users')
         .update({
-          first_name: data.firstName,
-          last_name: data.lastName,
-          display_name: data.displayName,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          display_name: data.display_name,
           email: data.email,
           updated_at: new Date().toISOString()
         })

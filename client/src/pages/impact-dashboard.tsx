@@ -22,7 +22,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 export default function ImpactDashboard() {
   // Fetch sandwich collections data
   const { data: collectionsData } = useQuery({
-    queryKey: ["/api/sandwich-collections"],
+    queryKey: ["sandwich-collections"],
     queryFn: () => apiRequest('/api/sandwich-collections?limit=10000')
   });
   
@@ -35,7 +35,7 @@ export default function ImpactDashboard() {
 
   // Fetch hosts data
   const { data: hosts = [] } = useQuery({
-    queryKey: ["/api/hosts"],
+    queryKey: ["hosts"],
   });
 
   // Process data for visualizations
@@ -62,7 +62,7 @@ export default function ImpactDashboard() {
     }> = {};
     
     collections.forEach((collection: any) => {
-      const collectionDate = collection.collectionDate;
+      const collectionDate = collection.collection_date;
       if (collectionDate) {
         const date = new Date(collectionDate);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -77,17 +77,17 @@ export default function ImpactDashboard() {
         }
         
         // Use correct API field names (camelCase)
-        const individualCount = collection.individualSandwiches || 0;
+        const individualCount = collection.individual_sandwiches || 0;
         let groupCount = 0;
         
         // Handle groupCollections properly
-        if (collection.groupCollections && collection.groupCollections !== '' && collection.groupCollections !== '[]') {
+        if (collection.group_collections && collection.group_collections !== '' && collection.group_collections !== '[]') {
           try {
-            const groupData = typeof collection.groupCollections === 'string' 
-              ? JSON.parse(collection.groupCollections) 
-              : collection.groupCollections;
+            const groupData = typeof collection.group_collections === 'string' 
+              ? JSON.parse(collection.group_collections) 
+              : collection.group_collections;
             if (Array.isArray(groupData)) {
-              groupCount = groupData.reduce((sum, group) => sum + (group.sandwichCount || 0), 0);
+              groupCount = groupData.reduce((sum, group) => sum + (group.sandwich_count || 0), 0);
             }
           } catch (e) {
             groupCount = 0;
@@ -96,7 +96,7 @@ export default function ImpactDashboard() {
         
         monthlyData[monthKey].sandwiches += individualCount + groupCount;
         monthlyData[monthKey].collections += 1;
-        const hostName = collection.hostName;
+        const hostName = collection.host_name;
         if (hostName) {
           monthlyData[monthKey].hosts.add(hostName);
         }
@@ -136,7 +136,7 @@ export default function ImpactDashboard() {
     }> = {};
     
     collections.forEach((collection: any) => {
-      const hostName = collection.hostName || 'Unknown';
+      const hostName = collection.host_name || 'Unknown';
       
       if (!hostData[hostName]) {
         hostData[hostName] = {
@@ -148,17 +148,17 @@ export default function ImpactDashboard() {
       }
       
       // Use correct API field names (camelCase)
-      const individualCount = collection.individualSandwiches || 0;
+      const individualCount = collection.individual_sandwiches || 0;
       let groupCount = 0;
       
       // Handle groupCollections properly
-      if (collection.groupCollections && collection.groupCollections !== '' && collection.groupCollections !== '[]') {
+      if (collection.group_collections && collection.group_collections !== '' && collection.group_collections !== '[]') {
         try {
-          const groupData = typeof collection.groupCollections === 'string' 
-            ? JSON.parse(collection.groupCollections) 
-            : collection.groupCollections;
+          const groupData = typeof collection.group_collections === 'string' 
+            ? JSON.parse(collection.group_collections) 
+            : collection.group_collections;
           if (Array.isArray(groupData)) {
-            groupCount = groupData.reduce((sum, group) => sum + (group.sandwichCount || 0), 0);
+            groupCount = groupData.reduce((sum, group) => sum + (group.sandwich_count || 0), 0);
           }
         } catch (e) {
           groupCount = 0;

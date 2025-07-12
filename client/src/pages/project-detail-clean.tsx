@@ -22,7 +22,7 @@ import { TaskAssigneeSelector } from "@/components/task-assignee-selector";
 import { MultiUserTaskCompletion } from "@/components/multi-user-task-completion";
 import ProjectCongratulations from "@/components/project-congratulations";
 import ProjectUserManager from "@/components/project-user-manager";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
@@ -119,7 +119,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
     },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setEditingTask(null);
       toast({ title: "Task updated successfully" });
       
@@ -164,7 +164,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setIsEditingProject(false);
       toast({ title: "Project updated successfully", description: "The project has been updated." });
     },
@@ -617,7 +617,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
         onUpdate={() => {
           // Refresh project data when assignments change
           queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
-          queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+          queryClient.invalidateQueries({ queryKey: ["projects"] });
         }}
       />
 
@@ -837,11 +837,11 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                                 assigneeIds={task.assigneeIds || []}
                                 assigneeNames={task.assigneeNames || []}
                                 currentUserId={user?.id}
-                                currentUserName={user?.displayName || user?.email}
+                                currentUserName={user?.display_name || user?.email}
                                 taskStatus={task.status}
                                 onStatusChange={(isCompleted) => {
                                   queryClient.invalidateQueries({ queryKey: ['/api/projects', project.id, 'tasks'] });
-                                  queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+                                  queryClient.invalidateQueries({ queryKey: ["projects"] });
                                 }}
                               />
                             </div>
@@ -1002,12 +1002,12 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                                 targetUserId: task.assigneeName, // Send to the task assignee
                                 type: 'congratulations',
                                 title: 'Congratulations!',
-                                message: `making a real difference in our mission! From ${(user as any)?.firstName || 'Admin'}`,
+                                message: `making a real difference in our mission! From ${(user as any)?.first_name || 'Admin'}`,
                                 relatedType: 'project_task',
                                 relatedId: task.id,
                                 celebrationData: {
                                   taskTitle: task.title,
-                                  senderName: (user as any)?.firstName || 'Admin',
+                                  senderName: (user as any)?.first_name || 'Admin',
                                   projectId: projectId,
                                   sentAt: new Date().toISOString()
                                 }
@@ -1118,7 +1118,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                   <div className="flex items-center justify-between py-2">
                     <span className="text-sm font-medium text-slate-600">Created</span>
                     <span className="text-sm text-slate-700">
-                      {project.createdAt ? new Date(project.createdAt).toLocaleDateString('en-US', { 
+                      {project.created_at ? new Date(project.created_at).toLocaleDateString('en-US', { 
                         year: 'numeric', 
                         month: 'long', 
                         day: 'numeric' 

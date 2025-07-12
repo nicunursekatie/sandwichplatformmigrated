@@ -12,12 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { Host, InsertHost, HostContact, InsertHostContact } from "@shared/schema";
 
 import { supabase } from '@/lib/supabase';
+import { supabaseService } from "@/lib/supabase-service";
 interface HostWithContacts extends Host {
   contacts: HostContact[];
 }
@@ -109,7 +110,7 @@ export default function HostsManagementConsolidated() {
 
   const updateHostMutation = useMutation({
     mutationFn: async (data: { id: number; updates: Partial<Host> }) => {
-      return await apiRequest('PATCH', `/api/hosts/${data.id}`, data.updates);
+      return await supabaseService.host.updateHost(data.id, data.updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
@@ -134,7 +135,7 @@ export default function HostsManagementConsolidated() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/hosts'] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
       toast({
         title: "Host deleted",
         description: "Host has been deleted successfully.",

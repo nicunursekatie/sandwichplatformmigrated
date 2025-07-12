@@ -216,7 +216,7 @@ export function UserPermissionsDialog({
           <DialogDescription>
             Configure role and permissions for{" "}
             <span className="font-semibold">
-              {user.firstName} {user.lastName}
+              {user.first_name} {user.last_name}
             </span>{" "}
             ({user.email})
           </DialogDescription>

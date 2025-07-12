@@ -46,7 +46,7 @@ import {
   Filter,
   X,
 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 
@@ -130,7 +130,7 @@ export default function DriversManagement() {
 
   // Fetch hosts for selection dropdown
   const { data: hosts = [] } = useQuery<Host[]>({
-    queryKey: ["/api/hosts"],
+    queryKey: ["hosts"],
   });
 
   // Add driver mutation
@@ -344,7 +344,7 @@ export default function DriversManagement() {
 
   const handleSubmitVolunteer = () => {
     if (
-      !volunteerForm.submittedBy ||
+      !volunteerForm.submitted_by ||
       !volunteerForm.phone ||
       !volunteerForm.email ||
       !volunteerForm.agreementAccepted
@@ -459,7 +459,7 @@ export default function DriversManagement() {
           `"${driver.phone || ""}"`,
           `"${driver.email || ""}"`,
           `"${driver.zone || ""}"`,
-          driver.isActive ? "Yes" : "No",
+          driver.is_active ? "Yes" : "No",
           hasAgreement ? "Yes" : "No",
           driver.vanApproved ? "Yes" : "No",
           `"${driver.homeAddress || ""}"`,
@@ -529,10 +529,10 @@ export default function DriversManagement() {
 
   // Separate and sort drivers, then apply filters
   const allActiveDrivers = drivers
-    .filter((driver) => driver.isActive)
+    .filter((driver) => driver.is_active)
     .sort((a, b) => a.name.localeCompare(b.name));
   const allInactiveDrivers = drivers
-    .filter((driver) => !driver.isActive)
+    .filter((driver) => !driver.is_active)
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const activeDrivers = applyFilters(allActiveDrivers);
@@ -661,7 +661,7 @@ export default function DriversManagement() {
                     <Label htmlFor="volunteer-name">Full Name *</Label>
                     <Input
                       id="volunteer-name"
-                      value={volunteerForm.submittedBy}
+                      value={volunteerForm.submitted_by}
                       onChange={(e) =>
                         setVolunteerForm({
                           ...volunteerForm,
@@ -1502,7 +1502,7 @@ export default function DriversManagement() {
                 <div>
                   <Label htmlFor="edit-status">Status</Label>
                   <Select
-                    value={editingDriver.isActive ? "active" : "inactive"}
+                    value={editingDriver.is_active ? "active" : "inactive"}
                     onValueChange={(value) =>
                       setEditingDriver({
                         ...editingDriver,
@@ -1698,7 +1698,7 @@ export default function DriversManagement() {
                 />
               </div>
 
-              {!editingDriver.isActive && (
+              {!editingDriver.is_active && (
                 <div>
                   <Label htmlFor="edit-inactive-reason">Inactive Reason</Label>
                   <Input

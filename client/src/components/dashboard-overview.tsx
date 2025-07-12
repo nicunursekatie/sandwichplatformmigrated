@@ -15,12 +15,12 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   const { user } = useAuth();
   
   const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
+    queryKey: ["projects"],
     enabled: hasPermission(user, PERMISSIONS.VIEW_PROJECTS)
   });
 
   const { data: messages = [] } = useQuery<Message[]>({
-    queryKey: ["/api/messages"],
+    queryKey: ["messages"],
     enabled: hasPermission(user, PERMISSIONS.GENERAL_CHAT)
   });
 
@@ -67,7 +67,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   };
 
   const statusCounts = getProjectStatusCounts();
-  const totalSandwiches = reports.reduce((sum, report) => sum + report.sandwichCount, 0);
+  const totalSandwiches = reports.reduce((sum, report) => sum + report.sandwich_count, 0);
   const totalCollectedSandwiches = statsData?.completeTotalSandwiches || 0;
   const activeProjects = projects.filter(p => p.status === "in_progress" || p.status === "available" || p.status === "planning");
   const recentMessages = messages.slice(0, 3);

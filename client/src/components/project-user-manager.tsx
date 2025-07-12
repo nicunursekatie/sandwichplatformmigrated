@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
@@ -41,7 +41,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
 
   // Fetch all users for assignment with fresh data
   const { data: allUsers = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
+    queryKey: ["users"],
     enabled: canEdit,
     staleTime: 0,
     cacheTime: 30000,
@@ -64,7 +64,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setSelectedUserId("");
       setSelectedRole("member");
       setSendNotification(true);
@@ -79,11 +79,11 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Remove user from project mutation
   const removeUserMutation = useMutation({
     mutationFn: async (data: { userId: string; sendNotification: boolean }) => {
-      return await supabase.from('project_assignments').delete().eq('user_id', data.userId).eq('project_id', project.id);
+      return await supabase.from('project_assignments').delete().eq('user_id', data.user_id).eq('project_id', project.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast({ title: "User removed from project" });
       onUpdate?.();
     },
@@ -97,7 +97,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
     mutationFn: async (data: { userId: string; role: string }) => {
       return await supabase.from('project_assignments').update({
         role: data.role
-      }).eq('user_id', data.userId).eq('project_id', project.id);
+      }).eq('user_id', data.user_id).eq('project_id', project.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
@@ -137,7 +137,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   };
 
   const availableUsers = allUsers.filter(u => 
-    !assignments.some(a => a.userId === u.id) && u.isActive
+    !assignments.some(a => a.user_id === u.id) && u.is_active
   );
 
   if (isLoading) {
@@ -196,7 +196,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                           <SelectContent>
                             {availableUsers.map((user) => (
                               <SelectItem key={user.id} value={user.id}>
-                                {user.firstName} {user.lastName} ({user.email})
+                                {user.first_name} {user.last_name} ({user.email})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -251,7 +251,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                         </div>
                       ) : (
                         assignments.map((assignment) => {
-                          const assignedUser = allUsers.find(u => u.id === assignment.userId);
+                          const assignedUser = allUsers.find(u => u.id === assignment.user_id);
                           if (!assignedUser) return null;
                           
                           return (
@@ -259,12 +259,12 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                   <span className="text-sm font-medium text-blue-600">
-                                    {assignedUser.firstName?.[0]}{assignedUser.lastName?.[0]}
+                                    {assignedUser.first_name?.[0]}{assignedUser.last_name?.[0]}
                                   </span>
                                 </div>
                                 <div>
                                   <div className="font-medium">
-                                    {assignedUser.firstName} {assignedUser.lastName}
+                                    {assignedUser.first_name} {assignedUser.last_name}
                                   </div>
                                   <div className="text-sm text-slate-500">{assignedUser.email}</div>
                                 </div>
@@ -274,7 +274,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                                 <Select 
                                   value={assignment.role} 
                                   onValueChange={(newRole) => updateRoleMutation.mutate({
-                                    userId: assignment.userId,
+                                    userId: assignment.user_id,
                                     role: newRole
                                   })}
                                 >
@@ -293,7 +293,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleRemoveUser(assignment.userId)}
+                                  onClick={() => handleRemoveUser(assignment.user_id)}
                                   disabled={removeUserMutation.isPending}
                                 >
                                   <UserMinus className="w-4 h-4" />
@@ -324,7 +324,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
             </div>
           ) : (
             assignments.map((assignment) => {
-              const assignedUser = allUsers.find(u => u.id === assignment.userId);
+              const assignedUser = allUsers.find(u => u.id === assignment.user_id);
               if (!assignedUser) return null;
               
               return (
@@ -332,12 +332,12 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-blue-600">
-                        {assignedUser.firstName?.[0]}{assignedUser.lastName?.[0]}
+                        {assignedUser.first_name?.[0]}{assignedUser.last_name?.[0]}
                       </span>
                     </div>
                     <div>
                       <div className="font-medium">
-                        {assignedUser.firstName} {assignedUser.lastName}
+                        {assignedUser.first_name} {assignedUser.last_name}
                       </div>
                       <div className="text-sm text-slate-500">{assignedUser.email}</div>
                     </div>

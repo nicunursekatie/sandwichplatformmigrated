@@ -144,7 +144,7 @@ export default function AuthDebug() {
                     <div className="pt-2 border-t">
                       <div className="text-sm text-gray-600">User: {authStatus.userEmail}</div>
                       <div className="text-sm text-gray-600">Role: {authStatus.userRole}</div>
-                      <div className="text-sm text-gray-600">ID: {authStatus.userId}</div>
+                      <div className="text-sm text-gray-600">ID: {authStatus.user_id}</div>
                     </div>
                   )}
                 </CardContent>

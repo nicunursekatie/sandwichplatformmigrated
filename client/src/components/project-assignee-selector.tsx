@@ -43,7 +43,7 @@ export function ProjectAssigneeSelector({
 
   // Fetch system users
   const { data: users = [] } = useQuery<User[]>({
-    queryKey: ['/api/users'],
+    queryKey: ["users"],
     retry: false,
   });
 
@@ -57,14 +57,14 @@ export function ProjectAssigneeSelector({
         
         nameList.forEach(name => {
           const matchedUser = users.find(user => {
-            const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
             return fullName === name || user.email === name;
           });
           
           if (matchedUser) {
             matchedUsers.push({
               id: matchedUser.id,
-              name: `${matchedUser.firstName || ''} ${matchedUser.lastName || ''}`.trim() || matchedUser.email
+              name: `${matchedUser.first_name || ''} ${matchedUser.last_name || ''}`.trim() || matchedUser.email
             });
           } else {
             // Keep as text if no user match
@@ -99,7 +99,7 @@ export function ProjectAssigneeSelector({
     const user = users.find(u => u.id === pendingUserId);
     if (!user) return;
 
-    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
     const newUser: SelectedUser = {
       id: user.id,
       name: fullName
@@ -210,7 +210,7 @@ export function ProjectAssigneeSelector({
                   .filter(user => !selectedUsers.some(su => su.id === user.id))
                   .map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      {`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}
+                      {`${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email}
                     </SelectItem>
                   ))}
               </SelectContent>

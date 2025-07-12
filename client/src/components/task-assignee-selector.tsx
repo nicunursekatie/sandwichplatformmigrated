@@ -40,7 +40,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
 
   // Fetch users from the system
   const { data: users = [], isLoading } = useQuery<User[]>({
-    queryKey: ['/api/users'],
+    queryKey: ["users"],
   });
 
   // Initialize state with existing values
@@ -70,7 +70,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
     const selectedUser = users.find(u => u.id === userId);
     if (!selectedUser) return;
 
-    const userName = `${selectedUser.firstName} ${selectedUser.lastName}`.trim() || selectedUser.email;
+    const userName = `${selectedUser.first_name} ${selectedUser.last_name}`.trim() || selectedUser.email;
 
     if (multiple) {
       // Multi-user mode
@@ -158,7 +158,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
       // Single user mode
       if (value?.assigneeId) {
         const user = users.find(u => u.id === value.assigneeId);
-        return user ? `${user.firstName} ${user.lastName}`.trim() || user.email : value.assigneeName;
+        return user ? `${user.first_name} ${user.last_name}`.trim() || user.email : value.assigneeName;
       }
       return value?.assigneeName || '';
     }
@@ -177,7 +177,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
         if (user) {
           allAssignees.push({
             id: userId,
-            name: `${user.firstName} ${user.lastName}`.trim() || user.email,
+            name: `${user.first_name} ${user.last_name}`.trim() || user.email,
             isSystemUser: true,
             index
           });
@@ -249,7 +249,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
             </SelectTrigger>
             <SelectContent>
               {users
-                .filter(user => user.isActive)
+                .filter(user => user.is_active)
                 .map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     <div className="flex items-center gap-2">
@@ -257,7 +257,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
                         <span className="text-green-600">✓</span>
                       )}
                       <span className="font-medium">
-                        {`${user.firstName} ${user.lastName}`.trim() || user.email}
+                        {`${user.first_name} ${user.last_name}`.trim() || user.email}
                       </span>
                       <Badge variant="secondary" className="text-xs">
                         {user.role}

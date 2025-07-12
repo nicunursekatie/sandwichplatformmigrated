@@ -10,7 +10,7 @@ const Breadcrumb = React.forwardRef<
     separator?: React.ReactNode
   }
 >(({ ...props }, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />)
-Breadcrumb.displayName = "Breadcrumb"
+Breadcrumb.display_name = "Breadcrumb"
 
 const BreadcrumbList = React.forwardRef<
   HTMLOListElement,
@@ -25,7 +25,7 @@ const BreadcrumbList = React.forwardRef<
     {...props}
   />
 ))
-BreadcrumbList.displayName = "BreadcrumbList"
+BreadcrumbList.display_name = "BreadcrumbList"
 
 const BreadcrumbItem = React.forwardRef<
   HTMLLIElement,
@@ -37,7 +37,7 @@ const BreadcrumbItem = React.forwardRef<
     {...props}
   />
 ))
-BreadcrumbItem.displayName = "BreadcrumbItem"
+BreadcrumbItem.display_name = "BreadcrumbItem"
 
 const BreadcrumbLink = React.forwardRef<
   HTMLAnchorElement,
@@ -55,7 +55,7 @@ const BreadcrumbLink = React.forwardRef<
     />
   )
 })
-BreadcrumbLink.displayName = "BreadcrumbLink"
+BreadcrumbLink.display_name = "BreadcrumbLink"
 
 const BreadcrumbPage = React.forwardRef<
   HTMLSpanElement,
@@ -70,7 +70,7 @@ const BreadcrumbPage = React.forwardRef<
     {...props}
   />
 ))
-BreadcrumbPage.displayName = "BreadcrumbPage"
+BreadcrumbPage.display_name = "BreadcrumbPage"
 
 const BreadcrumbSeparator = ({
   children,
@@ -86,7 +86,7 @@ const BreadcrumbSeparator = ({
     {children ?? <ChevronRight />}
   </li>
 )
-BreadcrumbSeparator.displayName = "BreadcrumbSeparator"
+BreadcrumbSeparator.display_name = "BreadcrumbSeparator"
 
 const BreadcrumbEllipsis = ({
   className,
@@ -102,7 +102,7 @@ const BreadcrumbEllipsis = ({
     <span className="sr-only">More</span>
   </span>
 )
-BreadcrumbEllipsis.displayName = "BreadcrumbElipssis"
+BreadcrumbEllipsis.display_name = "BreadcrumbElipssis"
 
 export {
   Breadcrumb,

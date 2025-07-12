@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 
 import { supabase } from '@/lib/supabase';
+import { supabaseService } from "@/lib/supabase-service";
 export default function WorkLogPage() {
   const { user } = useAuth();
   const [description, setDescription] = useState("");
@@ -15,7 +16,7 @@ export default function WorkLogPage() {
   const [minutes, setMinutes] = useState(0);
 
   const { data: logs = [], refetch, isLoading, error } = useQuery({
-    queryKey: ["/api/work-logs"],
+    queryKey: ["work-logs"],
     queryFn: async () => {
       console.log("🚀 Work logs query function called");
       const response = await supabase.from('work_logs').select('*').order('created_at', { ascending: false });
@@ -35,7 +36,7 @@ export default function WorkLogPage() {
 
   const createLog = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/work-logs", { 
+      const response = await supabaseService.workLog.createWorkLog({ 
         description, 
         hours, 
         minutes
@@ -46,7 +47,7 @@ export default function WorkLogPage() {
       setDescription("");
       setHours(0);
       setMinutes(0);
-      queryClient.invalidateQueries({ queryKey: ["/api/work-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["work-logs"] });
       refetch(); // Force refetch to update the list immediately
     },
   });
@@ -61,7 +62,7 @@ export default function WorkLogPage() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/work-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["work-logs"] });
       refetch(); // Force refetch to update the list immediately
     },
   });
@@ -140,11 +141,11 @@ export default function WorkLogPage() {
                   <div className="flex-1">
                     <div className="font-medium">{log.description}</div>
                     <div className="text-sm text-gray-500">
-                      {log.hours}h {log.minutes}m &middot; {new Date(log.createdAt).toLocaleString()}
-                      {log.userId !== user?.id && <span className="ml-2 text-blue-600">(by other user)</span>}
+                      {log.hours}h {log.minutes}m &middot; {new Date(log.created_at).toLocaleString()}
+                      {log.user_id !== user?.id && <span className="ml-2 text-blue-600">(by other user)</span>}
                     </div>
                   </div>
-                  {(user?.role === "super_admin" || user?.email === 'mdlouza@gmail.com' || log.userId === user?.id) && (
+                  {(user?.role === "super_admin" || user?.email === 'mdlouza@gmail.com' || log.user_id === user?.id) && (
                     <Button
                       variant="destructive"
                       size="sm"

@@ -70,7 +70,7 @@ export function CollectionFilters({
             <div>
               <Label htmlFor="hostFilter">Host Name</Label>
               <Select
-                value={searchFilters.hostName}
+                value={searchFilters.host_name}
                 onValueChange={(value) => updateFilter("hostName", value)}
               >
                 <SelectTrigger>
@@ -92,7 +92,7 @@ export function CollectionFilters({
               <Input
                 id="dateFrom"
                 type="date"
-                value={searchFilters.collectionDateFrom}
+                value={searchFilters.collection_dateFrom}
                 onChange={(e) => updateFilter("collectionDateFrom", e.target.value)}
               />
             </div>
@@ -102,7 +102,7 @@ export function CollectionFilters({
               <Input
                 id="dateTo"
                 type="date"
-                value={searchFilters.collectionDateTo}
+                value={searchFilters.collection_dateTo}
                 onChange={(e) => updateFilter("collectionDateTo", e.target.value)}
               />
             </div>

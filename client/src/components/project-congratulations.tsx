@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Heart, MessageCircle, Trophy, Star, PartyPopper, ThumbsUp } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
+
 import { useToast } from '@/hooks/use-toast';
 
 import { supabase } from '@/lib/supabase';
@@ -65,7 +65,7 @@ export default function ProjectCongratulations({
         relatedId: projectId,
         celebrationData: {
           projectTitle,
-          senderName: currentUser?.firstName || currentUser?.displayName || 'Team Member',
+          senderName: currentUser?.first_name || currentUser?.display_name || 'Team Member',
           emoji: randomEmoji,
           sentAt: new Date().toISOString()
         }
@@ -134,7 +134,7 @@ export default function ProjectCongratulations({
                     </span>
                     <span className="text-lg">{congrats.celebrationData?.emoji || '🎉'}</span>
                     <span className="text-xs text-gray-500">
-                      {new Date(congrats.createdAt).toLocaleDateString()}
+                      {new Date(congrats.created_at).toLocaleDateString()}
                     </span>
                   </div>
                   <p className="text-sm text-gray-700">{congrats.message}</p>

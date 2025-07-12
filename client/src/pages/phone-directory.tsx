@@ -4,6 +4,7 @@ import PhoneDirectory from "@/components/phone-directory";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
+import { supabaseService } from "@/lib/supabase-service";
 
 export default function PhoneDirectoryPage() {
   const [location] = useLocation();

@@ -19,7 +19,7 @@ import {
   LogOut
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+
 import SimpleNav from "@/components/simple-nav";
 
 interface PerformanceMetrics {

@@ -12,7 +12,7 @@ interface ChatHistoryModalProps {
 
 export default function ChatHistoryModal({ open, onOpenChange }: ChatHistoryModalProps) {
   const { data: messages = [], isLoading } = useQuery<Message[]>({
-    queryKey: ["/api/messages"],
+    queryKey: ["messages"],
     enabled: open
   });
 

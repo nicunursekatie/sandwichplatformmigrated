@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingState } from "@/components/ui/loading";
-import { apiRequest } from "@/lib/queryClient";
+
 import { supabase } from '@/lib/supabase';
 import { 
   Download, 

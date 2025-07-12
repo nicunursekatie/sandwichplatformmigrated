@@ -2,7 +2,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+
 
 interface MessageDeletionProps {
   messageId: number;
@@ -22,7 +22,7 @@ export default function MessageDeletion({ messageId, onDelete }: MessageDeletion
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
       toast({
         title: "Message deleted",
         description: "The message has been successfully removed.",

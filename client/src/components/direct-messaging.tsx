@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 
 import { supabase } from '@/lib/supabase';
 interface Message {
@@ -50,7 +50,7 @@ export default function DirectMessaging() {
 
   // Fetch all users for selection
   const { data: users = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
+    queryKey: ["users"],
   });
 
   // Fetch user's conversations
@@ -242,7 +242,7 @@ export default function DirectMessaging() {
 
   const canEditMessage = (message: Message) => {
     const currentUser = user as any;
-    const isOwner = message.userId === currentUser?.id;
+    const isOwner = message.user_id === currentUser?.id;
     const isSuperAdmin = currentUser?.role === "super_admin";
     const isAdmin = currentUser?.role === "admin";
     const hasModeratePermission = currentUser?.permissions?.includes("moderate_messages");
@@ -268,14 +268,14 @@ export default function DirectMessaging() {
   // Filter users based on search
   const filteredUsers = users.filter(u => 
     u.id !== (user as any)?.id && // Don't show current user
-    (u.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     u.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (u.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     u.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
      u.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups: { [key: string]: Message[] }, message) => {
-    const date = formatDate(message.createdAt);
+    const date = formatDate(message.created_at);
     if (!groups[date]) {
       groups[date] = [];
     }
@@ -318,12 +318,12 @@ export default function DirectMessaging() {
                 >
                   <Avatar className="w-10 h-10 mr-3">
                     <AvatarFallback className="bg-teal-100 text-teal-700">
-                      {u.firstName?.[0]}{u.lastName?.[0]}
+                      {u.first_name?.[0]}{u.last_name?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-slate-900 truncate">
-                      {u.firstName} {u.lastName}
+                      {u.first_name} {u.last_name}
                     </p>
                     <p className="text-xs text-slate-500 truncate">{u.email}</p>
                     <Badge variant="secondary" className="text-xs mt-1">
@@ -353,11 +353,11 @@ export default function DirectMessaging() {
               <CardTitle className="flex items-center">
                 <Avatar className="w-8 h-8 mr-3">
                   <AvatarFallback className="bg-teal-100 text-teal-700">
-                    {selectedUser.firstName?.[0]}{selectedUser.lastName?.[0]}
+                    {selectedUser.first_name?.[0]}{selectedUser.last_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-medium">{selectedUser.firstName} {selectedUser.lastName}</div>
+                  <div className="font-medium">{selectedUser.first_name} {selectedUser.last_name}</div>
                   <div className="text-sm text-slate-500">{selectedUser.email}</div>
                 </div>
               </CardTitle>
@@ -381,15 +381,15 @@ export default function DirectMessaging() {
                       </div>
 
                       {dateMessages.map((msg) => {
-                        const isCurrentUser = msg.userId === (user as any)?.id;
+                        const isCurrentUser = msg.user_id === (user as any)?.id;
 
                         return (
                           <div key={msg.id} className={`group flex items-start space-x-3 mb-4 ${isCurrentUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
                             <Avatar className="w-8 h-8">
                               <AvatarFallback className={`text-xs ${isCurrentUser ? 'bg-orange-100 text-orange-700' : 'bg-teal-100 text-teal-700'}`}>
                                 {isCurrentUser 
-                                  ? `${(user as any)?.firstName?.[0] || ''}${(user as any)?.lastName?.[0] || ''}`.toUpperCase()
-                                  : `${selectedUser?.firstName?.[0] || ''}${selectedUser?.lastName?.[0] || ''}`.toUpperCase()
+                                  ? `${(user as any)?.first_name?.[0] || ''}${(user as any)?.last_name?.[0] || ''}`.toUpperCase()
+                                  : `${selectedUser?.first_name?.[0] || ''}${selectedUser?.last_name?.[0] || ''}`.toUpperCase()
                                 }
                               </AvatarFallback>
                             </Avatar>
@@ -397,10 +397,10 @@ export default function DirectMessaging() {
                             <div className={`flex-1 min-w-0 ${isCurrentUser ? 'text-right' : ''}`}>
                               <div className={`flex items-center space-x-2 mb-1 ${isCurrentUser ? 'justify-end' : ''}`}>
                                 <span className="font-medium text-sm text-slate-900">
-                                  {isCurrentUser ? 'You' : `${selectedUser?.firstName} ${selectedUser?.lastName}`}
+                                  {isCurrentUser ? 'You' : `${selectedUser?.first_name} ${selectedUser?.last_name}`}
                                 </span>
                                 <span className="text-xs text-slate-500">
-                                  {formatTime(msg.createdAt)}
+                                  {formatTime(msg.created_at)}
                                 </span>
 
                                 {canEditMessage(msg) && (
@@ -484,7 +484,7 @@ export default function DirectMessaging() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder={selectedUser ? `Message ${selectedUser.firstName}...` : "Type a message..."}
+                    placeholder={selectedUser ? `Message ${selectedUser.first_name}...` : "Type a message..."}
                     className="flex-1"
                     disabled={sendMessageMutation.isPending}
                   />
@@ -498,7 +498,7 @@ export default function DirectMessaging() {
                 </div>
                 {selectedUser && (
                   <p className="text-xs text-slate-500 mt-2">
-                    Direct messages are private between you and {selectedUser.firstName}
+                    Direct messages are private between you and {selectedUser.first_name}
                   </p>
                 )}
               </div>

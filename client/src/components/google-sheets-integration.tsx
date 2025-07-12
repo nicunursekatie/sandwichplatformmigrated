@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+
 import { ExternalLink, Download, Upload, RefreshCw, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';

@@ -63,6 +63,6 @@ function Calendar({
     />
   )
 }
-Calendar.displayName = "Calendar"
+Calendar.display_name = "Calendar"
 
 export { Calendar }

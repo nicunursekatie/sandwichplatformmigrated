@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 // import { ScrollArea } from "@/components/ui/scroll-area";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessageReads } from "@/hooks/useMessageReads";
@@ -38,11 +38,11 @@ export default function HostChat() {
   const getUserName = () => {
     if (userProfile && typeof userProfile === 'object') {
       const profile = userProfile as any;
-      if (profile.displayName) {
-        return profile.displayName;
+      if (profile.display_name) {
+        return profile.display_name;
       }
-      if (profile.firstName) {
-        return profile.firstName;
+      if (profile.first_name) {
+        return profile.first_name;
       }
     }
     if (user && typeof user === 'object' && 'email' in user && user.email) {

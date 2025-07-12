@@ -15,13 +15,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertHostSchema, insertHostContactSchema, insertRecipientSchema, insertContactSchema } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import { Phone, Mail, MapPin, Search, Download, User, Users, Star, Building2, Plus, Edit, Trash2, Upload, FileSpreadsheet, Crown, Settings, ChevronDown } from "lucide-react";
 
 import { supabase } from '@/lib/supabase';
+import { supabaseService } from "@/lib/supabase-service";
 interface Host {
   id: number;
   name: string;
@@ -112,7 +113,7 @@ function PhoneDirectory() {
 
   // Keep separate hosts query for forms that need the basic host list
   const { data: hostsData = [], refetch: refetchHosts } = useQuery<Host[]>({
-    queryKey: ["/api/hosts"],
+    queryKey: ["hosts"],
   });
 
 
@@ -140,7 +141,7 @@ function PhoneDirectory() {
   const createHostMutation = useMutation({
     mutationFn: (data: z.infer<typeof insertHostSchema>) => apiRequest("POST", `/api/hosts`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
       setIsAddingHost(false);
       toast({ title: "Host added successfully" });
@@ -153,10 +154,10 @@ function PhoneDirectory() {
   const updateHostMutation = useMutation({
     mutationFn: ({ id, data, isReassignment }: { id: number; data: Partial<z.infer<typeof insertHostSchema>>; isReassignment?: boolean }) => {
       console.log('Updating host with:', { id, data, isReassignment });
-      return apiRequest("PATCH", `/api/hosts/${id}`, data);
+      return supabaseService.host.updateHost(id, data);
     },
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
       setEditingHost(null);
       
@@ -236,7 +237,7 @@ function PhoneDirectory() {
   const createHostContactMutation = useMutation({
     mutationFn: (data: z.infer<typeof insertHostContactSchema>) => supabase.from('host_contacts').insert(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
       setIsAddingHostContact(false);
@@ -257,7 +258,7 @@ function PhoneDirectory() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
       setImportDialogOpen(false);
@@ -339,7 +340,7 @@ function PhoneDirectory() {
     mutationFn: ({ id, data }: { id: number; data: Partial<HostContact> }) => 
       apiRequest("PATCH", `/api/host-contacts/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
       setEditingHostContact(null);
@@ -360,7 +361,7 @@ function PhoneDirectory() {
   const deleteHostContactMutation = useMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/host-contacts/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
       toast({
@@ -404,7 +405,7 @@ function PhoneDirectory() {
     const searchLower = searchTerm.toLowerCase();
     
     return recipient.name.toLowerCase().includes(searchLower) ||
-           (recipient.contactName && recipient.contactName.toLowerCase().includes(searchLower)) ||
+           (recipient.contact_name && recipient.contact_name.toLowerCase().includes(searchLower)) ||
            recipient.phone.includes(searchTerm) ||
            (recipient.email && recipient.email.toLowerCase().includes(searchLower)) ||
            (recipient.address && recipient.address.toLowerCase().includes(searchLower)) ||
@@ -647,9 +648,9 @@ function PhoneDirectory() {
               )}
             </div>
             
-            {recipient.contactName && (
+            {recipient.contact_name && (
               <div className="text-sm text-gray-600 mb-2">
-                <strong>Contact:</strong> {recipient.contactName}
+                <strong>Contact:</strong> {recipient.contact_name}
               </div>
             )}
             
@@ -1285,7 +1286,7 @@ const HostForm = ({
   
   // Fetch all hosts for location selection
   const { data: allHosts = [] } = useQuery<Host[]>({
-    queryKey: ["/api/hosts"],
+    queryKey: ["hosts"],
   });
 
   const form = useForm<z.infer<typeof insertHostSchema>>({
@@ -1497,7 +1498,7 @@ const RecipientForm = ({
     resolver: zodResolver(insertRecipientSchema),
     defaultValues: {
       name: initialData?.name || "",
-      contactName: initialData?.contactName || "",
+      contactName: initialData?.contact_name || "",
       phone: initialData?.phone || "",
       email: initialData?.email || "",
       address: initialData?.address || "",

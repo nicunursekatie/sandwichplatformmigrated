@@ -10,12 +10,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { insertMessageSchema, type Message } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 
 import { supabase } from '@/lib/supabase';
+import { supabaseService } from "@/lib/supabase-service";
 const messageFormSchema = z.object({
   content: z.string().min(1, "Message content is required"),
   sender: z.string().optional() // Optional since we'll use userName
@@ -105,7 +106,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
       console.log('API endpoint: POST /api/messages');
       
       try {
-        const result = await apiRequest("POST", "/api/messages", data);
+        const result = await supabaseService.message.createMessage(data);
         console.log('API response received:', result);
         return result;
       } catch (error) {
@@ -120,7 +121,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
     },
     onSuccess: (data) => {
       console.log('Message sent successfully:', data);
-      queryClient.invalidateQueries({ queryKey: ["/api/messages"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
       form.reset({
         content: ""
       });
@@ -152,7 +153,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
       setOptimisticMessages(null);
       toast({
         title: "Message deleted",
@@ -162,7 +163,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
     onError: (error, messageId, context) => {
       // Roll back optimistic update
       setOptimisticMessages(null);
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
       toast({
         title: "Delete failed",
         description: "Could not delete the message. Please try again.",
@@ -250,15 +251,15 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
     if (message.sender && message.sender.trim()) {
       return message.sender;
     }
-    if (message.userId) {
+    if (message.user_id) {
       // Create a friendly fallback name from userId
-      if (message.userId.includes('backup_restored')) {
+      if (message.user_id.includes('backup_restored')) {
         return 'Admin User';
       }
-      if (message.userId.includes('user_')) {
+      if (message.user_id.includes('user_')) {
         return 'Team Member';
       }
-      return message.userId.substring(0, 12) + '...';
+      return message.user_id.substring(0, 12) + '...';
     }
     return 'Anonymous';
   };

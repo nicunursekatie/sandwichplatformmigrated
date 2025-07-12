@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ExternalLink, Eye, FileSpreadsheet, AlertCircle, RefreshCw, Upload, Download } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission } from "@shared/auth-utils";
 

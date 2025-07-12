@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { supabaseService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { CheckCircle2, Truck, User, Trash2, MoreVertical, Edit } from "lucide-react";
@@ -240,8 +241,8 @@ export default function DriverChat() {
             </div>
           )}
           {displayedMessages.map((msg) => {
-            const msgUserId = msg.userId || msg.user_id;
-            const msgCreatedAt = msg.createdAt || msg.created_at;
+            const msgUserId = msg.user_id || msg.user_id;
+            const msgCreatedAt = msg.created_at || msg.created_at;
             const isOwnMessage = msgUserId === user?.id;
             
             return (

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useAuth } from "./useAuth";
 
 interface Message {
@@ -44,7 +44,7 @@ export function useMessageReads() {
       if (!enabled || !user || !messages || messages.length === 0) return;
 
       // Filter out user's own messages and get only unread ones
-      const otherUserMessages = messages.filter(msg => msg.userId !== user.id);
+      const otherUserMessages = messages.filter(msg => msg.user_id !== user.id);
       
       if (otherUserMessages.length === 0) return;
 

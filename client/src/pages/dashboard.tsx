@@ -36,6 +36,7 @@ import * as React from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import { queryClient } from "@/lib/queryClient";
+import { supabaseService } from "@/lib/supabase-service";
 import SimpleNav from "@/components/simple-nav";
 import AnnouncementBanner from "@/components/announcement-banner";
 import MessageNotifications from "@/components/message-notifications";

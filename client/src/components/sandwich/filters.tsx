@@ -28,7 +28,7 @@ export function Filters({
   collections
 }: FiltersProps) {
   // Get unique hosts for filter dropdown
-  const uniqueHosts = Array.from(new Set(collections.map(c => c.hostName))).sort();
+  const uniqueHosts = Array.from(new Set(collections.map(c => c.host_name))).sort();
 
   const clearFilters = () => {
     onSearchChange("");

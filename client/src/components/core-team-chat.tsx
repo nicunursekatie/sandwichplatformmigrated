@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessageReads } from "@/hooks/useMessageReads";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 
 import { supabase } from '@/lib/supabase';
 interface Message {
@@ -53,15 +53,15 @@ export default function CoreTeamChat() {
 
   // Fetch all users for name lookups
   const { data: allUsers = [] } = useQuery({
-    queryKey: ["/api/users"],
+    queryKey: ["users"],
   });
 
   // Helper functions for user display
   const getUserDisplayName = (userId: string) => {
     const userFound = allUsers.find((u: any) => u.id === userId);
     if (userFound) {
-      if (userFound.displayName) return userFound.displayName;
-      if (userFound.firstName) return userFound.firstName;
+      if (userFound.display_name) return userFound.display_name;
+      if (userFound.first_name) return userFound.first_name;
       if (userFound.email) return userFound.email.split("@")[0];
     }
     return "Team Member";
@@ -70,11 +70,11 @@ export default function CoreTeamChat() {
   const getUserInitials = (userId: string) => {
     const userFound = allUsers.find((u: any) => u.id === userId);
     if (userFound) {
-      if (userFound.firstName && userFound.lastName) {
-        return (userFound.firstName[0] + userFound.lastName[0]).toUpperCase();
+      if (userFound.first_name && userFound.last_name) {
+        return (userFound.first_name[0] + userFound.last_name[0]).toUpperCase();
       }
-      if (userFound.firstName) {
-        return userFound.firstName[0].toUpperCase();
+      if (userFound.first_name) {
+        return userFound.first_name[0].toUpperCase();
       }
       if (userFound.email) {
         return userFound.email[0].toUpperCase();
@@ -327,7 +327,7 @@ export default function CoreTeamChat() {
   const groupedMessages = displayedMessages.reduce(
     (groups: { [key: string]: Message[] }, message) => {
       const timestamp =
-        message.timestamp || message.createdAt || new Date().toISOString();
+        message.timestamp || message.created_at || new Date().toISOString();
       const date = formatDate(timestamp);
       if (!groups[date]) {
         groups[date] = [];
@@ -380,7 +380,7 @@ export default function CoreTeamChat() {
                   <div key={msg.id} className="flex items-start space-x-3 mb-4">
                     <Avatar className="w-8 h-8">
                       <AvatarFallback className="bg-orange-100 text-orange-700 text-xs">
-                        {getUserInitials(msg.userId || msg.user_id || "")}
+                        {getUserInitials(msg.user_id || msg.user_id || "")}
                       </AvatarFallback>
                     </Avatar>
 
@@ -390,7 +390,7 @@ export default function CoreTeamChat() {
                           <span className="font-medium text-sm text-slate-900">
                             {msg.sender ||
                               getUserDisplayName(
-                                msg.userId || msg.user_id || "",
+                                msg.user_id || msg.user_id || "",
                               )}
                           </span>
                           <Badge variant="secondary" className="text-xs">
@@ -399,7 +399,7 @@ export default function CoreTeamChat() {
                           </Badge>
                           <span className="text-xs text-slate-500">
                             {new Date(
-                              msg.timestamp || msg.createdAt || new Date(),
+                              msg.timestamp || msg.created_at || new Date(),
                             ).toLocaleTimeString("en-US", {
                               hour: "numeric",
                               minute: "2-digit",
@@ -409,7 +409,7 @@ export default function CoreTeamChat() {
                         </div>
 
                         {/* Show dropdown only for message owner or moderators */}
-                        {((msg.userId || msg.user_id) === user?.id ||
+                        {((msg.user_id || msg.user_id) === user?.id ||
                           hasPermission(user, "moderate_messages")) && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

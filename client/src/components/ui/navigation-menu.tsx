@@ -21,7 +21,7 @@ const NavigationMenu = React.forwardRef<
     <NavigationMenuViewport />
   </NavigationMenuPrimitive.Root>
 ))
-NavigationMenu.displayName = NavigationMenuPrimitive.Root.displayName
+NavigationMenu.display_name = NavigationMenuPrimitive.Root.display_name
 
 const NavigationMenuList = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.List>,
@@ -36,7 +36,7 @@ const NavigationMenuList = React.forwardRef<
     {...props}
   />
 ))
-NavigationMenuList.displayName = NavigationMenuPrimitive.List.displayName
+NavigationMenuList.display_name = NavigationMenuPrimitive.List.display_name
 
 const NavigationMenuItem = NavigationMenuPrimitive.Item
 
@@ -60,7 +60,7 @@ const NavigationMenuTrigger = React.forwardRef<
     />
   </NavigationMenuPrimitive.Trigger>
 ))
-NavigationMenuTrigger.displayName = NavigationMenuPrimitive.Trigger.displayName
+NavigationMenuTrigger.display_name = NavigationMenuPrimitive.Trigger.display_name
 
 const NavigationMenuContent = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Content>,
@@ -75,7 +75,7 @@ const NavigationMenuContent = React.forwardRef<
     {...props}
   />
 ))
-NavigationMenuContent.displayName = NavigationMenuPrimitive.Content.displayName
+NavigationMenuContent.display_name = NavigationMenuPrimitive.Content.display_name
 
 const NavigationMenuLink = NavigationMenuPrimitive.Link
 
@@ -94,8 +94,8 @@ const NavigationMenuViewport = React.forwardRef<
     />
   </div>
 ))
-NavigationMenuViewport.displayName =
-  NavigationMenuPrimitive.Viewport.displayName
+NavigationMenuViewport.display_name =
+  NavigationMenuPrimitive.Viewport.display_name
 
 const NavigationMenuIndicator = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Indicator>,
@@ -112,8 +112,8 @@ const NavigationMenuIndicator = React.forwardRef<
     <div className="relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm bg-border shadow-md" />
   </NavigationMenuPrimitive.Indicator>
 ))
-NavigationMenuIndicator.displayName =
-  NavigationMenuPrimitive.Indicator.displayName
+NavigationMenuIndicator.display_name =
+  NavigationMenuPrimitive.Indicator.display_name
 
 export {
   navigationMenuTriggerStyle,

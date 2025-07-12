@@ -122,12 +122,12 @@ export function DuplicateAnalysisDialog({
                           KEEP
                         </Badge>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {group.keepNewest.collectionDate} - {group.keepNewest.hostName}
+                          {group.keepNewest.collection_date} - {group.keepNewest.host_name}
                         </div>
                       </div>
                       <div className="text-sm mt-1">
-                        Individual: {group.keepNewest.individualSandwiches} | 
-                        Groups: {group.keepNewest.groupCollections}
+                        Individual: {group.keepNewest.individual_sandwiches} | 
+                        Groups: {group.keepNewest.group_collections}
                       </div>
                     </div>
                     
@@ -137,12 +137,12 @@ export function DuplicateAnalysisDialog({
                         <div className="flex justify-between items-center">
                           <Badge variant="destructive">DELETE</Badge>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {item.collectionDate} - {item.hostName}
+                            {item.collection_date} - {item.host_name}
                           </div>
                         </div>
                         <div className="text-sm mt-1">
-                          Individual: {item.individualSandwiches} | 
-                          Groups: {item.groupCollections}
+                          Individual: {item.individual_sandwiches} | 
+                          Groups: {item.group_collections}
                         </div>
                       </div>
                     ))}
@@ -167,12 +167,12 @@ export function DuplicateAnalysisDialog({
                         REVIEW
                       </Badge>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {entry.collectionDate} - {entry.hostName}
+                        {entry.collection_date} - {entry.host_name}
                       </div>
                     </div>
                     <div className="text-sm mt-1">
-                      Individual: {entry.individualSandwiches} | 
-                      Groups: {entry.groupCollections}
+                      Individual: {entry.individual_sandwiches} | 
+                      Groups: {entry.group_collections}
                     </div>
                   </div>
                 ))}

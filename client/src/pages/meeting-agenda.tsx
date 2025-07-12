@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Clock, ListTodo, Plus, Edit, Trash2, CheckCircle2, Circle, ArrowLeft } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { supabaseService } from "@/lib/supabase-service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
@@ -33,7 +34,7 @@ export default function MeetingAgenda() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    submittedBy: user?.firstName || "User"
+    submittedBy: user?.first_name || "User"
   });
   const { toast } = useToast();
 
@@ -239,7 +240,7 @@ export default function MeetingAgenda() {
                   <div>
                     <label className="block text-sm font-medium mb-2">Submitted By</label>
                     <Input
-                      value={formData.submittedBy}
+                      value={formData.submitted_by}
                       onChange={(e) => setFormData({ ...formData, submittedBy: e.target.value })}
                       placeholder="Your name"
                       required
@@ -284,9 +285,9 @@ export default function MeetingAgenda() {
                           <p className="text-gray-600 dark:text-gray-400 mb-3">{item.description}</p>
                         )}
                         <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span>Submitted by: {item.submittedBy}</span>
+                          <span>Submitted by: {item.submitted_by}</span>
                           <span>•</span>
-                          <span>{new Date(item.submittedAt).toLocaleDateString()}</span>
+                          <span>{new Date(item.submitted_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </div>

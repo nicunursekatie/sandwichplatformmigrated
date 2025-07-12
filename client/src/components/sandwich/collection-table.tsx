@@ -26,10 +26,10 @@ interface EditDialogProps {
 
 function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating }: EditDialogProps) {
   const [formData, setFormData] = useState({
-    collectionDate: collection?.collectionDate || '',
-    hostName: collection?.hostName || '',
-    individualSandwiches: collection?.individualSandwiches || 0,
-    groupCollections: collection?.groupCollections || ''
+    collectionDate: collection?.collection_date || '',
+    hostName: collection?.host_name || '',
+    individualSandwiches: collection?.individual_sandwiches || 0,
+    groupCollections: collection?.group_collections || ''
   });
 
   const handleSave = () => {
@@ -50,7 +50,7 @@ function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating 
             <Input
               id="collectionDate"
               type="date"
-              value={formData.collectionDate}
+              value={formData.collection_date}
               onChange={(e) => setFormData({ ...formData, collectionDate: e.target.value })}
             />
           </div>
@@ -59,7 +59,7 @@ function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating 
             <Label htmlFor="hostName">Host Name</Label>
             <Input
               id="hostName"
-              value={formData.hostName}
+              value={formData.host_name}
               onChange={(e) => setFormData({ ...formData, hostName: e.target.value })}
             />
           </div>
@@ -70,7 +70,7 @@ function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating 
               id="individualSandwiches"
               type="number"
               min="0"
-              value={formData.individualSandwiches}
+              value={formData.individual_sandwiches}
               onChange={(e) => setFormData({ ...formData, individualSandwiches: parseInt(e.target.value) || 0 })}
             />
           </div>
@@ -79,7 +79,7 @@ function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating 
             <Label htmlFor="groupCollections">Group Collections</Label>
             <Textarea
               id="groupCollections"
-              value={formData.groupCollections}
+              value={formData.group_collections}
               onChange={(e) => setFormData({ ...formData, groupCollections: e.target.value })}
               placeholder="JSON format or text description"
               rows={3}
@@ -125,11 +125,11 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
   };
 
   const calculateTotal = (collection: SandwichCollection) => {
-    const groupCollections = parseGroupCollections(collection.groupCollections);
+    const groupCollections = parseGroupCollections(collection.group_collections);
     const groupTotal = groupCollections.reduce((sum: number, group: any) => 
-      sum + (group.sandwichCount || 0), 0
+      sum + (group.sandwich_count || 0), 0
     );
-    return collection.individualSandwiches + groupTotal;
+    return collection.individual_sandwiches + groupTotal;
   };
 
   const handleEditClick = (collection: SandwichCollection) => {
@@ -164,7 +164,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
           </thead>
           <tbody>
             {collections.map((collection) => {
-              const groupCollections = parseGroupCollections(collection.groupCollections);
+              const groupCollections = parseGroupCollections(collection.group_collections);
               const total = calculateTotal(collection);
               
               return (
@@ -173,7 +173,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <span className="font-medium">
-                        {new Date(collection.collectionDate).toLocaleDateString()}
+                        {new Date(collection.collection_date).toLocaleDateString()}
                       </span>
                     </div>
                   </td>
@@ -181,13 +181,13 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-400" />
-                      <span>{collection.hostName}</span>
+                      <span>{collection.host_name}</span>
                     </div>
                   </td>
                   
                   <td className="p-3">
                     <Badge variant="secondary">
-                      {collection.individualSandwiches}
+                      {collection.individual_sandwiches}
                     </Badge>
                   </td>
                   
@@ -196,7 +196,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
                       <div className="space-y-1">
                         {groupCollections.map((group: any, idx: number) => (
                           <div key={idx} className="text-sm">
-                            <span className="font-medium">{group.groupName}:</span> {group.sandwichCount}
+                            <span className="font-medium">{group.groupName}:</span> {group.sandwich_count}
                           </div>
                         ))}
                       </div>
@@ -212,7 +212,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
                   </td>
                   
                   <td className="p-3 text-sm text-gray-600 dark:text-gray-400">
-                    {new Date(collection.submittedAt).toLocaleDateString()}
+                    {new Date(collection.submitted_at).toLocaleDateString()}
                   </td>
                   
                   <td className="p-3">

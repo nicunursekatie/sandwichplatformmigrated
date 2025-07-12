@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 
 import { supabase } from '@/lib/supabase';
 interface ImportResult {
@@ -30,7 +30,7 @@ export default function CSVImport() {
     },
     onSuccess: (result: ImportResult) => {
       setImportResult(result);
-      queryClient.invalidateQueries({ queryKey: ['/api/sandwich-collections'] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       
       if (result.errorCount === 0) {
         toast({

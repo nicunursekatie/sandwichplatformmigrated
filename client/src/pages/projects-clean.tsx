@@ -31,7 +31,7 @@ import {
   Settings
 } from "lucide-react";
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCelebration, CelebrationToast } from "@/components/celebration-toast";
@@ -64,7 +64,7 @@ export default function ProjectsClean() {
 
   // Fetch all projects
   const { data: projects = [], isLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"],
+    queryKey: ["projects"],
   });
 
   // Update project status mutation
@@ -73,7 +73,7 @@ export default function ProjectsClean() {
       return await supabase.from('projects').update({ status }).eq('id', id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast({ 
         title: "Project updated", 
         description: "Project status has been updated successfully." 
@@ -95,8 +95,8 @@ export default function ProjectsClean() {
     },
     onSuccess: (data) => {
       // Force immediate cache invalidation and refetch
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      queryClient.refetchQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.refetchQueries({ queryKey: ["projects"] });
       
       setShowCreateDialog(false);
       setNewProject({
@@ -134,7 +134,7 @@ export default function ProjectsClean() {
       return await supabase.from('projects').delete().eq('id', id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast({ 
         title: "Project deleted successfully!", 
         description: "The project has been removed from your list." 

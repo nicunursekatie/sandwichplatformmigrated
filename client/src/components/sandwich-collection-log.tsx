@@ -10,14 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import BulkDataManager from "@/components/bulk-data-manager";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { supabaseService } from "@/lib/supabase-service";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
-import type { SandwichCollection, Host } from "@shared/schema";
-
-
-
-import { supabase } from '@/lib/supabase';
+import { supabaseService } from "@/lib/supabase-service";
+import type { SandwichCollection, Host } from "@/lib/supabase";
 interface ImportResult {
   totalRecords: number;
   successCount: number;
@@ -72,7 +70,7 @@ export default function SandwichCollectionLog() {
   });
 
   const [sortConfig, setSortConfig] = useState({
-    field: "collectionDate" as keyof SandwichCollection,
+    field: "collection_date" as keyof SandwichCollection,
     direction: "desc" as "asc" | "desc"
   });
   const [showFilters, setShowFilters] = useState(false);
@@ -113,41 +111,36 @@ export default function SandwichCollectionLog() {
     sortConfig
   ], [needsAllData, currentPage, itemsPerPage, searchFilters, sortConfig]);
 
-  const { data: collectionsResponse, isLoading } = useQuery({
+    const { data: collectionsResponse, isLoading } = useQuery({
     queryKey,
     queryFn: useCallback(async () => {
       if (needsAllData) {
-        const { data, error } = await supabase
-          .from('sandwich_collections')
-          .select('*')
-          .limit(10000);
-
-        if (error) throw new Error('Failed to fetch collections');
-
-        let filteredCollections = data || [];
+        const collections = await supabaseService.sandwichCollection.getAllCollections(10000);
+        
+        let filteredCollections = collections || [];
         // Apply filters
-        if (searchFilters.hostName) {
-          const searchTerm = searchFilters.hostName.toLowerCase();
+        if (searchFilters.host_name) {
+          const searchTerm = searchFilters.host_name.toLowerCase();
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.hostName?.toLowerCase().includes(searchTerm)
+            c.host_name?.toLowerCase().includes(searchTerm)
           );
         }
         
-        if (searchFilters.collectionDateFrom) {
+        if (searchFilters.collection_dateFrom) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.collectionDate >= searchFilters.collectionDateFrom
+            c.collection_date >= searchFilters.collection_dateFrom
           );
         }
         
-        if (searchFilters.collectionDateTo) {
+        if (searchFilters.collection_dateTo) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.collectionDate <= searchFilters.collectionDateTo
+            c.collection_date <= searchFilters.collection_dateTo
           );
         }
         
         if (searchFilters.createdAtFrom) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
-            const submittedAtDate = typeof c.submittedAt === "string" ? new Date(c.submittedAt) : c.submittedAt;
+            const submittedAtDate = typeof c.submitted_at === "string" ? new Date(c.submitted_at) : c.submitted_at;
             const filterDate = typeof searchFilters.createdAtFrom === "string" ? new Date(searchFilters.createdAtFrom) : searchFilters.createdAtFrom;
             return submittedAtDate >= filterDate;
           });
@@ -155,7 +148,7 @@ export default function SandwichCollectionLog() {
         
         if (searchFilters.createdAtTo) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.submittedAt <= new Date(searchFilters.createdAtTo)
+            new Date(c.submitted_at) <= new Date(searchFilters.createdAtTo)
           );
         }
         
@@ -186,9 +179,16 @@ export default function SandwichCollectionLog() {
           }
         };
       } else {
-        const response = await fetch(`/api/sandwich-collections?page=${currentPage}&limit=${itemsPerPage}`);
-        if (!response.ok) throw new Error('Failed to fetch collections');
-        return response.json();
+        const collections = await supabaseService.sandwichCollection.getAllCollections(itemsPerPage);
+        return {
+          collections,
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: collections.length,
+            itemsPerPage
+          }
+        };
       }
     }, [needsAllData, currentPage, itemsPerPage, searchFilters, sortConfig])
   });
@@ -197,7 +197,7 @@ export default function SandwichCollectionLog() {
   const pagination = collectionsResponse?.pagination;
 
   const { data: hostsList = [] } = useQuery<Host[]>({
-    queryKey: ["/api/hosts"]
+    queryKey: ["hosts"]
   });
 
   // Query for complete database totals including both individual and group collections
@@ -214,32 +214,32 @@ export default function SandwichCollectionLog() {
   const filteredCollections = collections
     .filter((collection: SandwichCollection) => {
       // Host name filter
-      if (searchFilters.hostName && !collection.hostName.toLowerCase().includes(searchFilters.hostName.toLowerCase())) {
+      if (searchFilters.host_name && !collection.host_name.toLowerCase().includes(searchFilters.host_name.toLowerCase())) {
         return false;
       }
 
       // Collection date range filter
-      if (searchFilters.collectionDateFrom) {
-        const collectionDate = new Date(collection.collectionDate);
-        const fromDate = new Date(searchFilters.collectionDateFrom);
+      if (searchFilters.collection_dateFrom) {
+        const collectionDate = new Date(collection.collection_date);
+        const fromDate = new Date(searchFilters.collection_dateFrom);
         if (collectionDate < fromDate) return false;
       }
 
-      if (searchFilters.collectionDateTo) {
-        const collectionDate = new Date(collection.collectionDate);
-        const toDate = new Date(searchFilters.collectionDateTo);
+      if (searchFilters.collection_dateTo) {
+        const collectionDate = new Date(collection.collection_date);
+        const toDate = new Date(searchFilters.collection_dateTo);
         if (collectionDate > toDate) return false;
       }
 
       // Created at date range filter
       if (searchFilters.createdAtFrom) {
-        const createdDate = new Date(collection.submittedAt);
+        const createdDate = new Date(collection.submitted_at);
         const fromDate = new Date(searchFilters.createdAtFrom);
         if (createdDate < fromDate) return false;
       }
 
       if (searchFilters.createdAtTo) {
-        const createdDate = new Date(collection.submittedAt);
+        const createdDate = new Date(collection.submitted_at);
         const toDate = new Date(searchFilters.createdAtTo);
         // Add 23:59:59 to include the entire day
         toDate.setHours(23, 59, 59, 999);
@@ -258,8 +258,6 @@ export default function SandwichCollectionLog() {
         comparison = aValue.localeCompare(bValue);
       } else if (typeof aValue === 'number' && typeof bValue === 'number') {
         comparison = aValue - bValue;
-      } else if (aValue instanceof Date && bValue instanceof Date) {
-        comparison = aValue.getTime() - bValue.getTime();
       } else {
         // Handle date strings
         const aDate = new Date(aValue as string);
@@ -283,7 +281,7 @@ export default function SandwichCollectionLog() {
   }, [searchFilters, sortConfig]);
 
   // Get unique host names from collections for filtering
-  const uniqueHostNames = Array.from(new Set(collections.map((c: SandwichCollection) => c.hostName))).sort();
+  const uniqueHostNames = Array.from(new Set(collections.map((c: SandwichCollection) => c.host_name))).sort();
 
   // Include all hosts (active and inactive) for collection assignment
   const hostOptions = [...hostsList.map(host => host.name), "Other"];
@@ -311,28 +309,28 @@ export default function SandwichCollectionLog() {
   };
 
   const calculateTotal = (collection: SandwichCollection) => {
-    const individual = Number(collection.individualSandwiches || 0);
+    const individual = Number(collection.individual_sandwiches || 0);
     let groupTotal = 0;
     
     try {
       // Handle different formats in groupCollections
-      if (!collection.groupCollections || collection.groupCollections === "[]" || collection.groupCollections === "") {
+      if (!collection.group_collections || collection.group_collections === "[]" || collection.group_collections === "") {
         return individual;
       }
       
       // Try to parse as JSON first
-      const groupData = JSON.parse(collection.groupCollections);
+      const groupData = JSON.parse(collection.group_collections);
       if (Array.isArray(groupData)) {
-        groupTotal = groupData.reduce((sum: number, group: any) => sum + (Number(group.sandwichCount) || 0), 0);
+        groupTotal = groupData.reduce((sum: number, group: any) => sum + (Number(group.sandwich_count) || 0), 0);
       } else if (typeof groupData === 'number') {
         groupTotal = Number(groupData);
-      } else if (typeof groupData === 'object' && groupData.sandwichCount) {
-        groupTotal = Number(groupData.sandwichCount);
+      } else if (typeof groupData === 'object' && groupData.sandwich_count) {
+        groupTotal = Number(groupData.sandwich_count);
       }
     } catch (error) {
       // Handle text format like "Marketing Team: 8, Development: 6"
-      if (collection.groupCollections && collection.groupCollections !== "[]") {
-        const matches = collection.groupCollections.match(/(\d+)/g);
+      if (collection.group_collections && collection.group_collections !== "[]") {
+        const matches = collection.group_collections.match(/(\d+)/g);
         if (matches) {
           groupTotal = matches.reduce((sum, num) => sum + parseInt(num), 0);
         }
@@ -367,10 +365,10 @@ export default function SandwichCollectionLog() {
   // Mutations for update and delete
   const updateMutation = useMutation({
     mutationFn: async (data: { id: number; updates: any }) => {
-      return await apiRequest('PATCH', `/api/sandwich-collections/${data.id}`, data.updates);
+      return await supabaseService.sandwichCollection.updateCollection(data.id, data.updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       setEditingCollection(null);
       toast({
         title: "Collection updated",
@@ -388,12 +386,12 @@ export default function SandwichCollectionLog() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest('DELETE', `/api/sandwich-collections/${id}`);
+      const response = await supabaseService.sandwichCollection.deleteCollection(id);
       // Don't try to parse JSON for 204 responses
       return response.status === 204 ? null : response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       toast({
         title: "Collection deleted",
         description: "Sandwich collection has been deleted successfully.",
@@ -413,7 +411,7 @@ export default function SandwichCollectionLog() {
       return await supabase.from('sandwich_collections').insert(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       setShowAddForm(false);
       setNewCollectionData({
         collectionDate: "",
@@ -452,7 +450,7 @@ export default function SandwichCollectionLog() {
       return response.json() as Promise<ImportResult>;
     },
     onSuccess: (result: ImportResult) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       toast({
         title: "Import completed",
         description: `Successfully imported ${result.successCount} of ${result.totalRecords} records.`,
@@ -508,7 +506,7 @@ export default function SandwichCollectionLog() {
       return response.json();
     },
     onSuccess: (result: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       setShowDuplicateAnalysis(false);
       setDuplicateAnalysis(null);
       toast({
@@ -545,7 +543,7 @@ export default function SandwichCollectionLog() {
       return result;
     },
     onSuccess: (result: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       setSelectedCollections(new Set());
       setShowBatchEdit(false);
       setBatchEditData({ hostName: "", collectionDate: "" });
@@ -586,11 +584,11 @@ export default function SandwichCollectionLog() {
         headers.join(","),
         ...allCollections.map((collection: SandwichCollection) => [
           collection.id,
-          `"${collection.hostName}"`,
-          collection.individualSandwiches,
-          `"${collection.collectionDate}"`,
-          `"${collection.groupCollections}"`,
-          `"${new Date(collection.submittedAt).toLocaleString()}"`
+          `"${collection.host_name}"`,
+          collection.individual_sandwiches,
+          `"${collection.collection_date}"`,
+          `"${collection.group_collections}"`,
+          `"${new Date(collection.submitted_at).toLocaleString()}"`
         ].join(","))
       ].join("\n");
 
@@ -627,7 +625,7 @@ export default function SandwichCollectionLog() {
       return response.json();
     },
     onSuccess: (result: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       setSelectedCollections(new Set());
       toast({
         title: "Batch delete completed",
@@ -691,8 +689,8 @@ export default function SandwichCollectionLog() {
     console.log("selectedCollections:", Array.from(selectedCollections));
 
     const updates: Partial<SandwichCollection> = {};
-    if (batchEditData.hostName) updates.hostName = batchEditData.hostName;
-    if (batchEditData.collectionDate) updates.collectionDate = batchEditData.collectionDate;
+    if (batchEditData.host_name) updates.host_name = batchEditData.host_name;
+    if (batchEditData.collection_date) updates.collection_date = batchEditData.collection_date;
 
     console.log("Prepared updates:", updates);
 
@@ -735,19 +733,19 @@ export default function SandwichCollectionLog() {
   const handleEdit = (collection: SandwichCollection) => {
     setEditingCollection(collection);
     setEditFormData({
-      collectionDate: collection.collectionDate,
-      hostName: collection.hostName,
-      individualSandwiches: collection.individualSandwiches.toString(),
-      groupCollections: collection.groupCollections
+      collectionDate: collection.collection_date,
+      hostName: collection.host_name,
+      individualSandwiches: collection.individual_sandwiches.toString(),
+      groupCollections: collection.group_collections
     });
     
     // Parse existing group collections for editing
-    const parsedGroups = parseGroupCollections(collection.groupCollections || "");
+    const parsedGroups = parseGroupCollections(collection.group_collections || "");
     if (parsedGroups.length > 0) {
       setEditGroupCollections(parsedGroups.map((group: any, index: number) => ({
         id: `edit-${index}`,
         groupName: group.groupName,
-        sandwichCount: group.sandwichCount
+        sandwichCount: group.sandwich_count
       })));
     } else {
       setEditGroupCollections([{ id: "edit-1", groupName: "", sandwichCount: 0 }]);
@@ -758,17 +756,17 @@ export default function SandwichCollectionLog() {
     if (!editingCollection) return;
 
     // Convert editGroupCollections back to JSON format with consistent property names
-    const validGroups = editGroupCollections.filter(g => g.groupName.trim() && g.sandwichCount > 0);
+    const validGroups = editGroupCollections.filter(g => g.groupName.trim() && g.sandwich_count > 0);
     const groupCollectionsString = validGroups.length > 0 
-      ? JSON.stringify(validGroups.map(g => ({ name: g.groupName.trim(), count: g.sandwichCount })))
+      ? JSON.stringify(validGroups.map(g => ({ name: g.groupName.trim(), count: g.sandwich_count })))
       : '[]';
 
     updateMutation.mutate({
       id: editingCollection.id,
       updates: {
-        collectionDate: editFormData.collectionDate,
-        hostName: editFormData.hostName,
-        individualSandwiches: parseInt(editFormData.individualSandwiches) || 0,
+        collectionDate: editFormData.collection_date,
+        hostName: editFormData.host_name,
+        individualSandwiches: parseInt(editFormData.individual_sandwiches) || 0,
         groupCollections: groupCollectionsString
       }
     });
@@ -803,7 +801,7 @@ export default function SandwichCollectionLog() {
     
     // In group-only mode, we only require collection date and group collections
     if (newCollectionGroupOnlyMode) {
-      if (!newCollectionData.collectionDate) {
+      if (!newCollectionData.collection_date) {
         toast({
           title: "Missing information",
           description: "Please fill in the collection date.",
@@ -813,7 +811,7 @@ export default function SandwichCollectionLog() {
       }
       
       const validGroupCollections = newGroupCollections.filter(
-        (g) => g.sandwichCount > 0,
+        (g) => g.sandwich_count > 0,
       );
       
       if (validGroupCollections.length === 0) {
@@ -826,7 +824,7 @@ export default function SandwichCollectionLog() {
       }
     } else {
       // Regular mode requires host name and collection date
-      if (!newCollectionData.collectionDate || !newCollectionData.hostName) {
+      if (!newCollectionData.collection_date || !newCollectionData.host_name) {
         toast({
           title: "Missing required fields",
           description: "Please fill in the collection date and host name.",
@@ -837,18 +835,18 @@ export default function SandwichCollectionLog() {
     }
 
     // Format group collections as JSON to match the schema
-    const validGroupCollections = newGroupCollections.filter(group => group.sandwichCount > 0);
+    const validGroupCollections = newGroupCollections.filter(group => group.sandwich_count > 0);
     const formattedGroupCollections = validGroupCollections.length > 0 
       ? JSON.stringify(validGroupCollections.map(g => ({ 
           name: g.groupName.trim() || "Unnamed Group", 
-          count: g.sandwichCount 
+          count: g.sandwich_count 
         })))
       : '[]';
 
     const submissionData = {
-      collectionDate: newCollectionData.collectionDate,
-      hostName: newCollectionGroupOnlyMode ? "Groups - Unassigned" : newCollectionData.hostName,
-      individualSandwiches: newCollectionGroupOnlyMode ? 0 : parseInt(newCollectionData.individualSandwiches) || 0,
+      collectionDate: newCollectionData.collection_date,
+      hostName: newCollectionGroupOnlyMode ? "Groups - Unassigned" : newCollectionData.host_name,
+      individualSandwiches: newCollectionGroupOnlyMode ? 0 : parseInt(newCollectionData.individual_sandwiches) || 0,
       groupCollections: formattedGroupCollections
     };
 
@@ -959,7 +957,7 @@ export default function SandwichCollectionLog() {
                 </span>
                 <span className="text-slate-400 hidden sm:inline">|</span>
                 <span className="text-slate-500">
-                  {totalStats.individualSandwiches.toLocaleString()} individual + {totalStats.groupSandwiches.toLocaleString()} group
+                  {totalStats.individual_sandwiches.toLocaleString()} individual + {totalStats.groupSandwiches.toLocaleString()} group
                 </span>
               </div>
             )}
@@ -1012,7 +1010,7 @@ export default function SandwichCollectionLog() {
                       <Input
                         id="collectionDate"
                         type="date"
-                        value={newCollectionData.collectionDate}
+                        value={newCollectionData.collection_date}
                         onChange={(e) => setNewCollectionData(prev => ({
                           ...prev,
                           collectionDate: e.target.value
@@ -1024,7 +1022,7 @@ export default function SandwichCollectionLog() {
                       <div>
                         <Label htmlFor="hostName">Host Name *</Label>
                         <Select
-                          value={newCollectionData.hostName}
+                          value={newCollectionData.host_name}
                           onValueChange={(value) => setNewCollectionData(prev => ({
                             ...prev,
                             hostName: value
@@ -1052,7 +1050,7 @@ export default function SandwichCollectionLog() {
                         id="individualSandwiches"
                         type="number"
                         min="0"
-                        value={newCollectionData.individualSandwiches}
+                        value={newCollectionData.individual_sandwiches}
                         onChange={(e) => setNewCollectionData(prev => ({
                           ...prev,
                           individualSandwiches: e.target.value
@@ -1077,7 +1075,7 @@ export default function SandwichCollectionLog() {
                           type="number"
                           min="0"
                           placeholder="Count"
-                          value={group.sandwichCount}
+                          value={group.sandwich_count}
                           onChange={(e) => updateNewGroupCollection(group.id, 'sandwichCount', parseInt(e.target.value) || 0)}
                           className="w-24"
                         />
@@ -1176,7 +1174,7 @@ export default function SandwichCollectionLog() {
               <Input
                 id="hostFilter"
                 placeholder="Search by host name..."
-                value={searchFilters.hostName}
+                value={searchFilters.host_name}
                 onChange={(e) => handleFilterChange({ hostName: e.target.value })}
                 className="mt-1"
               />
@@ -1200,7 +1198,7 @@ export default function SandwichCollectionLog() {
               <Input
                 id="collectionFromDate"
                 type="date"
-                value={searchFilters.collectionDateFrom}
+                value={searchFilters.collection_dateFrom}
                 onChange={(e) => handleFilterChange({ collectionDateFrom: e.target.value })}
                 className="mt-1"
               />
@@ -1210,7 +1208,7 @@ export default function SandwichCollectionLog() {
               <Input
                 id="collectionToDate"
                 type="date"
-                value={searchFilters.collectionDateTo}
+                value={searchFilters.collection_dateTo}
                 onChange={(e) => handleFilterChange({ collectionDateTo: e.target.value })}
                 className="mt-1"
               />
@@ -1305,12 +1303,12 @@ export default function SandwichCollectionLog() {
         )}
         <div className="space-y-4">
           {paginatedCollections.map((collection: SandwichCollection) => {
-            const groupData = parseGroupCollections(collection.groupCollections);
+            const groupData = parseGroupCollections(collection.group_collections);
             const totalSandwiches = calculateTotal(collection);
             const isSelected = selectedCollections.has(collection.id);
 
             // Check if the host is inactive
-            const hostData = hostsList.find(h => h.name === collection.hostName);
+            const hostData = hostsList.find(h => h.name === collection.host_name);
             const isInactiveHost = hostData?.status === 'inactive';
 
             return (
@@ -1341,12 +1339,12 @@ export default function SandwichCollectionLog() {
                     )}
                     <div className={`flex items-center ${isInactiveHost ? 'text-gray-600' : 'text-slate-700'}`}>
                       <Calendar className={`w-4 h-4 mr-1 ${isInactiveHost ? 'text-gray-500' : ''}`} />
-                      <span className="font-medium">{formatDate(collection.collectionDate)}</span>
+                      <span className="font-medium">{formatDate(collection.collection_date)}</span>
                     </div>
                     <div className={`flex items-center ${isInactiveHost ? 'text-gray-500' : 'text-slate-600'}`}>
                       <User className={`w-4 h-4 mr-1 ${isInactiveHost ? 'text-gray-400' : ''}`} />
-                      <span>{collection.hostName}</span>
-                      {collection.hostName === 'OG Sandwich Project' && (
+                      <span>{collection.host_name}</span>
+                      {collection.host_name === 'OG Sandwich Project' && (
                         <span className="ml-2 text-xs bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 px-2 py-0.5 rounded-full font-medium border border-amber-300">
                           👑 HISTORICAL
                         </span>
@@ -1392,7 +1390,7 @@ export default function SandwichCollectionLog() {
                   <div className="bg-slate-50 rounded-lg p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-slate-700">Individual Collections</span>
-                      <span className="text-sm font-semibold text-slate-900">{collection.individualSandwiches}</span>
+                      <span className="text-sm font-semibold text-slate-900">{collection.individual_sandwiches}</span>
                     </div>
                   </div>
 
@@ -1402,7 +1400,7 @@ export default function SandwichCollectionLog() {
                       <span className="text-sm font-medium text-slate-700">Group Collections</span>
                       <span className="text-sm font-semibold text-slate-900">
                         {Array.isArray(groupData) 
-                          ? groupData.reduce((sum: number, group: any) => sum + (group.sandwichCount || 0), 0)
+                          ? groupData.reduce((sum: number, group: any) => sum + (group.sandwich_count || 0), 0)
                           : 0}
                       </span>
                     </div>
@@ -1414,7 +1412,7 @@ export default function SandwichCollectionLog() {
                               <Users className="w-3 h-3 mr-1" />
                               {group.groupName}
                             </span>
-                            <span className="text-slate-700 font-medium">{group.sandwichCount}</span>
+                            <span className="text-slate-700 font-medium">{group.sandwich_count}</span>
                           </div>
                         ))}
                       </div>
@@ -1428,7 +1426,7 @@ export default function SandwichCollectionLog() {
                 {/* Footer */}
                 <div className="mt-3 pt-3 border-t border-slate-200">
                   <div className="text-xs text-slate-500">
-                    Submitted {formatSubmittedAt(collection.submittedAt)}
+                    Submitted {formatSubmittedAt(collection.submitted_at)}
                   </div>
                 </div>
               </div>
@@ -1559,7 +1557,7 @@ export default function SandwichCollectionLog() {
                   {duplicateAnalysis.duplicates.map((group, index) => (
                     <div key={index} className="border border-slate-200 rounded-lg p-3">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium">{group.entries[0].hostName} - {group.entries[0].collectionDate}</span>
+                        <span className="font-medium">{group.entries[0].host_name} - {group.entries[0].collection_date}</span>
                         <span className="text-sm text-slate-600">{group.count} entries</span>
                       </div>
                       <div className="text-sm text-slate-600">
@@ -1576,7 +1574,7 @@ export default function SandwichCollectionLog() {
                   <div className="max-h-32 overflow-y-auto space-y-1">
                     {duplicateAnalysis.suspiciousEntries.slice(0, 10).map((entry) => (
                       <div key={entry.id} className="text-sm text-slate-600 border-l-2 border-amber-300 pl-2">
-                        {entry.hostName} - {entry.collectionDate} (ID: {entry.id})
+                        {entry.host_name} - {entry.collection_date} (ID: {entry.id})
                       </div>
                     ))}
                     {duplicateAnalysis.suspiciousEntries.length > 10 && (
@@ -1627,14 +1625,14 @@ export default function SandwichCollectionLog() {
               <Input
                 id="edit-date"
                 type="date"
-                value={editFormData.collectionDate}
+                value={editFormData.collection_date}
                 onChange={(e) => setEditFormData({ ...editFormData, collectionDate: e.target.value })}
               />
             </div>
 
             <div>
               <Label htmlFor="edit-host">Host Name</Label>
-              <Select value={editFormData.hostName} onValueChange={(value) => setEditFormData({ ...editFormData, hostName: value })}>
+              <Select value={editFormData.host_name} onValueChange={(value) => setEditFormData({ ...editFormData, hostName: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select host" />
                 </SelectTrigger>
@@ -1652,7 +1650,7 @@ export default function SandwichCollectionLog() {
                 id="edit-individual"
                 type="number"
                 min="0"
-                value={editFormData.individualSandwiches}
+                value={editFormData.individual_sandwiches}
                 onChange={(e) => setEditFormData({ ...editFormData, individualSandwiches: e.target.value })}
               />
             </div>
@@ -1680,7 +1678,7 @@ export default function SandwichCollectionLog() {
                       type="number"
                       min="0"
                       placeholder="Count"
-                      value={group.sandwichCount || ""}
+                      value={group.sandwich_count || ""}
                       onChange={(e) => updateEditGroupCollection(group.id, "sandwichCount", parseInt(e.target.value) || 0)}
                       className="w-24"
                     />
@@ -1731,14 +1729,14 @@ export default function SandwichCollectionLog() {
               <Input
                 id="batch-date"
                 type="date"
-                value={batchEditData.collectionDate}
+                value={batchEditData.collection_date}
                 onChange={(e) => setBatchEditData({ ...batchEditData, collectionDate: e.target.value })}
               />
             </div>
 
             <div>
               <Label htmlFor="batch-host">Host Name</Label>
-              <Select value={batchEditData.hostName} onValueChange={(value) => setBatchEditData({ ...batchEditData, hostName: value })}>
+              <Select value={batchEditData.host_name} onValueChange={(value) => setBatchEditData({ ...batchEditData, hostName: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select host (optional)" />
                 </SelectTrigger>

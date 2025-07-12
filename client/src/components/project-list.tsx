@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import type { Project } from "@shared/schema";
 
 import { supabase } from '@/lib/supabase';
@@ -43,7 +43,7 @@ export default function ProjectList() {
   });
   
   const { data: projects = [], isLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects"]
+    queryKey: ["projects"]
   });
 
   const claimProjectMutation = useMutation({
@@ -54,7 +54,7 @@ export default function ProjectList() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setClaimingProjectId(null);
       setAssigneeName("");
       toast({
@@ -102,7 +102,7 @@ export default function ProjectList() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setNewProject({
         title: "",
         description: "",
@@ -145,7 +145,7 @@ export default function ProjectList() {
       return supabase.from('projects').update(updates).eq('id', id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setEditingProject(null);
       toast({
         title: "Project updated successfully",
@@ -166,7 +166,7 @@ export default function ProjectList() {
       return supabase.from('projects').delete().eq('id', id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast({
         title: "Project deleted successfully",
         description: "The project has been removed.",

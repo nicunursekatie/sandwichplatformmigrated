@@ -13,7 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useCelebration, CelebrationToast } from "@/components/celebration-toast";
 import { hasPermission, USER_ROLES, PERMISSIONS, getDefaultPermissionsForRole, getRoleDisplayName } from "@shared/auth-utils";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { supabaseService } from "@/lib/supabase-service";
 import { Users, Shield, Settings, Key, Award, Megaphone, Trash2, Bug } from "lucide-react";
 import AnnouncementManager from "@/components/announcement-manager";
 import AuthDebug from "@/components/auth-debug";
@@ -58,19 +59,19 @@ export default function UserManagement() {
   }
 
   const { data: users = [], isLoading } = useQuery<User[]>({
-    queryKey: ["/api/users"],
+    queryKey: ["users"],
     enabled: hasPermission(currentUser, PERMISSIONS.VIEW_USERS),
   });
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: { userId: string; role: string; permissions: string[] }) => {
-      return apiRequest("PATCH", `/api/users/${data.userId}`, {
+      return apiRequest("PATCH", `/api/users/${data.user_id}`, {
         role: data.role,
         permissions: data.permissions,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
         title: "User Updated",
         description: "User permissions have been successfully updated.",
@@ -88,12 +89,12 @@ export default function UserManagement() {
 
   const toggleUserStatus = useMutation({
     mutationFn: async (data: { userId: string; isActive: boolean }) => {
-      return apiRequest("PATCH", `/api/users/${data.userId}/status`, {
-        isActive: data.isActive,
+      return apiRequest("PATCH", `/api/users/${data.user_id}/status`, {
+        isActive: data.is_active,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
         title: "User Status Updated",
         description: "User status has been successfully changed.",
@@ -131,8 +132,8 @@ export default function UserManagement() {
     },
     onSuccess: () => {
       // Force a complete refetch of the users list
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      queryClient.refetchQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.refetchQueries({ queryKey: ["users"] });
       toast({
         title: "User Deleted",
         description: "User has been successfully deleted.",
@@ -167,19 +168,19 @@ export default function UserManagement() {
     ];
     
     const randomAchievement = achievements[Math.floor(Math.random() * achievements.length)];
-    const congratsMessage = `${user.firstName} ${user.lastName} - ${randomAchievement}! From ${currentUser?.firstName || 'Admin'}`;
+    const congratsMessage = `${user.first_name} ${user.last_name} - ${randomAchievement}! From ${currentUser?.first_name || 'Admin'}`;
     
     triggerCelebration(congratsMessage);
     
     toast({
       title: "Congratulations Sent!",
-      description: `Celebrated ${user.firstName} ${user.lastName}'s achievements.`,
+      description: `Celebrated ${user.first_name} ${user.last_name}'s achievements.`,
     });
   };
 
   const handleDeleteUser = (user: User) => {
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete ${user.firstName} ${user.lastName}? This action cannot be undone.`
+      `Are you sure you want to delete ${user.first_name} ${user.last_name}? This action cannot be undone.`
     );
     
     if (confirmDelete) {
@@ -297,7 +298,7 @@ export default function UserManagement() {
                   <TableCell>
                     <div>
                       <div className="font-medium">
-                        {user.firstName} {user.lastName}
+                        {user.first_name} {user.last_name}
                       </div>
                       <div className="text-sm text-gray-500">{user.email}</div>
                     </div>
@@ -308,19 +309,19 @@ export default function UserManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.isActive ? "default" : "secondary"}>
-                      {user.isActive ? "Active" : "Inactive"}
+                    <Badge variant={user.is_active ? "default" : "secondary"}>
+                      {user.is_active ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {user.lastLoginAt 
-                      ? new Date(user.lastLoginAt).toLocaleDateString() + ' ' + 
-                        new Date(user.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    {user.last_login_at 
+                      ? new Date(user.last_login_at).toLocaleDateString() + ' ' + 
+                        new Date(user.last_login_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                       : <span className="text-gray-500 italic">Never</span>
                     }
                   </TableCell>
                   <TableCell>
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -354,7 +355,7 @@ export default function UserManagement() {
                           <DialogHeader>
                             <DialogTitle>Reset Password</DialogTitle>
                             <DialogDescription>
-                              Reset password for {user.firstName} {user.lastName} ({user.email})
+                              Reset password for {user.first_name} {user.last_name} ({user.email})
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
@@ -405,10 +406,10 @@ export default function UserManagement() {
                         size="sm"
                         onClick={() => toggleUserStatus.mutate({
                           userId: user.id,
-                          isActive: !user.isActive
+                          isActive: !user.is_active
                         })}
                       >
-                        {user.isActive ? "Deactivate" : "Activate"}
+                        {user.is_active ? "Deactivate" : "Activate"}
                       </Button>
 
                       {/* Delete Button */}

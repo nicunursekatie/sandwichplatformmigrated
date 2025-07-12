@@ -35,7 +35,7 @@ const ContextMenuSubTrigger = React.forwardRef<
     <ChevronRight className="ml-auto h-4 w-4" />
   </ContextMenuPrimitive.SubTrigger>
 ))
-ContextMenuSubTrigger.displayName = ContextMenuPrimitive.SubTrigger.displayName
+ContextMenuSubTrigger.display_name = ContextMenuPrimitive.SubTrigger.display_name
 
 const ContextMenuSubContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.SubContent>,
@@ -50,7 +50,7 @@ const ContextMenuSubContent = React.forwardRef<
     {...props}
   />
 ))
-ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName
+ContextMenuSubContent.display_name = ContextMenuPrimitive.SubContent.display_name
 
 const ContextMenuContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Content>,
@@ -67,7 +67,7 @@ const ContextMenuContent = React.forwardRef<
     />
   </ContextMenuPrimitive.Portal>
 ))
-ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName
+ContextMenuContent.display_name = ContextMenuPrimitive.Content.display_name
 
 const ContextMenuItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Item>,
@@ -85,7 +85,7 @@ const ContextMenuItem = React.forwardRef<
     {...props}
   />
 ))
-ContextMenuItem.displayName = ContextMenuPrimitive.Item.displayName
+ContextMenuItem.display_name = ContextMenuPrimitive.Item.display_name
 
 const ContextMenuCheckboxItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.CheckboxItem>,
@@ -108,8 +108,8 @@ const ContextMenuCheckboxItem = React.forwardRef<
     {children}
   </ContextMenuPrimitive.CheckboxItem>
 ))
-ContextMenuCheckboxItem.displayName =
-  ContextMenuPrimitive.CheckboxItem.displayName
+ContextMenuCheckboxItem.display_name =
+  ContextMenuPrimitive.CheckboxItem.display_name
 
 const ContextMenuRadioItem = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.RadioItem>,
@@ -131,7 +131,7 @@ const ContextMenuRadioItem = React.forwardRef<
     {children}
   </ContextMenuPrimitive.RadioItem>
 ))
-ContextMenuRadioItem.displayName = ContextMenuPrimitive.RadioItem.displayName
+ContextMenuRadioItem.display_name = ContextMenuPrimitive.RadioItem.display_name
 
 const ContextMenuLabel = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Label>,
@@ -149,7 +149,7 @@ const ContextMenuLabel = React.forwardRef<
     {...props}
   />
 ))
-ContextMenuLabel.displayName = ContextMenuPrimitive.Label.displayName
+ContextMenuLabel.display_name = ContextMenuPrimitive.Label.display_name
 
 const ContextMenuSeparator = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Separator>,
@@ -161,7 +161,7 @@ const ContextMenuSeparator = React.forwardRef<
     {...props}
   />
 ))
-ContextMenuSeparator.displayName = ContextMenuPrimitive.Separator.displayName
+ContextMenuSeparator.display_name = ContextMenuPrimitive.Separator.display_name
 
 const ContextMenuShortcut = ({
   className,
@@ -177,7 +177,7 @@ const ContextMenuShortcut = ({
     />
   )
 }
-ContextMenuShortcut.displayName = "ContextMenuShortcut"
+ContextMenuShortcut.display_name = "ContextMenuShortcut"
 
 export {
   ContextMenu,

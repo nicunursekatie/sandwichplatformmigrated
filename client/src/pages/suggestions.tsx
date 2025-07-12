@@ -15,7 +15,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
+
 import { 
   Lightbulb, 
   Plus, 
@@ -235,7 +235,7 @@ export default function SuggestionsPortal() {
         tabMatch = suggestion.status === "completed";
         break;
       case "mine":
-        tabMatch = suggestion.submittedBy === currentUser?.id;
+        tabMatch = suggestion.submitted_by === currentUser?.id;
         break;
       default:
         tabMatch = true;
@@ -335,7 +335,7 @@ export default function SuggestionsPortal() {
       pending: suggestions.filter(s => ["submitted", "under_review", "needs_clarification"].includes(s.status)).length,
       inProgress: suggestions.filter(s => s.status === "in_progress").length,
       completed: suggestions.filter(s => s.status === "completed").length,
-      mine: suggestions.filter(s => s.submittedBy === currentUser?.id).length
+      mine: suggestions.filter(s => s.submitted_by === currentUser?.id).length
     };
   };
 
@@ -712,7 +712,7 @@ export default function SuggestionsPortal() {
                           </Badge>
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            <span>{new Date(suggestion.createdAt).toLocaleDateString()}</span>
+                            <span>{new Date(suggestion.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -845,7 +845,7 @@ export default function SuggestionsPortal() {
 
                 <div className="flex items-center justify-between pt-4 border-t">
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>Submitted: {new Date(selectedSuggestion.createdAt).toLocaleDateString()}</span>
+                    <span>Submitted: {new Date(selectedSuggestion.created_at).toLocaleDateString()}</span>
                     <span>Status: {selectedSuggestion.status.replace('_', ' ')}</span>
                   </div>
                   <Button
@@ -889,7 +889,7 @@ export default function SuggestionsPortal() {
                 contextId={String(selectedSuggestion.id)}
                 contextTitle={selectedSuggestion.title}
                 defaultRecipients={selectedSuggestion.isAnonymous ? [] : [{
-                  id: selectedSuggestion.submittedBy,
+                  id: selectedSuggestion.submitted_by,
                   name: selectedSuggestion.submitterName || 'Unknown'
                 }]}
                 compact={true}

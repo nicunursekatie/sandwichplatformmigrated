@@ -34,7 +34,7 @@ export default function AnnouncementBanner() {
     const startDate = new Date(announcement.startDate);
     const endDate = new Date(announcement.endDate);
     
-    return announcement.isActive && 
+    return announcement.is_active && 
            now >= startDate && 
            now <= endDate && 
            !dismissedBanners.includes(announcement.id);

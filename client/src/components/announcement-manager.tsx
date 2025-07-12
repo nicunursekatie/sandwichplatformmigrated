@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, Calendar, Users, AlertCircle, Eye, EyeOff } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+
 import { useToast } from "@/hooks/use-toast";
 
 interface Announcement {
@@ -206,7 +206,7 @@ export default function AnnouncementManager() {
   };
 
   const isCurrentlyActive = (announcement: Announcement) => {
-    if (!announcement.isActive) return false;
+    if (!announcement.is_active) return false;
     const now = new Date();
     const start = new Date(announcement.startDate);
     const end = new Date(announcement.endDate);
@@ -391,7 +391,7 @@ export default function AnnouncementManager() {
                   <div className="flex items-center gap-2">
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={announcement.isActive}
+                        checked={announcement.is_active}
                         onCheckedChange={(checked) => toggleActive(announcement.id, checked)}
                       />
                       <Label className="text-sm">Active</Label>

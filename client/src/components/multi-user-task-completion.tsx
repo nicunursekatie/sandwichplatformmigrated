@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, Circle, Users, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+
 
 interface TaskCompletion {
   id: number;
@@ -71,7 +71,7 @@ export function MultiUserTaskCompletion({
     onSuccess: async (data) => {
       // Force comprehensive cache invalidation and refresh
       await queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'completions'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ['/api/projects', 25, 'tasks'] });
       await refetch();
       setShowCompletionDialog(false);
@@ -109,7 +109,7 @@ export function MultiUserTaskCompletion({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'completions'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast({
         title: "Completion removed",
         description: "Your completion has been removed from this task"
@@ -138,7 +138,7 @@ export function MultiUserTaskCompletion({
   }
 
   const currentUserCompletion = completions.find(
-    (c: TaskCompletion) => c.userId === currentUserId
+    (c: TaskCompletion) => c.user_id === currentUserId
   );
   const isCurrentUserCompleted = !!currentUserCompletion;
   const completedCount = completions.length;
@@ -154,7 +154,7 @@ export function MultiUserTaskCompletion({
     
     // Match completion by user ID (assigneeId is actually a user ID from the assigneeIds array)
     const completion = completions.find((c: TaskCompletion) => {
-      return c.userId === assigneeId;
+      return c.user_id === assigneeId;
     });
     const isCompleted = !!completion;
 

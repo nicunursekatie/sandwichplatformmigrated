@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import { Database, FileText, MapPin, BarChart3, RefreshCw, ArrowLeft, Upload, Download, Scan } from "lucide-react";
@@ -85,7 +85,7 @@ export default function BulkDataManager({
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['/api/collection-stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/host-mapping-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/sandwich-collections'] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       
       toast({
         title: "Bulk mapping completed",
@@ -223,11 +223,11 @@ export default function BulkDataManager({
                     <div 
                       key={index} 
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => handleHostClick(stat.hostName)}
+                      onClick={() => handleHostClick(stat.host_name)}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-3 h-3 rounded-full" style={{backgroundColor: 'var(--tsp-teal)'}}></div>
-                        <span className="font-medium">{stat.hostName}</span>
+                        <span className="font-medium">{stat.host_name}</span>
                         {stat.mapped && <Badge variant="outline" className="text-green-600">Mapped</Badge>}
                       </div>
                       <Badge variant="secondary">
@@ -395,19 +395,19 @@ export default function BulkDataManager({
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <span className="font-medium text-gray-600">Date:</span>
-                        <div>{collection.collectionDate}</div>
+                        <div>{collection.collection_date}</div>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Host:</span>
-                        <div>{collection.hostName}</div>
+                        <div>{collection.host_name}</div>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Individual:</span>
-                        <div>{collection.individualSandwiches || 0}</div>
+                        <div>{collection.individual_sandwiches || 0}</div>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Groups:</span>
-                        <div>{collection.groupCollections || 0}</div>
+                        <div>{collection.group_collections || 0}</div>
                       </div>
                       {collection.notes && (
                         <div className="col-span-2 md:col-span-4">
