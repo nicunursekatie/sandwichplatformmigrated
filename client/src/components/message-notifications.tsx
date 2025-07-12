@@ -36,6 +36,14 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
   const isAuthenticated = !!user;
   const [lastCheck, setLastCheck] = useState(Date.now());
 
+  // ALL hooks must be called before any conditional returns
+  // Query for unread message counts - only when authenticated
+  const { data: unreadCounts, refetch, error, isLoading } = useQuery<UnreadCounts>({
+    queryKey: ['/api/message-notifications/unread-counts'],
+    enabled: !!user && isAuthenticated,
+    refetchInterval: isAuthenticated ? 30000 : false, // Check every 30 seconds only when authenticated
+  });
+
   console.log('🔔 MessageNotifications: user=', (user as any)?.id, 'isAuthenticated=', isAuthenticated);
   console.log('🔔 MessageNotifications: user object=', user);
 
@@ -44,13 +52,6 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
     return null;
   }
-
-  // Query for unread message counts - only when authenticated
-  const { data: unreadCounts, refetch, error, isLoading } = useQuery<UnreadCounts>({
-    queryKey: ['/api/message-notifications/unread-counts'],
-    enabled: !!user && isAuthenticated,
-    refetchInterval: isAuthenticated ? 30000 : false, // Check every 30 seconds only when authenticated
-  });
 
   console.log('🔔 MessageNotifications: Query state - isLoading:', isLoading, 'error:', error, 'data:', unreadCounts);
 

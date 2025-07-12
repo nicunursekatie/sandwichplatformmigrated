@@ -141,11 +141,11 @@ async function migrateUsersToSupabaseAuth() {
         console.warn(`⚠️  Warning: Could not update users table for ${user.email}:`, updateError.message);
       }
 
-      results.success.push(user.email);
+      (results.success as string[]).push(user.email);
       console.log(`✅ Successfully migrated: ${user.email}`);
       
     } catch (err: any) {
-      results.failed.push({ email: user.email, error: err.message });
+      (results.failed as { email: string; error: any }[]).push({ email: user.email, error: err.message });
       console.error(`❌ Failed to migrate ${user.email}:`, err.message);
     }
   }
@@ -157,7 +157,9 @@ async function migrateUsersToSupabaseAuth() {
   
   if (results.failed.length > 0) {
     console.log('\nFailed migrations:');
-    results.failed.forEach(f => console.log(`  - ${f.email}: ${f.error}`));
+    (results.failed as { email: string; error: any }[]).forEach(f => 
+      console.log(`  - ${f.email}: ${f.error}`)
+    );
   }
 
   return results;
