@@ -43,6 +43,7 @@ import WorkLogPage from "@/pages/work-log";
 import SuggestionsPortal from "@/pages/suggestions";
 import GoogleSheetsPage from "@/pages/google-sheets";
 import InboxPage from "@/pages/inbox";
+import AblyDemo from "@/components/ably-demo";
 
 export default function Dashboard({ initialSection = "dashboard" }: { initialSection?: string }) {
   const [activeSection, setActiveSection] = useState(initialSection);
@@ -101,6 +102,7 @@ export default function Dashboard({ initialSection = "dashboard" }: { initialSec
     { id: "toolkit", label: "Toolkit", icon: FolderOpen },
     { id: "development", label: "Development", icon: FileText },
     { id: "work-log", label: "Work Log", icon: ClipboardList },
+    { id: "ably-demo", label: "Ably Demo", icon: MessageCircle },
     
     // Admin section
     ...(hasPermission(user, PERMISSIONS.MANAGE_USERS) ? [{ id: "user-management", label: "Admin", icon: UserCog }] : []),
@@ -282,6 +284,8 @@ export default function Dashboard({ initialSection = "dashboard" }: { initialSec
         return <SuggestionsPortal />;
       case "google-sheets":
         return <GoogleSheetsPage />;
+      case "ably-demo":
+        return <AblyDemo />;
 
       case "committee":
       case "committee-chat":

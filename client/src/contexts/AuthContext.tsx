@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { setClientId } from '@/lib/ably';
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Set Ably client ID if user is already logged in
+      if (session?.user?.id) {
+        setClientId(session.user.id);
+      }
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
@@ -32,6 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Set Ably client ID when user logs in
+      if (session?.user?.id) {
+        setClientId(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();

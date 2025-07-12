@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useAbly } from "@/hooks/useAbly";
 
 import { supabase } from '@/lib/supabase';
 
@@ -77,15 +77,17 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // Use the new WebSocket hook
-  const { isConnected, isConnecting } = useWebSocket({
+  // Use Ably for real-time notifications
+  const { isConnected, lastMessage } = useAbly({
+    channelName: `notifications-${userId}`,
+    eventName: 'notification',
     onMessage: (message: any) => {
-      console.log('🔔 WebSocket message received:', message);
+      console.log('🔔 Ably notification received:', message);
       
-      if (message.type === 'notification' && message.data?.type === 'unread_counts') {
-        // Update unread counts from WebSocket by triggering a refetch
+      if (message.data?.type === 'unread_counts') {
+        // Update unread counts from Ably by triggering a refetch
         setLastCheck(Date.now());
-      } else if (message.type === 'message') {
+      } else if (message.data?.type === 'new_message') {
         // New message received - refetch unread counts
         setLastCheck(Date.now());
         
@@ -98,14 +100,14 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
         }
       }
     },
-    onConnect: () => {
-      console.log('🔔 WebSocket connected for notifications');
+    onConnected: () => {
+      console.log('🔔 Ably connected for notifications');
     },
-    onDisconnect: () => {
-      console.log('🔔 WebSocket disconnected for notifications');
+    onDisconnected: () => {
+      console.log('🔔 Ably disconnected for notifications');
     },
     onError: (error: any) => {
-      console.error('🔔 WebSocket error:', error);
+      console.error('🔔 Ably error:', error);
     }
   });
 

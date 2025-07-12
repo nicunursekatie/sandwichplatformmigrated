@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import { useAbly } from "@/hooks/useAbly";
 
 // Define types locally to avoid import issues
 interface Message {
@@ -111,7 +112,6 @@ export function GroupConversation({ groupId, groupName, groupDescription, onBack
       const data = await response.json();
       return Array.isArray(data) ? data : [];
     },
-    refetchInterval: 3000,
     enabled: !!groupId,
     retry: 2,
     retryDelay: 1000,
@@ -119,6 +119,20 @@ export function GroupConversation({ groupId, groupName, groupDescription, onBack
 
   const [optimisticMessages, setOptimisticMessages] = useState<Message[] | null>(null);
   const displayedMessages = optimisticMessages || messages;
+
+  // Use Ably for real-time messaging
+  const { isConnected, sendMessage: sendAblyMessage } = useAbly({
+    channelName: `group-${groupId}`,
+    eventName: 'new_message',
+    onMessage: (message: any) => {
+      console.log('🔔 New group message received via Ably:', message);
+      // Refetch messages when new message is received
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", groupId, "messages"] });
+    },
+    onError: (error: any) => {
+      console.error('🔔 Ably error in group chat:', error);
+    }
+  });
 
   useEffect(() => {
     setOptimisticMessages(null);
@@ -168,9 +182,23 @@ export function GroupConversation({ groupId, groupName, groupDescription, onBack
   // Send message mutation  
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { content: string }) => {
-      return await apiRequest('POST', `/api/conversations/${groupId}/messages`, {
+      const result = await apiRequest('POST', `/api/conversations/${groupId}/messages`, {
         content: data.content
       });
+      
+      // Also publish to Ably for real-time updates
+      try {
+        await sendAblyMessage({
+          type: 'new_message',
+          data: result,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.warn('Failed to publish to Ably:', error);
+        // Don't fail the message send if Ably fails
+      }
+      
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", groupId, "messages"] });
