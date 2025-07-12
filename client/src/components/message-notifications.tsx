@@ -11,8 +11,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/hooks/useAuth";
-import { apiRequest } from "@/lib/queryClient";
 
 import { supabase } from '@/lib/supabase';
 
@@ -40,7 +38,7 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
 
   // Use a stable query key that doesn't change based on user state
   const { data: unreadCounts, refetch, error, isLoading } = useQuery<UnreadCounts>({
-    queryKey: ['/api/message-notifications/unread-counts', user?.id || 'no-user'],
+    queryKey: ['/api/message-notifications/unread-counts', user?.id || 'no-user', lastCheck],
     enabled: !!user?.id, // Only enable when we have a user ID
     refetchInterval: !!user?.id ? 30000 : false, // Check every 30 seconds only when authenticated
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
@@ -117,7 +115,8 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
           if (data.type === 'new_message') {
             console.log('Processing new_message notification');
             // Refetch unread counts when new message arrives
-            refetch();
+            // Using setLastCheck to trigger a refetch instead of calling refetch directly
+            setLastCheck(Date.now());
 
             // Show browser notification if permission granted and available
             if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -148,7 +147,7 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
         socket.close(1000, 'Component unmounting');
       }
     };
-  }, [user, refetch]);
+  }, [user]);
 
   // Request notification permission on mount
   useEffect(() => {

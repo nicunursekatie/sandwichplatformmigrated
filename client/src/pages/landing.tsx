@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Users, Calendar, MessageSquare, TrendingUp, MapPin } from "lucide-react";
+import { Users, Calendar, MessageSquare, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { DocumentsBrowser } from "@/components/documents-browser";
 import { LoginForm } from "@/components/auth/login-form";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import tspLogo from "@assets/CMYK_PRINT_TSP-01_1749585167435.png";
 import tspTransparent from "@assets/LOGOS/LOGOS/Copy of TSP_transparent.png";
 
@@ -26,12 +27,15 @@ export default function Landing() {
       
       // Get total sandwiches
       const { data: collections, error } = await supabase
-        .from('collections')
-        .select('number_of_sandwiches');
+        .from('sandwich_collections')
+        .select('sandwich_count, individual_sandwiches');
       
       if (error) throw error;
       
-      const totalSandwiches = collections?.reduce((sum, c) => sum + (c.number_of_sandwiches || 0), 0) || 0;
+      const totalSandwiches = collections?.reduce((sum, c) => {
+        // Add both sandwich_count (from groups) and individual_sandwiches
+        return sum + (c.sandwich_count || 0) + (c.individual_sandwiches || 0);
+      }, 0) || 0;
       
       return {
         totalSandwiches,
@@ -45,9 +49,9 @@ export default function Landing() {
   const { data: collectionsResponse } = useQuery({
     queryKey: ['recent-collections'],
     queryFn: async () => {
-      const response = await supabase.from('sandwich_collections').select('*').limit(1000);
-      if (!response.ok) throw new Error('Failed to fetch collections');
-      return response.json();
+      const { data, error } = await supabase.from('sandwich_collections').select('*').limit(1000);
+      if (error) throw error;
+      return { collections: data || [] };
     },
     retry: false,
   });
@@ -263,6 +267,9 @@ export default function Landing() {
       {/* Login Dialog */}
       <Dialog open={showLogin} onOpenChange={setShowLogin}>
         <DialogContent className="sm:max-w-[425px] p-0">
+          <VisuallyHidden>
+            <DialogTitle>Login to The Sandwich Project</DialogTitle>
+          </VisuallyHidden>
           <LoginForm />
         </DialogContent>
       </Dialog>

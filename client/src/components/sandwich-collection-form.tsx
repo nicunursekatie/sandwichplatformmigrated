@@ -60,8 +60,9 @@ export default function SandwichCollectionForm() {
       email: string;
       status: string;
     }) => {
-      const response = await supabase.from('hosts').insert(hostData);
-      return response.json();
+      const { data, error } = await supabase.from('hosts').insert(hostData);
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       // Refresh all host-related queries to update dropdown and management sections
