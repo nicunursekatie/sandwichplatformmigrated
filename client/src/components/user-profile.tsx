@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -57,9 +58,27 @@ export default function UserProfile() {
     },
   });
 
-  // Load user profile data
+  // Load user profile data from Supabase
   const { data: userProfile, isLoading } = useQuery({
-    queryKey: ["/api/auth/profile"],
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.email) return null;
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', user.email)
+        .single();
+      
+      if (error) throw error;
+      
+      return {
+        firstName: data.first_name,
+        lastName: data.last_name,
+        displayName: data.display_name || `${data.first_name} ${data.last_name}`,
+        email: data.email
+      };
+    },
     enabled: !!user,
   });
 
@@ -76,14 +95,35 @@ export default function UserProfile() {
     }
   }, [userProfile, profileForm]);
 
-  // Update profile mutation
+  // Update profile mutation using Supabase
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
-      return await apiRequest('PUT', '/api/auth/profile', data);
+      if (!user?.id) throw new Error('No user ID');
+      
+      const { error } = await supabase
+        .from('users')
+        .update({
+          first_name: data.firstName,
+          last_name: data.lastName,
+          display_name: data.displayName,
+          email: data.email,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Update auth email if changed
+      if (data.email !== user.email) {
+        const { error: authError } = await supabase.auth.updateUser({
+          email: data.email
+        });
+        if (authError) throw authError;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["user-data"] });
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
@@ -98,13 +138,26 @@ export default function UserProfile() {
     }
   });
 
-  // Change password mutation
+  // Change password mutation using Supabase Auth
   const changePasswordMutation = useMutation({
     mutationFn: async (data: PasswordFormData) => {
-      return await apiRequest('PUT', '/api/auth/change-password', {
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
+      // Supabase doesn't verify current password in updateUser
+      // So we need to re-authenticate first
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: data.currentPassword
       });
+      
+      if (signInError) {
+        throw new Error('Current password is incorrect');
+      }
+      
+      // Now update the password
+      const { error } = await supabase.auth.updateUser({
+        password: data.newPassword
+      });
+      
+      if (error) throw error;
     },
     onSuccess: () => {
       passwordForm.reset();
