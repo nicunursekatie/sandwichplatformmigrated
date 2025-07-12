@@ -23,22 +23,31 @@ app.get("/api/test", (_req, res) => {
   res.json({ message: "API is working!", timestamp: new Date().toISOString() });
 });
 
-// Initialize routes in a way that works with serverless
-let routesInitialized = false;
-
-app.use(async (req, res, next) => {
-  if (!routesInitialized && req.path.startsWith('/api/') && req.path !== '/api/test') {
-    try {
-      const { registerRoutes } = await import('../server/routes');
-      await registerRoutes(app);
-      routesInitialized = true;
-      console.log('Routes initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize routes:', error);
-      return res.status(500).json({ error: 'Failed to initialize application' });
+// Test database connection
+app.get("/api/db-test", async (_req, res) => {
+  try {
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ error: "DATABASE_URL not configured" });
     }
+    
+    const { db } = await import('../server/db');
+    const { hosts } = await import('../shared/schema');
+    const { count } = await import('drizzle-orm');
+    
+    const result = await db.select({ count: count() }).from(hosts);
+    res.json({ 
+      message: "Database connected successfully", 
+      hostCount: result[0]?.count || 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Database test failed:', error);
+    res.status(500).json({ 
+      error: "Database connection failed", 
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
-  next();
 });
 
 export default app; 
