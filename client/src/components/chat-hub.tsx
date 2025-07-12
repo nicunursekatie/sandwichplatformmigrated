@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,10 +136,12 @@ export default function ChatHub() {
     });
   }
 
-  // Auto-select first channel if none selected
-  if (!activeChannel && availableChannels.length > 0) {
-    setActiveChannel(availableChannels[0].value);
-  }
+  // Auto-select first channel if none selected - moved to useEffect
+  useEffect(() => {
+    if (!activeChannel && availableChannels.length > 0) {
+      setActiveChannel(availableChannels[0].value);
+    }
+  }, [activeChannel, availableChannels]);
 
   const renderActiveChannel = () => {
     if (!activeChannel) return null;
