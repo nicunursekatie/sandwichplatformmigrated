@@ -33,15 +33,15 @@ interface MessageNotificationsProps {
 export default function MessageNotifications({ user }: MessageNotificationsProps) {
   console.log('🔔 MessageNotifications component mounting...');
 
-  const isAuthenticated = !!user;
+  // Always call hooks with stable values to prevent hook order changes
   const [lastCheck, setLastCheck] = useState(Date.now());
 
-  // ALL hooks must be called before any conditional returns
-  // Query for unread message counts - only when authenticated
+  // Use a stable query key that doesn't change based on user state
   const { data: unreadCounts, refetch, error, isLoading } = useQuery<UnreadCounts>({
-    queryKey: ['/api/message-notifications/unread-counts'],
-    enabled: !!user && isAuthenticated,
-    refetchInterval: isAuthenticated ? 30000 : false, // Check every 30 seconds only when authenticated
+    queryKey: ['/api/message-notifications/unread-counts', user?.id || 'no-user'],
+    enabled: !!user?.id, // Only enable when we have a user ID
+    refetchInterval: !!user?.id ? 30000 : false, // Check every 30 seconds only when authenticated
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
   // Listen for WebSocket notifications (to be implemented)
@@ -155,41 +155,37 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     }
   }, []);
 
-  console.log('🔔 MessageNotifications: user=', (user as any)?.id, 'isAuthenticated=', isAuthenticated);
+  console.log('🔔 MessageNotifications: user=', (user as any)?.id, 'isAuthenticated=', !!user);
   console.log('🔔 MessageNotifications: user object=', user);
 
-  // Early return if user is not authenticated to prevent any queries
-  if (!isAuthenticated || !user) {
-    console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
-    return null;
-  }
-
-  console.log('🔔 MessageNotifications: Query state - isLoading:', isLoading, 'error:', error, 'data:', unreadCounts);
-
-  // Show loading state or empty state instead of returning null
-  if (isLoading) {
-    console.log('🔔 MessageNotifications: Loading unread counts...');
-    return null; // Could show a loading spinner here
-  }
-
-  if (error) {
-    console.error('🔔 MessageNotifications: Error loading unread counts:', error);
-    return null; // Could show error state here
-  }
-
-  if (!unreadCounts) {
-    console.log('🔔 MessageNotifications: No unread counts data, showing empty state');
-    // Continue with empty counts instead of returning null
-  }
-
+  // Calculate final unread counts - handle all cases
   const finalUnreadCounts = unreadCounts || {
     general: 0, committee: 0, hosts: 0, drivers: 0, recipients: 0,
     core_team: 0, direct: 0, groups: 0, total: 0
   };
 
+  const totalUnread = finalUnreadCounts.total || 0;
+
+  console.log('🔔 MessageNotifications: Query state - isLoading:', isLoading, 'error:', error, 'data:', unreadCounts);
   console.log('🔔 MessageNotifications: Rendering with final unread counts:', finalUnreadCounts);
 
-  const totalUnread = finalUnreadCounts.total || 0;
+  // Early return if user is not authenticated - this is now safe after all hooks
+  if (!user) {
+    console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
+    return null;
+  }
+
+  // Show loading state
+  if (isLoading) {
+    console.log('🔔 MessageNotifications: Loading unread counts...');
+    return null; // Could show a loading spinner here
+  }
+
+  // Show error state
+  if (error) {
+    console.error('🔔 MessageNotifications: Error loading unread counts:', error);
+    return null; // Could show error state here
+  }
 
   const handleMarkAllRead = async () => {
     try {

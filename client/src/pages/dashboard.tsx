@@ -1,5 +1,6 @@
 import { Sandwich, LogOut, LayoutDashboard, ListTodo, MessageCircle, ClipboardList, FolderOpen, BarChart3, TrendingUp, Users, Car, Building2, FileText, Phone, ChevronDown, ChevronRight, Menu, X, UserCog, Lightbulb } from "lucide-react";
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
+import { supabase } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectList from "@/components/project-list";
 import WeeklySandwichForm from "@/components/weekly-sandwich-form";
@@ -364,11 +365,10 @@ export default function Dashboard({ initialSection = "dashboard" }: { initialSec
           <button 
             onClick={async () => {
               try {
-                // Call logout API to clear session
-                await fetch('/api/logout', {
-                  method: 'POST',
-                  credentials: 'include'
-                });
+                // Sign out from Supabase
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                
                 // Clear query cache
                 queryClient.clear();
                 // Redirect to landing page

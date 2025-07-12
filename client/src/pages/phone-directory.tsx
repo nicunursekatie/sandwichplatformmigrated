@@ -1,4 +1,5 @@
 import { Sandwich, LogOut, LayoutDashboard, ListTodo, MessageCircle, ClipboardList, FolderOpen, BarChart3, Users, Car, Building2, FileText, Phone } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import PhoneDirectory from "@/components/phone-directory";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -65,11 +66,13 @@ export default function PhoneDirectoryPage() {
             <button 
               onClick={async () => {
                 try {
-                  await fetch('/api/logout', { method: 'POST' });
-                  queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+                  const { error } = await supabase.auth.signOut();
+                  if (error) throw error;
+                  
                   queryClient.clear();
                   window.location.href = '/';
                 } catch (error) {
+                  console.error('Logout error:', error);
                   queryClient.clear();
                   window.location.href = '/';
                 }
