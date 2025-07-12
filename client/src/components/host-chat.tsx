@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMessageReads } from "@/hooks/useMessageReads";
 import type { Host, Message } from "@shared/schema";
 
+import { supabase } from '@/lib/supabase';
 interface HostWithContacts extends Host {
   contacts: any[];
 }
@@ -29,7 +30,7 @@ export default function HostChat() {
 
   // Get user profile for display name
   const { data: userProfile } = useQuery({
-    queryKey: ["/api/auth/profile"],
+    queryKey: ['user-profile', user?.id],
     enabled: !!user,
   });
 
@@ -105,9 +106,9 @@ export default function HostChat() {
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { content: string }) => {
       if (!hostConversation) throw new Error("No conversation available");
-      return await apiRequest('POST', `/api/conversations/${hostConversation.id}/messages`, {
+      return await supabase.from('messages').insert({ ...{
         content: data.content
-      });
+      }, conversation_id: hostConversation.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", hostConversation?.id, "messages"] });
@@ -124,7 +125,7 @@ export default function HostChat() {
 
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      return await apiRequest('DELETE', `/api/messages/${messageId}`);
+      return await supabase.from('messages').delete().eq('id', messageId);
     },
     onMutate: async (messageId: number) => {
       setOptimisticMessages((prev) => {

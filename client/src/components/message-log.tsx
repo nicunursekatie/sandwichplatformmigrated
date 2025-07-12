@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 
+import { supabase } from '@/lib/supabase';
 const messageFormSchema = z.object({
   content: z.string().min(1, "Message content is required"),
   sender: z.string().optional() // Optional since we'll use userName
@@ -141,7 +142,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
 
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      return apiRequest('DELETE', `/api/messages/${messageId}`);
+      return supabase.from('messages').delete().eq('id', messageId);
     },
     onMutate: async (messageId: number) => {
       // Optimistically remove the message from the UI

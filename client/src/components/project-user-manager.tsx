@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { User, Project } from "@shared/schema";
 
+import { supabase } from '@/lib/supabase';
 interface ProjectUserManagerProps {
   project: Project;
   onUpdate?: () => void;
@@ -59,7 +60,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Add user to project mutation
   const addUserMutation = useMutation({
     mutationFn: async (data: { userId: string; role: string; sendNotification: boolean }) => {
-      return await apiRequest('POST', `/api/projects/${project.id}/assignments`, data);
+      return await supabase.from('project_assignments').insert({ ...data, project_id: project.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
@@ -78,9 +79,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Remove user from project mutation
   const removeUserMutation = useMutation({
     mutationFn: async (data: { userId: string; sendNotification: boolean }) => {
-      return await apiRequest('DELETE', `/api/projects/${project.id}/assignments/${data.userId}`, {
-        sendNotification: data.sendNotification
-      });
+      return await supabase.from('project_assignments').delete().eq('user_id', data.userId).eq('project_id', project.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
@@ -96,9 +95,9 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Update user role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async (data: { userId: string; role: string }) => {
-      return await apiRequest('PATCH', `/api/projects/${project.id}/assignments/${data.userId}`, {
+      return await supabase.from('project_assignments').update({
         role: data.role
-      });
+      }).eq('user_id', data.userId).eq('project_id', project.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+import { supabase } from '@/lib/supabase';
 interface ImportResult {
   totalRecords: number;
   successCount: number;
@@ -24,7 +25,7 @@ export default function CSVImport() {
       const formData = new FormData();
       formData.append('csvFile', file);
       
-      const response = await apiRequest('POST', '/api/import-collections', formData);
+      const response = await supabase.from('sandwich_collections').insert(formData);
       return response.json();
     },
     onSuccess: (result: ImportResult) => {

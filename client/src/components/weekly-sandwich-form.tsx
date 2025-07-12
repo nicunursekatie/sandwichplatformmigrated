@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+import { supabase } from '@/lib/supabase';
 export default function WeeklySandwichForm() {
   const { toast } = useToast();
   const [weekEnding, setWeekEnding] = useState("");
@@ -16,7 +17,7 @@ export default function WeeklySandwichForm() {
 
   const submitReportMutation = useMutation({
     mutationFn: async (data: { weekEnding: string; sandwichCount: number; notes?: string }) => {
-      const response = await apiRequest("POST", "/api/weekly-reports", {
+      const response = await supabase.from('weekly_reports').insert({
         ...data,
         submittedBy: "John Doe"
       });

@@ -7064,5 +7064,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
   (global as any).broadcastNewMessage = broadcastNewMessage;
   (global as any).broadcastTaskAssignment = broadcastTaskAssignment;
 
+  app.get(
+    "/api/conversations/:id/participants",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const user = (req as any).user;
+        if (!user?.id) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const conversationId = parseInt(req.params.id);
+
+        // Check access: participant in conversation OR channel conversations are public
+        const [conversation] = await db
+          .select({ type: conversations.type })
+          .from(conversations)
+          .where(eq(conversations.id, conversationId));
+
+        if (!conversation) {
+          return res.status(404).json({ message: "Conversation not found" });
+        }
+
+        // Channel conversations are accessible to all users
+        if (conversation.type !== "channel") {
+          // Super admins with moderate_messages permission can access all conversations
+          const isSuperAdmin =
+            user.role === "super_admin" &&
+            user.permissions?.includes("moderate_messages");
+
+          if (!isSuperAdmin) {
+            const [participant] = await db
+              .select()
+              .from(conversationParticipants)
+              .where(
+                and(
+                  eq(conversationParticipants.conversationId, conversationId),
+                  eq(conversationParticipants.userId, user.id),
+                ),
+              );
+
+            if (!participant) {
+              return res.status(403).json({ message: "Access denied" });
+            }
+          }
+        }
+
+        // Get all participants for this conversation
+        const participants = await db
+          .select({
+            userId: conversationParticipants.userId,
+            role: users.role,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email,
+          })
+          .from(conversationParticipants)
+          .innerJoin(users, eq(conversationParticipants.userId, users.id))
+          .where(eq(conversationParticipants.conversationId, conversationId));
+
+        res.json(participants);
+      } catch (error) {
+        console.error("[CONVERSATION PARTICIPANTS] Error:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    },
+  );
+
   return httpServer;
 }

@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+import { supabase } from '@/lib/supabase';
 interface Message {
   id: number;
   userId: string;
@@ -128,9 +129,9 @@ export default function DirectMessaging() {
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!currentConversation) throw new Error("No conversation selected");
-      const response = await apiRequest("POST", `/api/conversations/${currentConversation.id}/messages`, {
+      const response = await supabase.from('messages').insert({ ...{
         content
-      });
+      }, conversation_id: currentConversation.id });
       return await response.json();
     },
     onSuccess: () => {
@@ -145,7 +146,7 @@ export default function DirectMessaging() {
   // Edit message mutation
   const editMessageMutation = useMutation({
     mutationFn: async ({ messageId, content }: { messageId: number; content: string }) => {
-      const response = await apiRequest('PATCH', `/api/messages/${messageId}`, { content });
+      const response = await supabase.from('messages').update({ content }).eq('id', messageId);
       return await response.json();
     },
     onSuccess: () => {
@@ -164,7 +165,7 @@ export default function DirectMessaging() {
   // Delete message mutation
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      return await apiRequest('DELETE', `/api/messages/${messageId}`);
+      return await supabase.from('messages').delete().eq('id', messageId);
     },
     onMutate: async (messageId: number) => {
       setOptimisticMessages((prev) => {

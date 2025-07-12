@@ -9,6 +9,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { CheckCircle2, Truck, User, Trash2, MoreVertical, Edit } from "lucide-react";
+import { supabase } from '@/lib/supabase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,9 +88,9 @@ export default function DriverChat() {
         throw new Error("Driver conversation not found");
       }
       
-      const response = await apiRequest("POST", `/api/conversations/${driverConversation.id}/messages`, {
+      const response = await supabase.from('messages').insert({ ...{
         content
-      });
+      }, conversation_id: driverConversation.id });
       
       return response;
     },
@@ -110,7 +111,7 @@ export default function DriverChat() {
   // Edit message mutation
   const editMessageMutation = useMutation({
     mutationFn: async ({ messageId, content }: { messageId: number; content: string }) => {
-      const response = await apiRequest("PATCH", `/api/messages/${messageId}`, { content });
+      const response = await supabase.from('messages').update({ content }).eq('id', messageId);
       return response;
     },
     onSuccess: () => {
@@ -134,7 +135,7 @@ export default function DriverChat() {
   // Delete message mutation
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      const response = await apiRequest("DELETE", `/api/messages/${messageId}`);
+      const response = await supabase.from('messages').delete().eq('id', messageId);
       return response;
     },
     onSuccess: () => {

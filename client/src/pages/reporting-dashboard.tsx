@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SimpleNav from "@/components/simple-nav";
 
+import { supabase } from '@/lib/supabase';
 interface ReportConfig {
   type: 'collections' | 'hosts' | 'impact' | 'comprehensive';
   dateRange: {
@@ -77,7 +78,7 @@ export default function ReportingDashboard({ isEmbedded = false }: { isEmbedded?
   // Generate report mutation
   const generateReport = useMutation({
     mutationFn: async (config: ReportConfig) => {
-      const response = await apiRequest('POST', '/api/reports/generate', config);
+      const response = await supabase.from('reports').insert(config);
       return await response.json();
     },
     onSuccess: (data) => {
@@ -107,7 +108,7 @@ export default function ReportingDashboard({ isEmbedded = false }: { isEmbedded?
   // Schedule report mutation
   const scheduleReport = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/reports/schedule', {
+      const response = await supabase.from('scheduled_reports').insert({
         config: reportConfig,
         schedule: scheduleConfig
       });

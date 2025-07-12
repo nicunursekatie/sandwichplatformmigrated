@@ -39,6 +39,7 @@ import { ProjectAssigneeSelector } from "@/components/project-assignee-selector"
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { Project, InsertProject } from "@shared/schema";
 
+import { supabase } from '@/lib/supabase';
 export default function ProjectsClean() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -69,7 +70,7 @@ export default function ProjectsClean() {
   // Update project status mutation
   const updateProjectMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return await apiRequest('PATCH', `/api/projects/${id}`, { status });
+      return await supabase.from('projects').update({ status }).eq('id', id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
@@ -90,7 +91,7 @@ export default function ProjectsClean() {
   // Create project mutation
   const createProjectMutation = useMutation({
     mutationFn: async (projectData: Partial<InsertProject>) => {
-      return await apiRequest('POST', '/api/projects', projectData);
+      return await supabase.from('projects').insert(projectData);
     },
     onSuccess: (data) => {
       // Force immediate cache invalidation and refetch
@@ -130,7 +131,7 @@ export default function ProjectsClean() {
   // Delete project mutation
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest('DELETE', `/api/projects/${id}`);
+      return await supabase.from('projects').delete().eq('id', id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });

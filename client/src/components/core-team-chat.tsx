@@ -27,6 +27,7 @@ import { useMessageReads } from "@/hooks/useMessageReads";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+import { supabase } from '@/lib/supabase';
 interface Message {
   id: number;
   userId?: string;
@@ -238,7 +239,7 @@ export default function CoreTeamChat() {
   // Delete message mutation
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      return await apiRequest("DELETE", `/api/messages/${messageId}`);
+      return await supabase.from('messages').delete().eq('id', messageId);
     },
     onMutate: async (messageId: number) => {
       setOptimisticMessages((prev) => {

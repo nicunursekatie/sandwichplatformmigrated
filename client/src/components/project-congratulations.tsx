@@ -10,6 +10,7 @@ import { Heart, MessageCircle, Trophy, Star, PartyPopper, ThumbsUp } from 'lucid
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
+import { supabase } from '@/lib/supabase';
 interface ProjectCongratulationsProps {
   projectId: number;
   projectTitle: string;
@@ -70,7 +71,7 @@ export default function ProjectCongratulations({
         }
       };
 
-      await apiRequest('POST', '/api/notifications', congratulationData);
+      await supabase.from('notifications').insert(congratulationData);
       
       toast({
         title: "Congratulations sent!",

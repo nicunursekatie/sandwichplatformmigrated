@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+import { supabase } from '@/lib/supabase';
 export default function WorkLogPage() {
   const { user } = useAuth();
   const [description, setDescription] = useState("");
@@ -17,7 +18,7 @@ export default function WorkLogPage() {
     queryKey: ["/api/work-logs"],
     queryFn: async () => {
       console.log("🚀 Work logs query function called");
-      const response = await apiRequest("GET", "/api/work-logs");
+      const response = await supabase.from('work_logs').select('*').order('created_at', { ascending: false });
       const data = await response.json();
       console.log("🚀 Work logs API response data:", data);
       return data;

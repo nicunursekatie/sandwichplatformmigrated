@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { Project, ProjectTask } from "@shared/schema";
 
+import { supabase } from '@/lib/supabase';
 interface ProjectDetailCleanProps {
   projectId: number;
   onBack?: () => void;
@@ -88,7 +89,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
   // Create task mutation
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
-      return await apiRequest('POST', `/api/projects/${projectId}/tasks`, taskData);
+      return await supabase.from('project_tasks').insert({ ...taskData, project_id: projectId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
@@ -114,7 +115,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
   // Update task mutation
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<ProjectTask> }) => {
-      return await apiRequest('PATCH', `/api/projects/${projectId}/tasks/${id}`, updates);
+      return await supabase.from('project_tasks').update(updates).eq('id', id);
     },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
@@ -270,7 +271,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
       };
       
       // Send notification to backend
-      apiRequest('POST', '/api/notifications', notificationData).catch(err => console.log('Notification storage failed:', err));
+      supabase.from('notifications').insert(notificationData).catch(err => console.log('Notification storage failed:', err));
     }
     
     updateTaskMutation.mutate({
@@ -1013,7 +1014,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                               };
                               
                               // Send notification silently (no popup for sender)
-                              apiRequest('POST', '/api/notifications', congratulationData).then(() => {
+                              supabase.from('notifications').insert(congratulationData).then(() => {
                                 // Simple confirmation toast for sender
                                 toast({
                                   title: "Congratulations sent!",
@@ -1403,7 +1404,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
             }
           };
           
-          apiRequest('POST', '/api/notifications', thankYouData).then(() => {
+          supabase.from('notifications').insert(thankYouData).then(() => {
             toast({ 
               title: "Thank you sent!", 
               description: "Your appreciation has been recorded." 

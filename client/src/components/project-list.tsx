@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Project } from "@shared/schema";
 
+import { supabase } from '@/lib/supabase';
 export default function ProjectList() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -92,7 +93,7 @@ export default function ProjectList() {
         successCriteria: projectData.successCriteria || null
       };
       console.log("Sending project data:", transformedData);
-      const response = await apiRequest("POST", "/api/projects", transformedData);
+      const response = await supabase.from('projects').insert(transformedData);
       if (!response.ok) {
         const errorText = await response.text();
         console.error("API Error:", response.status, errorText);
@@ -141,7 +142,7 @@ export default function ProjectList() {
 
   const updateProjectMutation = useMutation({
     mutationFn: async ({ id, ...updates }: { id: number } & Partial<Project>) => {
-      return apiRequest("PATCH", `/api/projects/${id}`, updates);
+      return supabase.from('projects').update(updates).eq('id', id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
@@ -162,7 +163,7 @@ export default function ProjectList() {
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/projects/${id}`);
+      return supabase.from('projects').delete().eq('id', id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });

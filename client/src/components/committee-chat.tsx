@@ -9,6 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessageReads } from "@/hooks/useMessageReads";
 
+import { supabase } from '@/lib/supabase';
 interface Message {
   id: number;
   sender: string;
@@ -60,7 +61,7 @@ export default function CommitteeChat() {
 
   // Get user profile for display name
   const { data: userProfile } = useQuery({
-    queryKey: ["/api/auth/profile"],
+    queryKey: ['user-profile', user?.id],
     enabled: !!user,
   });
 
@@ -121,9 +122,9 @@ export default function CommitteeChat() {
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { content: string }) => {
       if (!committeeConversation) throw new Error("No conversation available");
-      return await apiRequest('POST', `/api/conversations/${committeeConversation.id}/messages`, {
+      return await supabase.from('messages').insert({ ...{
         content: data.content
-      });
+      }, conversation_id: committeeConversation.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", committeeConversation?.id, "messages"] });
@@ -140,7 +141,7 @@ export default function CommitteeChat() {
 
   const deleteMessageMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      return await apiRequest('DELETE', `/api/messages/${messageId}`);
+      return await supabase.from('messages').delete().eq('id', messageId);
     },
     onMutate: async (messageId: number) => {
       setOptimisticMessages((prev) => {

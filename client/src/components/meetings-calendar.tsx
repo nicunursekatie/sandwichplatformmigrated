@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+import { supabase } from '@/lib/supabase';
 interface Meeting {
   id: number;
   title: string;
@@ -50,7 +51,7 @@ export default function MeetingsCalendar() {
 
   const { data: allMeetings = [], isLoading } = useQuery({
     queryKey: ['/api/meetings'],
-    queryFn: () => fetch('/api/meetings').then(res => res.json())
+    queryFn: () => supabase.from('meetings').select('*').then(res => res.json())
   });
 
   const createMeetingMutation = useMutation({

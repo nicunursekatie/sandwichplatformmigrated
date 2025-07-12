@@ -42,6 +42,7 @@ import { hasPermission } from "@shared/auth-utils";
 import { MessageComposer } from "@/components/message-composer";
 import { useMessaging } from "@/hooks/useMessaging";
 
+import { supabase } from '@/lib/supabase';
 // Schema for suggestion form
 const suggestionSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title must be under 200 characters"),
@@ -100,7 +101,7 @@ export default function SuggestionsPortal() {
 
   // Get current user
   const { data: currentUser } = useQuery({
-    queryKey: ['/api/auth/user'],
+    queryKey: ['user-data', user?.id],
     enabled: true
   });
 
@@ -111,7 +112,7 @@ export default function SuggestionsPortal() {
 
   // Fetch suggestions
   const { data: suggestions = [], isLoading } = useQuery({
-    queryKey: ['/api/suggestions'],
+    queryKey: ['suggestions'],
     enabled: hasPermission(currentUser, 'view_suggestions'),
     staleTime: 0
   });
@@ -129,10 +130,10 @@ export default function SuggestionsPortal() {
   // Submit suggestion mutation
   const submitSuggestionMutation = useMutation({
     mutationFn: (data: SuggestionFormData) => {
-      return apiRequest('POST', '/api/suggestions', data);
+      return supabase.from('suggestions').insert(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestions'] });
       setShowSubmissionForm(false);
       suggestionForm.reset();
       toast({
@@ -153,7 +154,7 @@ export default function SuggestionsPortal() {
   const upvoteMutation = useMutation({
     mutationFn: (suggestionId: number) => apiRequest('POST', `/api/suggestions/${suggestionId}/upvote`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestions'] });
       toast({
         title: "Success",
         description: "Suggestion upvoted!"
@@ -164,13 +165,13 @@ export default function SuggestionsPortal() {
   // Update suggestion mutation (admin only)
   const updateSuggestionMutation = useMutation({
     mutationFn: ({ id, updates }: { id: number; updates: Partial<Suggestion> }) => 
-      apiRequest('PATCH', `/api/suggestions/${id}`, updates),
+      supabase.from('suggestions').update(updates).eq('id', id),
     onSuccess: (updatedSuggestion) => {
       if (selectedSuggestion && updatedSuggestion) {
         setSelectedSuggestion({ ...selectedSuggestion, ...updatedSuggestion });
       }
-      queryClient.invalidateQueries({ queryKey: ['/api/suggestions'] });
-      queryClient.refetchQueries({ queryKey: ['/api/suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['suggestions'] });
+      queryClient.refetchQueries({ queryKey: ['suggestions'] });
       toast({
         title: "Success",
         description: "Suggestion updated successfully!"
@@ -187,9 +188,9 @@ export default function SuggestionsPortal() {
 
   // Delete suggestion mutation (admin only)
   const deleteSuggestionMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/suggestions/${id}`),
+    mutationFn: (id: number) => supabase.from('suggestions').delete().eq('id', id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/suggestions'], staleTime: 0 });
+      queryClient.invalidateQueries({ queryKey: ['suggestions'], staleTime: 0 });
       setSelectedSuggestion(null);
       toast({
         title: "Suggestion deleted",

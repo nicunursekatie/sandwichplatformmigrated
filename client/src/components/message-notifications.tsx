@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 
+import { supabase } from '@/lib/supabase';
 interface UnreadCounts {
   general: number;
   committee: number;
@@ -189,7 +190,7 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
 
   const handleMarkAllRead = async () => {
     try {
-      await apiRequest('POST', '/api/message-notifications/mark-all-read');
+      await supabase.from('message_reads').insert({ user_id: user.id, read_at: new Date().toISOString() });
       refetch();
     } catch (error) {
       console.error('Failed to mark all messages as read:', error);
