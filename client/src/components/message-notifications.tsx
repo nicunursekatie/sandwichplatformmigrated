@@ -103,6 +103,9 @@ function MessageNotifications({ user }: MessageNotificationsProps) {
   console.log('🔔 MessageNotifications: Query state - isLoading:', isLoading, 'error:', error, 'data:', unreadCounts);
   console.log('🔔 MessageNotifications: Rendering with final unread counts:', finalUnreadCounts);
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
+  // Now we can safely return early after all hooks have been called
+
   // Early return if user is not authenticated - this is now safe after all hooks
   if (!userId) {
     console.log('🔔 MessageNotifications: Early return - not authenticated or no user');

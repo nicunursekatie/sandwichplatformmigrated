@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -18,6 +18,10 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Use a ref to track if we've completed the initial auth check
+  // This prevents the user object from changing during the component lifecycle
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     // Get initial session
@@ -25,6 +29,7 @@ export function useAuth() {
       setSession(session);
       setSupabaseUser(session?.user ?? null);
       setIsLoading(false);
+      hasInitialized.current = true;
     });
 
     // Listen for auth changes
@@ -32,6 +37,7 @@ export function useAuth() {
       setSession(session);
       setSupabaseUser(session?.user ?? null);
       setIsLoading(false);
+      hasInitialized.current = true;
     });
 
     return () => subscription.unsubscribe();
@@ -61,7 +67,8 @@ export function useAuth() {
   });
 
   // Combine Supabase auth user with database user data
-  const user: UserData | null = supabaseUser && userData ? {
+  // Only return user data when we have BOTH supabaseUser AND userData AND we've initialized
+  const user: UserData | null = (hasInitialized.current && supabaseUser && userData) ? {
     id: supabaseUser.id,
     email: supabaseUser.email!,
     firstName: userData.first_name || supabaseUser.user_metadata.first_name || '',

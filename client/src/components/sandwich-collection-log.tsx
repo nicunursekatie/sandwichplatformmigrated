@@ -437,17 +437,14 @@ export default function SandwichCollectionLog() {
 
   const importMutation = useMutation({
     mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('csvFile', file);
-
-      const response = await fetch('/api/sandwich-collections/import', {
-        method: 'POST',
-        body: formData
+      // TODO: Implement CSV import with Supabase
+      // For now, parse CSV client-side and use batch insert
+      toast({
+        title: "Import not yet implemented",
+        description: "CSV import functionality is being migrated to Supabase.",
+        variant: "destructive",
       });
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-      return response.json() as Promise<ImportResult>;
+      throw new Error('Import not yet implemented');
     },
     onSuccess: (result: ImportResult) => {
       queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
@@ -474,9 +471,13 @@ export default function SandwichCollectionLog() {
 
   const analyzeDuplicatesMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/sandwich-collections/analyze-duplicates");
-      if (!response.ok) throw new Error('Failed to analyze duplicates');
-      return response.json() as Promise<DuplicateAnalysis>;
+      // TODO: Implement duplicate analysis with Supabase RPC
+      toast({
+        title: "Analysis not yet implemented",
+        description: "Duplicate analysis is being migrated to Supabase.",
+        variant: "destructive",
+      });
+      throw new Error('Analysis not yet implemented');
     },
     onSuccess: (result: DuplicateAnalysis) => {
       setDuplicateAnalysis(result);
