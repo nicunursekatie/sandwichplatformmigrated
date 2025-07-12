@@ -498,13 +498,13 @@ export default function SandwichCollectionLog() {
 
   const cleanDuplicatesMutation = useMutation({
     mutationFn: async (mode: 'exact' | 'suspicious' | 'og-duplicates') => {
-      const response = await fetch("/api/sandwich-collections/clean-duplicates", {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode })
+      // TODO: Implement duplicate cleanup with Supabase RPC
+      toast({
+        title: "Cleanup not yet implemented",
+        description: "Duplicate cleanup is being migrated to Supabase.",
+        variant: "destructive",
       });
-      if (!response.ok) throw new Error('Failed to clean duplicates');
-      return response.json();
+      throw new Error('Cleanup not yet implemented');
     },
     onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
