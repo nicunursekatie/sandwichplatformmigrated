@@ -155,7 +155,7 @@ export default function SandwichCollectionLog() {
         
         if (searchFilters.createdAtTo) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.submittedAt <= searchFilters.createdAtTo
+            c.submittedAt <= new Date(searchFilters.createdAtTo)
           );
         }
         
@@ -204,15 +204,15 @@ export default function SandwichCollectionLog() {
   const { data: totalStats } = useQuery({
     queryKey: ["/api/sandwich-collections/stats"],
     queryFn: async () => {
-      const response = await supabase.rpc('get_collection_stats');
-      if (!response.ok) throw new Error('Failed to fetch stats');
-      return response.json();
+      const { data, error } = await supabase.rpc('get_collection_stats');
+      if (error) throw error;
+      return data;
     }
   });
 
   // Filter and sort collections
   const filteredCollections = collections
-    .filter(collection => {
+    .filter((collection: SandwichCollection) => {
       // Host name filter
       if (searchFilters.hostName && !collection.hostName.toLowerCase().includes(searchFilters.hostName.toLowerCase())) {
         return false;
@@ -248,7 +248,7 @@ export default function SandwichCollectionLog() {
 
       return true;
     })
-    .sort((a, b) => {
+    .sort((a: SandwichCollection, b: SandwichCollection) => {
       const aValue = a[sortConfig.field];
       const bValue = b[sortConfig.field];
 
@@ -283,7 +283,7 @@ export default function SandwichCollectionLog() {
   }, [searchFilters, sortConfig]);
 
   // Get unique host names from collections for filtering
-  const uniqueHostNames = Array.from(new Set(collections.map(c => c.hostName))).sort();
+  const uniqueHostNames = Array.from(new Set(collections.map((c: SandwichCollection) => c.hostName))).sort();
 
   // Include all hosts (active and inactive) for collection assignment
   const hostOptions = [...hostsList.map(host => host.name), "Other"];
@@ -570,10 +570,9 @@ export default function SandwichCollectionLog() {
   const exportToCSV = async () => {
     try {
       // Fetch all collections data for export
-      const response = await supabase.from('sandwich_collections').select('*').limit(10000);
-      if (!response.ok) throw new Error('Failed to fetch all collections');
-      const allCollectionsData = await response.json();
-      const allCollections = allCollectionsData.collections || [];
+      const { data, error } = await supabase.from('sandwich_collections').select('*').limit(10000);
+      if (error) throw error;
+      const allCollections = data || [];
 
       if (allCollections.length === 0) {
         toast({
@@ -661,7 +660,7 @@ export default function SandwichCollectionLog() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedCollections(new Set(filteredCollections.map(c => c.id)));
+      setSelectedCollections(new Set(filteredCollections.map((c: SandwichCollection) => c.id)));
     } else {
       setSelectedCollections(new Set());
     }
@@ -1307,7 +1306,7 @@ export default function SandwichCollectionLog() {
           </div>
         )}
         <div className="space-y-4">
-          {paginatedCollections.map((collection) => {
+          {paginatedCollections.map((collection: SandwichCollection) => {
             const groupData = parseGroupCollections(collection.groupCollections);
             const totalSandwiches = calculateTotal(collection);
             const isSelected = selectedCollections.has(collection.id);
