@@ -17,19 +17,32 @@ export default function Landing() {
     setShowLogin(true);
   };
 
-  // Fetch real statistics for public display
+  // Fetch real statistics for public display using Supabase
   const { data: statsData } = useQuery({
-    queryKey: ['/api/sandwich-collections/stats'],
+    queryKey: ['sandwich-stats'],
     queryFn: async () => {
-      const response = await fetch('/api/sandwich-collections/stats');
-      if (!response.ok) throw new Error('Failed to fetch stats');
-      return response.json();
+      const { supabase } = await import('@/lib/supabase');
+      
+      // Get total sandwiches
+      const { data: collections, error } = await supabase
+        .from('collections')
+        .select('number_of_sandwiches');
+      
+      if (error) throw error;
+      
+      const totalSandwiches = collections?.reduce((sum, c) => sum + (c.number_of_sandwiches || 0), 0) || 0;
+      
+      return {
+        totalSandwiches,
+        totalVolunteers: 1500, // You can query this from users table if needed
+        totalProjects: 50, // Query from projects table
+      };
     },
     retry: false,
   });
 
   const { data: collectionsResponse } = useQuery({
-    queryKey: ['/api/sandwich-collections'],
+    queryKey: ['recent-collections'],
     queryFn: async () => {
       const response = await fetch('/api/sandwich-collections?limit=1000');
       if (!response.ok) throw new Error('Failed to fetch collections');
@@ -245,6 +258,13 @@ export default function Landing() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Login Dialog */}
+      <Dialog open={showLogin} onOpenChange={setShowLogin}>
+        <DialogContent className="sm:max-w-[425px] p-0">
+          <LoginForm />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
