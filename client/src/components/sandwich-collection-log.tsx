@@ -117,12 +117,14 @@ export default function SandwichCollectionLog() {
     queryKey,
     queryFn: useCallback(async () => {
       if (needsAllData) {
-        const response = await supabase.from('sandwich_collections').select('*').limit(10000);
-        if (!response.ok) throw new Error('Failed to fetch collections');
-        const data = await response.json();
-        
-        let filteredCollections = data.collections || [];
-        
+        const { data, error } = await supabase
+          .from('sandwich_collections')
+          .select('*')
+          .limit(10000);
+
+        if (error) throw new Error('Failed to fetch collections');
+
+        let filteredCollections = data || [];
         // Apply filters
         if (searchFilters.hostName) {
           const searchTerm = searchFilters.hostName.toLowerCase();
@@ -144,9 +146,11 @@ export default function SandwichCollectionLog() {
         }
         
         if (searchFilters.createdAtFrom) {
-          filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.submittedAt >= searchFilters.createdAtFrom
-          );
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            const submittedAtDate = typeof c.submittedAt === "string" ? new Date(c.submittedAt) : c.submittedAt;
+            const filterDate = typeof searchFilters.createdAtFrom === "string" ? new Date(searchFilters.createdAtFrom) : searchFilters.createdAtFrom;
+            return submittedAtDate >= filterDate;
+          });
         }
         
         if (searchFilters.createdAtTo) {
@@ -438,52 +442,16 @@ export default function SandwichCollectionLog() {
       const formData = new FormData();
       formData.append('csvFile', file);
 
-      // TODO: Implement CSV import with Supabase
-      // For now, parse the CSV client-side and insert to Supabase
-      const text = await file.text();
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
-      
-      const records = [];
-      const errors = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        const values = lines[i].split(',').map(v => v.trim());
-        const record: any = {};
-        
-        headers.forEach((header, index) => {
-          record[header] = values[index];
-        });
-        
-        // Map CSV fields to database fields
-        const mappedRecord = {
-          collection_date: record.date || record.collection_date,
-          host_name: record.host || record.host_name,
-          sandwich_count: parseInt(record.sandwiches || record.sandwich_count || '0'),
-          individual_sandwiches: parseInt(record.individual || record.individual_sandwiches || '0'),
-          // Add other fields as needed
-        };
-        
-        records.push(mappedRecord);
+      const response = await fetch('/api/sandwich-collections/import', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
       }
-      
-      // Insert records to Supabase
-      const { data, error } = await supabase
-        .from('sandwich_collections')
-        .insert(records);
-      
-      if (error) {
-        throw error;
-      }
-      
-      return {
-        totalRecords: records.length,
-        successCount: data?.length || 0,
-        errorCount: errors.length,
-        errors
-      } as ImportResult;
+
+      return response.json() as Promise<ImportResult>;
     },
     onSuccess: (result: ImportResult) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
