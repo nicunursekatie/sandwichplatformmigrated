@@ -131,7 +131,7 @@ export default function CoreTeamChat() {
         "[DEBUG] Core Team Chat: Creating new Core Team conversation...",
       );
       // Create Core Team conversation if it doesn't exist
-      const createResponse = await apiRequest("POST", "/api/conversations", {
+      const createResponse = await supabase.from('conversations').insert({
         type: "channel",
         name: "Core Team",
       });

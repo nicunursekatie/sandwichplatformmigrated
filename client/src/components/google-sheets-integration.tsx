@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ExternalLink, Download, Upload, RefreshCw, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
 
+import { supabase } from '@/lib/supabase';
 export function GoogleSheetsIntegration() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -47,10 +48,8 @@ export function GoogleSheetsIntegration() {
   const importFromSheet = async () => {
     setIsImporting(true);
     try {
-      const response = await apiRequest('POST', '/api/google-sheets/sync/import', {
-        sheetName,
-        dryRun
-      });
+      const response = await // TODO: Implement Google Sheets import
+      // Fetch from Google Sheets API and insert to Supabase;
       
       setImportResult(response.result);
       
@@ -80,9 +79,8 @@ export function GoogleSheetsIntegration() {
   const exportToSheet = async () => {
     setIsExporting(true);
     try {
-      const response = await apiRequest('POST', '/api/google-sheets/sync/export', {
-        sheetName: 'Database_Export'
-      });
+      const response = await // TODO: Implement Google Sheets export
+      // Fetch from Supabase and update Google Sheets;
       
       toast({
         title: "Export Complete",

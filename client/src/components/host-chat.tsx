@@ -70,7 +70,7 @@ export default function HostChat() {
     queryKey: ["/api/conversations/host", selectedHost?.id],
     queryFn: async () => {
       if (!selectedHost) return null;
-      const response = await apiRequest('POST', '/api/conversations', {
+      const response = await supabase.from('conversations').insert({
         type: 'host',
         name: `${selectedHost.name} Host Chat`,
         metadata: { hostId: selectedHost.id }

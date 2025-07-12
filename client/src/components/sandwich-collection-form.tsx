@@ -17,6 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
 import type { Host } from "@shared/schema";
 
+import { supabase } from '@/lib/supabase';
 interface GroupCollection {
   id: string;
   groupName: string;
@@ -59,7 +60,7 @@ export default function SandwichCollectionForm() {
       email: string;
       status: string;
     }) => {
-      const response = await apiRequest("POST", "/api/hosts", hostData);
+      const response = await supabase.from('hosts').insert(hostData);
       return response.json();
     },
     onSuccess: () => {

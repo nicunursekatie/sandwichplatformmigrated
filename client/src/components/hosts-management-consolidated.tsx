@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { Host, InsertHost, HostContact, InsertHostContact } from "@shared/schema";
 
+import { supabase } from '@/lib/supabase';
 interface HostWithContacts extends Host {
   contacts: HostContact[];
 }
@@ -86,7 +87,7 @@ export default function HostsManagementConsolidated() {
 
   const createHostMutation = useMutation({
     mutationFn: async (data: InsertHost) => {
-      return await apiRequest('POST', '/api/hosts', data);
+      return await supabase.from('hosts').insert(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
@@ -151,7 +152,7 @@ export default function HostsManagementConsolidated() {
 
   const createContactMutation = useMutation({
     mutationFn: async (data: InsertHostContact) => {
-      return await apiRequest('POST', '/api/host-contacts', data);
+      return await supabase.from('host_contacts').insert(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });

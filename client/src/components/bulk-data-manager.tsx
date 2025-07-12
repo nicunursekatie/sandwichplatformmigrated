@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import { Database, FileText, MapPin, BarChart3, RefreshCw, ArrowLeft, Upload, Download, Scan } from "lucide-react";
 
+import { supabase } from '@/lib/supabase';
 interface MappingStats {
   hostName: string;
   count: number;
@@ -76,7 +77,8 @@ export default function BulkDataManager({
   // Run bulk mapping
   const bulkMapMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/bulk-map-hosts', {});
+      const response = await // TODO: Implement bulk host mapping with Supabase
+      // This requires a custom RPC function or client-side processing;
       return response.json();
     },
     onSuccess: (result) => {

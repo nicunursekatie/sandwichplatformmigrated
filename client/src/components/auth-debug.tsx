@@ -41,8 +41,8 @@ export default function AuthDebug() {
     
     try {
       const [sessionResponse, statusResponse] = await Promise.all([
-        fetch('/api/debug/session'),
-        fetch('/api/debug/auth-status')
+        // Debug endpoint removed - use Supabase dashboard for debugging,
+        // Debug endpoint removed - use Supabase dashboard for debugging
       ]);
 
       if (sessionResponse.ok) {

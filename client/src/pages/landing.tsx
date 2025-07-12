@@ -9,6 +9,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import tspLogo from "@assets/CMYK_PRINT_TSP-01_1749585167435.png";
 import tspTransparent from "@assets/LOGOS/LOGOS/Copy of TSP_transparent.png";
 
+import { supabase } from '@/lib/supabase';
 export default function Landing() {
   const [showToolkit, setShowToolkit] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -44,7 +45,7 @@ export default function Landing() {
   const { data: collectionsResponse } = useQuery({
     queryKey: ['recent-collections'],
     queryFn: async () => {
-      const response = await fetch('/api/sandwich-collections?limit=1000');
+      const response = await supabase.from('sandwich_collections').select('*').limit(1000);
       if (!response.ok) throw new Error('Failed to fetch collections');
       return response.json();
     },

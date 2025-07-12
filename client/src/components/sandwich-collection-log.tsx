@@ -17,6 +17,7 @@ import type { SandwichCollection, Host } from "@shared/schema";
 
 
 
+import { supabase } from '@/lib/supabase';
 interface ImportResult {
   totalRecords: number;
   successCount: number;
@@ -116,7 +117,7 @@ export default function SandwichCollectionLog() {
     queryKey,
     queryFn: useCallback(async () => {
       if (needsAllData) {
-        const response = await fetch('/api/sandwich-collections?limit=10000');
+        const response = await supabase.from('sandwich_collections').select('*').limit(10000);
         if (!response.ok) throw new Error('Failed to fetch collections');
         const data = await response.json();
         
@@ -199,7 +200,7 @@ export default function SandwichCollectionLog() {
   const { data: totalStats } = useQuery({
     queryKey: ["/api/sandwich-collections/stats"],
     queryFn: async () => {
-      const response = await fetch('/api/sandwich-collections/stats');
+      const response = await supabase.rpc('get_collection_stats');
       if (!response.ok) throw new Error('Failed to fetch stats');
       return response.json();
     }
@@ -405,7 +406,7 @@ export default function SandwichCollectionLog() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest('POST', '/api/sandwich-collections', data);
+      return await supabase.from('sandwich_collections').insert(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sandwich-collections"] });
@@ -437,10 +438,8 @@ export default function SandwichCollectionLog() {
       const formData = new FormData();
       formData.append('csvFile', file);
 
-      const response = await fetch('/api/import-collections', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await // TODO: Implement bulk import with Supabase
+      // Parse CSV/JSON and use supabase.from('sandwich_collections').insert(parsedData);
 
       if (!response.ok) {
         throw new Error('Upload failed');
@@ -565,7 +564,7 @@ export default function SandwichCollectionLog() {
   const exportToCSV = async () => {
     try {
       // Fetch all collections data for export
-      const response = await fetch('/api/sandwich-collections?limit=10000');
+      const response = await supabase.from('sandwich_collections').select('*').limit(10000);
       if (!response.ok) throw new Error('Failed to fetch all collections');
       const allCollectionsData = await response.json();
       const allCollections = allCollectionsData.collections || [];

@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 
+import { supabase } from '@/lib/supabase';
 interface Recipient {
   id: number;
   name: string;
@@ -121,10 +122,8 @@ export default function RecipientsManagement() {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      return fetch('/api/recipients/import', {
-        method: 'POST',
-        body: formData,
-      }).then(res => res.json());
+      return // TODO: Implement recipient import with Supabase
+      // Parse CSV and use supabase.from('recipients').insert(parsedData).then(res => res.json());
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });

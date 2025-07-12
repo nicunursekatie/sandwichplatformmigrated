@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { Project, Message, MeetingMinutes, DriveLink, WeeklyReport, SandwichCollection, Meeting } from "@shared/schema";
 
+import { supabase } from '@/lib/supabase';
 interface DashboardOverviewProps {
   onSectionChange: (section: string) => void;
 }
@@ -40,7 +41,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   const { data: statsData } = useQuery({
     queryKey: ["/api/sandwich-collections/stats"],
     queryFn: async () => {
-      const response = await fetch('/api/sandwich-collections/stats');
+      const response = await supabase.rpc('get_collection_stats');
       if (!response.ok) throw new Error('Failed to fetch stats');
       return response.json();
     },

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { LoadingState } from "@/components/ui/loading";
 import { apiRequest } from "@/lib/queryClient";
+import { supabase } from '@/lib/supabase';
 import { 
   Download, 
   Search, 
@@ -435,7 +436,8 @@ export function DataManagementDashboard() {
                 <Button
                   onClick={async () => {
                     try {
-                      const response = await fetch('/api/data/export/full-dataset');
+                      const response = await // TODO: Implement data export with Supabase
+      // Fetch all data and format for export;
                       if (!response.ok) throw new Error('Export failed');
                       
                       const blob = await response.blob();

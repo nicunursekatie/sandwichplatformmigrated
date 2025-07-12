@@ -87,7 +87,7 @@ export default function CommitteeChat() {
     queryKey: ["/api/conversations/committee", selectedCommittee?.id],
     queryFn: async () => {
       if (!selectedCommittee) return null;
-      const response = await apiRequest('POST', '/api/conversations', {
+      const response = await supabase.from('conversations').insert({
         type: 'channel',
         name: `${selectedCommittee.name}`
       });

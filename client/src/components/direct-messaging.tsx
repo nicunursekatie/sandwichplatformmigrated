@@ -78,7 +78,7 @@ export default function DirectMessaging() {
         // Create new conversation
         try {
           console.log('Creating conversation with user:', (user as any)?.id, 'for selected user:', selectedUser.id);
-          const response = await apiRequest('POST', '/api/conversations', {
+          const response = await supabase.from('conversations').insert({
             type: "direct",
             name: conversationName,
             participants: [(user as any).id, selectedUser.id]
