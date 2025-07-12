@@ -11,7 +11,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useAbly } from "@/hooks/useAbly";
 
 import { supabase } from '@/lib/supabase';
 
@@ -31,7 +30,13 @@ interface MessageNotificationsProps {
   user: any; // User object passed from parent Dashboard
 }
 
-export default function MessageNotifications({ user }: MessageNotificationsProps) {
+// Wrapper component to ensure stable rendering
+function MessageNotificationsWrapper({ user }: MessageNotificationsProps) {
+  // Always render the component, but handle the authentication state inside
+  return <MessageNotifications user={user} />;
+}
+
+function MessageNotifications({ user }: MessageNotificationsProps) {
   console.log('🔔 MessageNotifications component mounting...');
 
   // Always call hooks with stable values to prevent hook order changes
@@ -75,40 +80,6 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     enabled: !!userId, // Only enable when we have a user ID
     refetchInterval: !!userId ? 30000 : false, // Check every 30 seconds only when authenticated
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
-
-  // Use Ably for real-time notifications - always call this hook
-  const { isConnected, lastMessage } = useAbly({
-    channelName: userId ? `notifications-${userId}` : 'notifications-no-user',
-    eventName: 'notification',
-    onMessage: (message: any) => {
-      console.log('🔔 Ably notification received:', message);
-      
-      if (message.data?.type === 'unread_counts') {
-        // Update unread counts from Ably by triggering a refetch
-        setLastCheck(Date.now());
-      } else if (message.data?.type === 'new_message') {
-        // New message received - refetch unread counts
-        setLastCheck(Date.now());
-        
-        // Show browser notification if permission granted
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          new Notification('New message received', {
-            body: message.data?.content?.substring(0, 100) || 'New message',
-            icon: '/favicon.ico'
-          });
-        }
-      }
-    },
-    onConnected: () => {
-      console.log('🔔 Ably connected for notifications');
-    },
-    onDisconnected: () => {
-      console.log('🔔 Ably disconnected for notifications');
-    },
-    onError: (error: any) => {
-      console.error('🔔 Ably error:', error);
-    }
   });
 
   // Request notification permission on mount
@@ -243,3 +214,5 @@ export default function MessageNotifications({ user }: MessageNotificationsProps
     </DropdownMenu>
   );
 }
+
+export default MessageNotificationsWrapper;
