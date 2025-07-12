@@ -30,7 +30,7 @@ import {
   Edit,
   Settings
 } from "lucide-react";
-import sandwichLogo from "@assets/LOGOS/sandwich logo.png";
+import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";

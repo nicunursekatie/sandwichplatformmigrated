@@ -7,7 +7,7 @@ import { DocumentsBrowser } from "@/components/documents-browser";
 import { LoginForm } from "@/components/auth/login-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import tspLogo from "@assets/CMYK_PRINT_TSP-01_1749585167435.png";
-import tspTransparent from "@assets/LOGOS/Copy of TSP_transparent.png";
+import tspTransparent from "@assets/LOGOS/LOGOS/Copy of TSP_transparent.png";
 
 export default function Landing() {
   const [showToolkit, setShowToolkit] = useState(false);
@@ -52,7 +52,7 @@ export default function Landing() {
   });
 
   const collections = collectionsResponse?.collections || [];
-  const totalSandwiches = statsData?.completeTotalSandwiches || 0;
+  const totalSandwiches = statsData?.totalSandwiches || 0;
   // Use calculated overall weekly average from actual operational data
   // Based on 2023-2025 performance: 8,983/week (2023), 8,851/week (2024), 7,861/week (2025)
   const weeklyAverage = 8700;
