@@ -13,11 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
-import type { Host } from "@shared/schema";
+import { supabaseService } from "@/lib/supabase-service";
+import type { Host, InsertSandwichCollection } from "@/lib/supabase";
 
-import { supabase } from '@/lib/supabase';
 interface GroupCollection {
   id: string;
   groupName: string;
@@ -38,14 +38,10 @@ export default function SandwichCollectionForm() {
   ]);
   const [groupOnlyMode, setGroupOnlyMode] = useState(false);
 
-  // Fetch active hosts from the database
+  // Fetch active hosts from Supabase
   const { data: hosts = [] } = useQuery<Host[]>({
-    queryKey: ["/api/hosts"],
-    queryFn: async () => {
-      const response = await fetch("/api/hosts");
-      if (!response.ok) throw new Error("Failed to fetch hosts");
-      return response.json();
-    },
+    queryKey: ["hosts"],
+    queryFn: () => supabaseService.host.getActiveHosts(),
   });
 
   // Include all hosts (active and inactive) for collection assignment
@@ -60,47 +56,33 @@ export default function SandwichCollectionForm() {
       email: string;
       status: string;
     }) => {
-      const { data, error } = await supabase.from('hosts').insert(hostData);
-      if (error) throw error;
-      return data;
+      return await supabaseService.host.createHost({
+        name: hostData.name,
+        address: hostData.address,
+        contact_phone: hostData.phone,
+        contact_email: hostData.email,
+        is_active: hostData.status === "active",
+        contact_name: null,
+        city: null,
+        state: null,
+        zip: null,
+        notes: null
+      });
     },
     onSuccess: () => {
       // Refresh all host-related queries to update dropdown and management sections
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
     },
   });
 
   const submitCollectionMutation = useMutation({
-    mutationFn: async (data: {
-      collectionDate: string;
-      hostName: string;
-      individualSandwiches: number;
-      groupCollections: string;
-    }) => {
-      return await apiRequest(
-        "POST",
-        "/api/sandwich-collections",
-        data,
-      );
+    mutationFn: async (data: InsertSandwichCollection) => {
+      return await supabaseService.sandwichCollection.createCollection(data);
     },
     onSuccess: async (data) => {
-      queryClient.invalidateQueries({
-        queryKey: ["/api/sandwich-collections"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts"] });
-
-      // Sync to Google Sheets
-      try {
-        await apiRequest("POST", "/api/google-sheets/sync-entry", {
-          collectionData: data
-        });
-        console.log("Collection synced to Google Sheets");
-      } catch (error) {
-        console.warn("Google Sheets sync failed:", error);
-        // Don't show error to user as the main collection was successful
-      }
+      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts"] });
 
       // Reset form
       setHostName("");
@@ -110,7 +92,7 @@ export default function SandwichCollectionForm() {
       setGroupOnlyMode(false);
       toast({
         title: "Collection submitted",
-        description: "Sandwich collection has been logged and synced to Google Sheets.",
+        description: "Sandwich collection has been logged successfully.",
       });
     },
     onError: () => {
@@ -239,10 +221,10 @@ export default function SandwichCollectionForm() {
     }
 
     submitCollectionMutation.mutate({
-      collectionDate,
-      hostName: finalHostName,
-      individualSandwiches: finalIndividualSandwiches,
-      groupCollections: finalGroupCollections,
+      collection_date: collectionDate,
+      host_name: finalHostName,
+      individual_sandwiches: finalIndividualSandwiches,
+      group_collections: finalGroupCollections,
     });
   };
 
