@@ -1,0 +1,5 @@
+api/
+server/
+*.md
+.env*
+node_modules/
