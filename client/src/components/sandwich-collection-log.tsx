@@ -939,11 +939,11 @@ export default function SandwichCollectionLog() {
             {totalStats && (
               <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm">
                 <span className="text-slate-600">
-                  <span className="font-medium text-amber-600">{totalStats.completeTotalSandwiches.toLocaleString()}</span> total sandwiches
+                  <span className="font-medium text-amber-600">{totalStats.completeTotalSandwiches?.toLocaleString() || '0'}</span> total sandwiches
                 </span>
                 <span className="text-slate-400 hidden sm:inline">|</span>
                 <span className="text-slate-500">
-                  {totalStats.individual_sandwiches.toLocaleString()} individual + {totalStats.groupSandwiches.toLocaleString()} group
+                  {totalStats.individual_sandwiches?.toLocaleString() || '0'} individual + {totalStats.groupSandwiches?.toLocaleString() || '0'} group
                 </span>
               </div>
             )}

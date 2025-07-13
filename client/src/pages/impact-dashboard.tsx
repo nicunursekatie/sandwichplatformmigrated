@@ -450,11 +450,11 @@ export default function ImpactDashboard() {
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Total Collections</span>
-                    <span className="font-bold text-xl">{impactMetrics.totalCollections.toLocaleString()}</span>
+                    <span className="font-bold text-xl">{impactMetrics.totalCollections?.toLocaleString() || '0'}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Active Hosts</span>
-                    <span className="font-bold text-xl">{impactMetrics.uniqueHosts.toLocaleString()}</span>
+                    <span className="font-bold text-xl">{impactMetrics.uniqueHosts?.toLocaleString() || '0'}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Avg per Collection</span>
