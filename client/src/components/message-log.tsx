@@ -83,15 +83,11 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
     scrollToBottom();
   }, [messages]);
 
-  // Group messages into threads - only show root messages, not replies
-  const rootMessages = displayedMessages.filter(m => !m.parentId);
-  const getThreadReplies = (threadId: number) => 
-    displayedMessages.filter(m => m.threadId === threadId && m.parentId);
+  // For now, show all messages since threading isn't implemented yet
+  const rootMessages = displayedMessages;
+  const getThreadReplies = (threadId: number) => [];
   
-  const getLatestReply = (threadId: number) => {
-    const replies = getThreadReplies(threadId);
-    return replies.length > 0 ? replies[replies.length - 1] : null;
-  };
+  const getLatestReply = (threadId: number) => null;
 
   const form = useForm<MessageFormData>({
     resolver: zodResolver(messageFormSchema),
@@ -368,12 +364,12 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
           const prevMessage = index > 0 ? rootMessages[index - 1] : null;
           const isSameSender = prevMessage?.sender === message.sender && getDisplayName(prevMessage) === getDisplayName(message);
           const timeDiff = prevMessage ? 
-            new Date(message.timestamp).getTime() - new Date(prevMessage.timestamp).getTime() : 
+            new Date(message.createdAt || '').getTime() - new Date(prevMessage.createdAt || '').getTime() : 
             Number.MAX_SAFE_INTEGER;
           const shouldShowAvatar = !isSameSender || timeDiff > 300000; // 5 minutes
           
-          const threadReplies = getThreadReplies(message.threadId || message.id);
-          const latestReply = getLatestReply(message.threadId || message.id);
+          const threadReplies = getThreadReplies(message.id);
+          const latestReply = getLatestReply(message.id);
           const hasReplies = threadReplies.length > 0;
 
           return (
@@ -388,7 +384,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
                 ) : (
                   <div className="w-9 mr-3 flex items-center justify-center">
                     <span className="text-xs text-slate-400 opacity-0 group-hover:opacity-100">
-                      {formatMessageTime(message.timestamp)}
+                      {formatMessageTime(message.createdAt || '')}
                     </span>
                   </div>
                 )}
@@ -399,9 +395,9 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
                       <span className="font-bold text-slate-900 text-sm mr-2">
                         {getDisplayName(message)}
                       </span>
-                      <span className="text-xs text-slate-500">
-                        {formatMessageTime(message.timestamp)}
-                      </span>
+                                              <span className="text-xs text-slate-500">
+                          {formatMessageTime(message.createdAt || '')}
+                        </span>
                     </div>
                   )}
                   <div className="text-slate-800 text-sm leading-relaxed break-words mb-1">

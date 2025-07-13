@@ -448,7 +448,7 @@ export default function PermissionTemplatesManager() {
                 Permission Templates
               </CardTitle>
               <CardDescription>
-                Manage permission templates for quick role assignment
+                Manage permission templates for quick role assignment. Custom templates can be edited and deleted, while system templates are protected.
               </CardDescription>
             </div>
             <Button onClick={() => setIsCreateOpen(true)}>
@@ -460,15 +460,21 @@ export default function PermissionTemplatesManager() {
         <CardContent>
           <div className="grid gap-4">
             {templates.map(template => (
-              <Card key={template.id}>
+              <Card key={template.id} className={template.isSystem ? "border-gray-200" : "border-blue-200 bg-blue-50/30"}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{template.name}</h3>
-                        {template.isSystem && (
+                        {template.isSystem ? (
                           <Badge variant="secondary" className="text-xs">
-                            System
+                            <Shield className="h-3 w-3 mr-1" />
+                            System Template
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
+                            <Edit className="h-3 w-3 mr-1" />
+                            Custom Template
                           </Badge>
                         )}
                       </div>
@@ -476,30 +482,32 @@ export default function PermissionTemplatesManager() {
                     </div>
                     <div className="flex gap-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => handleDuplicateTemplate(template)}
                       >
-                        <Copy className="h-4 w-4" />
+                        <Copy className="h-4 w-4 mr-2" />
+                        Duplicate
                       </Button>
                       {!template.isSystem && (
                         <>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => handleEditTemplate(template)}
-                            title="Edit template"
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
                           </Button>
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => setDeleteTemplate(template)}
-                            className="text-red-600 hover:text-red-700"
-                            title="Delete template"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
                           </Button>
                         </>
                       )}

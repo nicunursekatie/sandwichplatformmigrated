@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LoadingState } from "@/components/ui/loading";
 
 import { supabase } from '@/lib/supabase';
+import { apiRequest } from '@/lib/queryClient';
 import { 
   Download, 
   Search, 
@@ -22,6 +23,42 @@ import {
   Trash2
 } from "lucide-react";
 
+// Define types for your data
+type Summary = {
+  collections: number;
+  hosts: number;
+  projects: number;
+  totalSandwiches: number;
+};
+
+type IntegrityData = {
+  summary: {
+    totalIssues: number;
+    criticalIssues: number;
+  };
+  issues: Array<{
+    description: string;
+    count: number;
+    type: string;
+  }>;
+};
+
+type SearchResults = {
+  summary?: {
+    total: number;
+    collections: number;
+    hosts: number;
+    projects: number;
+    contacts: number;
+  };
+  results?: Array<{
+    type: string;
+    title: string;
+    description: string;
+    relevance: number;
+  }>;
+};
+
 export function DataManagementDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<string>("all");
@@ -30,17 +67,17 @@ export function DataManagementDashboard() {
   const queryClient = useQueryClient();
 
   // Fetch data summary
-  const { data: summary, isLoading: summaryLoading } = useQuery({
+  const { data: summary, isLoading: summaryLoading } = useQuery<Summary>({
     queryKey: ["/api/data/summary"],
   });
 
   // Fetch data integrity status
-  const { data: integrityData, isLoading: integrityLoading } = useQuery({
+  const { data: integrityData, isLoading: integrityLoading } = useQuery<IntegrityData>({
     queryKey: ["/api/data/integrity/check"],
   });
 
   // Search functionality
-  const { data: searchResults, isLoading: searchLoading, refetch: performSearch } = useQuery({
+  const { data: searchResults, isLoading: searchLoading, refetch: performSearch } = useQuery<SearchResults>({
     queryKey: ["/api/search", searchQuery, searchType],
     enabled: false, // Manual trigger
   });
@@ -118,8 +155,9 @@ export function DataManagementDashboard() {
 
   // Bulk operations
   const deduplicateHostsMutation = useMutation({
-    mutationFn: () => apiRequest("/api/data/bulk/deduplicate-hosts", { method: "POST" }),
-    onSuccess: (data: any) => {
+    mutationFn: () => apiRequest("POST", "/api/data/bulk/deduplicate-hosts"),
+    onSuccess: async (response: Response) => {
+      const data = await response.json();
       toast({
         title: "Deduplication Complete",
         description: `Removed ${data.deleted || 0} duplicate hosts`,
@@ -183,7 +221,11 @@ export function DataManagementDashboard() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Collections:</span>
-                      <Badge>{summary.collections?.toLocaleString() || 0}</Badge>
+                      <Badge>
+                        {typeof (summary as any).collections === "number"
+                          ? (summary as any).collections.toLocaleString()
+                          : 0}
+                      </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Hosts:</span>

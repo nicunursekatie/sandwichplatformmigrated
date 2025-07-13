@@ -109,7 +109,7 @@ export default function ProjectsClean() {
     title: '',
     description: '',
     status: 'planning' as const,
-    priority: 'medium' as const,
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
     category: 'general',
     due_date: '',
     start_date: '',
