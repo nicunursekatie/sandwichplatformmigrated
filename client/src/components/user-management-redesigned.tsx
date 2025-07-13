@@ -886,10 +886,9 @@ export default function UserManagementRedesigned() {
                   </p>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )}
 
       {/* Celebration Toast */}
       <CelebrationToast
