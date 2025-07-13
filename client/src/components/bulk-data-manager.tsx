@@ -51,19 +51,19 @@ export default function BulkDataManager({
   const canExport = hasPermission(user, PERMISSIONS.EXPORT_DATA);
 
   // Fetch collection statistics
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery<ImportProgress>({
     queryKey: ['/api/collection-stats'],
     refetchInterval: 5000, // Refresh every 5 seconds during import
   });
 
   // Fetch host mapping distribution
-  const { data: mappingStats, isLoading: mappingLoading } = useQuery({
+  const { data: mappingStats, isLoading: mappingLoading } = useQuery<MappingStats[]>({
     queryKey: ['/api/host-mapping-stats'],
     refetchInterval: 5000,
   });
 
   // Fetch collections for selected host
-  const { data: hostCollections, isLoading: hostCollectionsLoading } = useQuery({
+  const { data: hostCollections, isLoading: hostCollectionsLoading } = useQuery<any[]>({
     queryKey: ['/api/collections-by-host', selectedHost],
     queryFn: async () => {
       if (!selectedHost) return [];
@@ -223,11 +223,11 @@ export default function BulkDataManager({
                     <div 
                       key={index} 
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => handleHostClick(stat.host_name)}
+                      onClick={() => handleHostClick(stat.hostName)}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-3 h-3 rounded-full" style={{backgroundColor: 'var(--tsp-teal)'}}></div>
-                        <span className="font-medium">{stat.host_name}</span>
+                        <span className="font-medium">{stat.hostName}</span>
                         {stat.mapped && <Badge variant="outline" className="text-green-600">Mapped</Badge>}
                       </div>
                       <Badge variant="secondary">

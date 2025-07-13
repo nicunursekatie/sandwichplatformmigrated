@@ -17,22 +17,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Plus, 
   Calendar, 
-  User, 
   Clock, 
   Target, 
   CheckCircle2, 
-  Circle, 
-  Pause,
-  Play,
-  ArrowRight,
-  BarChart3,
   AlertCircle,
-  Award,
-  Trash2,
   Edit,
-  Settings,
   Users,
-  MessageSquare,
   FileText,
   MoreVertical
 } from "lucide-react";
@@ -107,15 +97,13 @@ interface TaskAssignment {
 }
 
 export default function ProjectsClean() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { celebration, triggerCelebration, hideCelebration } = useCelebration();
+  const { celebration, hideCelebration } = useCelebration();
   const canEdit = hasPermission(user, PERMISSIONS.MANAGE_PROJECTS);
   const canView = hasPermission(user, PERMISSIONS.VIEW_PROJECTS);
   
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [newProject, setNewProject] = useState({
     title: '',
@@ -628,8 +616,8 @@ export default function ProjectsClean() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={newProject.priority} onValueChange={(value: 'low' | 'medium' | 'high' | 'urgent') => 
-                  setNewProject({ ...newProject, priority: value })
+                <Select value={newProject.priority} onValueChange={(value) => 
+                  setNewProject({ ...newProject, priority: value as 'low' | 'medium' | 'high' | 'urgent' })
                 }>
                   <SelectTrigger>
                     <SelectValue />
@@ -712,7 +700,7 @@ export default function ProjectsClean() {
         onClose={hideCelebration}
         taskTitle={celebration.taskTitle}
         emoji={celebration.emoji}
-        onSendThanks={(message: string) => {
+        onSendThanks={() => {
           toast({
             title: "Thanks sent!",
             description: "Your appreciation message has been recorded.",

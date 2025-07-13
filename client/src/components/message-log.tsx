@@ -110,12 +110,18 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
         const result = await supabaseService.message.createMessage(data);
         console.log('API response received:', result);
         return result;
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('API request failed:', error);
+        // Type assertion to access error properties
+        const err = error as { 
+          message?: string; 
+          status?: number; 
+          response?: any 
+        };
         console.error('Error details:', {
-          message: error.message,
-          status: error.status,
-          response: error.response
+          message: err.message,
+          status: err.status,
+          response: err.response
         });
         throw error;
       }
@@ -132,11 +138,12 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
         description: "Your message has been added to the team chat."
       });
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       console.error('Message sending failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
         title: "Error",
-        description: `Failed to send message: ${error.message || 'Unknown error'}`,
+        description: `Failed to send message: ${errorMessage}`,
         variant: "destructive"
       });
     }
@@ -161,7 +168,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
         description: "The message has been removed from the chat.",
       });
     },
-    onError: (error, messageId, context) => {
+    onError: (error: unknown, messageId: number, context: unknown) => {
       // Roll back optimistic update
       setOptimisticMessages(null);
       queryClient.invalidateQueries({ queryKey: ["messages"] });

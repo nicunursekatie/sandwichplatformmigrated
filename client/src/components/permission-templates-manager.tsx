@@ -209,6 +209,53 @@ export default function PermissionTemplatesManager() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
+        // Custom templates (editable/deletable)
+        {
+          id: "content_manager",
+          name: "Content Manager",
+          description: "Manages content and announcements but limited admin access",
+          permissions: [
+            PERMISSIONS.GENERAL_CHAT,
+            PERMISSIONS.COMMITTEE_CHAT,
+            PERMISSIONS.VIEW_RECIPIENTS,
+            PERMISSIONS.VIEW_HOSTS,
+            PERMISSIONS.VIEW_DRIVERS,
+            PERMISSIONS.VIEW_COLLECTIONS,
+            PERMISSIONS.VIEW_PROJECTS,
+            PERMISSIONS.MANAGE_ANNOUNCEMENTS,
+            PERMISSIONS.VIEW_SUGGESTIONS,
+            PERMISSIONS.SUBMIT_SUGGESTIONS,
+            PERMISSIONS.RESPOND_TO_SUGGESTIONS,
+          ],
+          isSystem: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: "project_coordinator",
+          name: "Project Coordinator",
+          description: "Can manage projects and work logs but limited to operational tasks",
+          permissions: [
+            PERMISSIONS.GENERAL_CHAT,
+            PERMISSIONS.COMMITTEE_CHAT,
+            PERMISSIONS.VIEW_RECIPIENTS,
+            PERMISSIONS.VIEW_HOSTS,
+            PERMISSIONS.VIEW_DRIVERS,
+            PERMISSIONS.VIEW_COLLECTIONS,
+            PERMISSIONS.EDIT_COLLECTIONS,
+            PERMISSIONS.VIEW_PROJECTS,
+            PERMISSIONS.MANAGE_PROJECTS,
+            PERMISSIONS.VIEW_MEETINGS,
+            PERMISSIONS.EDIT_MEETINGS,
+            PERMISSIONS.LOG_WORK,
+            PERMISSIONS.MANAGE_WORK_LOGS,
+            PERMISSIONS.VIEW_SUGGESTIONS,
+            PERMISSIONS.SUBMIT_SUGGESTIONS,
+          ],
+          isSystem: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
       ];
     },
   });
@@ -441,6 +488,7 @@ export default function PermissionTemplatesManager() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditTemplate(template)}
+                            title="Edit template"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -448,6 +496,8 @@ export default function PermissionTemplatesManager() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setDeleteTemplate(template)}
+                            className="text-red-600 hover:text-red-700"
+                            title="Delete template"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

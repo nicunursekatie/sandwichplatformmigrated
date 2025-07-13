@@ -41,12 +41,12 @@ export default function AnalyticsDashboard() {
 
     // Calculate basic statistics
     const totalSandwiches = collections.reduce((sum, c) => 
-      sum + (c.individual_sandwiches || 0) + parseGroups(c.group_collections), 0
+      sum + (c.individualSandwiches || 0) + parseGroups(c.groupCollections), 0
     );
 
     const hostStats = collections.reduce((acc, c) => {
-      const host = c.host_name || 'Unknown';
-      const sandwiches = (c.individual_sandwiches || 0) + parseGroups(c.group_collections);
+      const host = c.hostName || 'Unknown';
+      const sandwiches = (c.individualSandwiches || 0) + parseGroups(c.groupCollections);
       
       if (!acc[host]) {
         acc[host] = { total: 0, collections: 0 };
@@ -69,12 +69,12 @@ export default function AnalyticsDashboard() {
     };
 
     const weeklyData = collections.reduce((acc, c) => {
-      const date = new Date(c.collection_date || '');
+      const date = new Date(c.collectionDate || '');
       const weekKey = getWeekKey(date);
-      const sandwiches = (c.individual_sandwiches || 0) + parseGroups(c.group_collections);
+      const sandwiches = (c.individualSandwiches || 0) + parseGroups(c.groupCollections);
       
       if (!acc[weekKey]) {
-        acc[weekKey] = { total: 0, date: c.collection_date };
+        acc[weekKey] = { total: 0, date: c.collectionDate };
       }
       acc[weekKey].total += sandwiches;
       
@@ -91,9 +91,9 @@ export default function AnalyticsDashboard() {
 
     // Monthly trends for chart
     const monthlyTrends = collections.reduce((acc, c) => {
-      const date = new Date(c.collection_date || '');
+      const date = new Date(c.collectionDate || '');
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const sandwiches = (c.individual_sandwiches || 0) + parseGroups(c.group_collections);
+      const sandwiches = (c.individualSandwiches || 0) + parseGroups(c.groupCollections);
       
       if (!acc[monthKey]) {
         acc[monthKey] = { month: monthKey, sandwiches: 0 };
