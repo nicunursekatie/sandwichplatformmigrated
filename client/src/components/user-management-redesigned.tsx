@@ -886,7 +886,7 @@ export default function UserManagementRedesigned() {
                   </p>
                 </div>
               )}
-            )}
+            </div>
           </CardContent>
         </Card>
       )}
