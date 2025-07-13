@@ -339,6 +339,18 @@ export default function UserManagementRedesigned() {
             <span className="sm:hidden">Users</span>
           </button>
           <button
+            onClick={() => setActiveTab("templates")}
+            className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
+              activeTab === "templates"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+            }`}
+          >
+            <Shield className="h-4 w-4 inline mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Permission Templates</span>
+            <span className="sm:hidden">Templates</span>
+          </button>
+          <button
             onClick={() => setActiveTab("announcements")}
             className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === "announcements"
@@ -365,7 +377,9 @@ export default function UserManagementRedesigned() {
         </nav>
       </div>
 
-      {activeTab === "announcements" ? (
+      {activeTab === "templates" ? (
+        <PermissionTemplatesManager />
+      ) : activeTab === "announcements" ? (
         <AnnouncementManager />
       ) : activeTab === "auth-debug" ? (
         <AuthDebug />
