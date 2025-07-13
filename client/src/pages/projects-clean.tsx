@@ -69,6 +69,8 @@ export default function ProjectsClean() {
     queryKey: ["projects"],
     queryFn: async () => {
       console.log('Fetching projects...');
+      console.log('Current user:', user?.email, 'Role:', user?.role, 'Has permission:', hasPermission(user, PERMISSIONS.VIEW_PROJECTS));
+      
       const { data, error } = await supabase
         .from('projects')
         .select('*')
@@ -82,6 +84,7 @@ export default function ProjectsClean() {
       console.log('Projects fetched successfully:', data?.length || 0, 'projects');
       return data || [];
     },
+    enabled: hasPermission(user, PERMISSIONS.VIEW_PROJECTS),
   });
 
   // Update project status mutation
@@ -418,10 +421,44 @@ export default function ProjectsClean() {
     </Card>
   );
 
+  // Check if user has permission to view projects
+  if (!hasPermission(user, PERMISSIONS.VIEW_PROJECTS)) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-amber-600 mb-2">Access Restricted</div>
+          <div className="text-slate-600 text-sm">
+            You don't have permission to view projects.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-slate-600">Loading projects...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error('Projects query error:', error);
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-red-600 mb-2">Error loading projects</div>
+          <div className="text-slate-600 text-sm">
+            {error instanceof Error ? error.message : 'Unknown error occurred'}
+          </div>
+          <button 
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["projects"] })}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

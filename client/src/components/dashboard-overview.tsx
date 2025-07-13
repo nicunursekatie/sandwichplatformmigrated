@@ -16,11 +16,38 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching projects in dashboard:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
     enabled: hasPermission(user, PERMISSIONS.VIEW_PROJECTS)
   });
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ["messages"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) {
+        console.error('Error fetching messages in dashboard:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
     enabled: hasPermission(user, PERMISSIONS.GENERAL_CHAT)
   });
 
