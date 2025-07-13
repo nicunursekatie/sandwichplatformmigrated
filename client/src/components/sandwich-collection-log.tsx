@@ -317,7 +317,7 @@ export default function SandwichCollectionLog() {
     });
 
   // Use server-side pagination data
-  const totalItems = pagination?.total || 0;
+  const totalItems = pagination?.totalItems || 0;
   const totalPages = pagination?.totalPages || 1;
   const paginatedCollections = filteredCollections;
 
@@ -434,9 +434,8 @@ export default function SandwichCollectionLog() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await supabaseService.sandwichCollection.deleteCollection(id);
-      // Don't try to parse JSON for 204 responses
-      return response.status === 204 ? null : response.json();
+      await supabaseService.sandwichCollection.deleteCollection(id);
+      return;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
@@ -456,7 +455,7 @@ export default function SandwichCollectionLog() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await supabase.from('sandwich_collections').insert(data);
+      return await supabaseService.sandwichCollection.createCollection(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
@@ -471,7 +470,7 @@ export default function SandwichCollectionLog() {
       setNewCollectionGroupOnlyMode(false);
       toast({
         title: "Collection added",
-        description: "The sandbox collection has been added successfully.",
+        description: "The sandwich collection has been added successfully.",
       });
     },
     onError: () => {
@@ -603,10 +602,7 @@ export default function SandwichCollectionLog() {
   const exportToCSV = async () => {
     try {
       // Fetch all collections data for export
-      const { data, error } = await supabase.from('sandwich_collections').select('*').limit(10000);
-      if (error) throw error;
-      const allCollections = data || [];
-
+      const allCollections = await supabaseService.sandwichCollection.getAllCollections(10000);
       if (allCollections.length === 0) {
         toast({
           title: "No data to export",
@@ -615,7 +611,6 @@ export default function SandwichCollectionLog() {
         });
         return;
       }
-
       const headers = ["ID", "Host Name", "Individual Sandwiches", "Collection Date", "Group Collections", "Submitted At"];
       const csvData = [
         headers.join(","),
@@ -628,7 +623,6 @@ export default function SandwichCollectionLog() {
           `"${new Date(collection.submitted_at).toLocaleString()}"`
         ].join(","))
       ].join("\n");
-
       const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
@@ -638,7 +632,6 @@ export default function SandwichCollectionLog() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
       toast({
         title: "Export successful",
         description: `All ${allCollections.length} collections exported to CSV.`,
