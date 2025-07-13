@@ -116,6 +116,7 @@ export default function SandwichCollectionLog() {
     const { data: collectionsResponse, isLoading } = useQuery({
     queryKey,
     queryFn: useCallback(async () => {
+      console.log('Query function called with:', { currentPage, itemsPerPage, searchFilters, sortConfig });
       // Always fetch all collections to get accurate pagination
       const collections = await supabaseService.sandwichCollection.getAllCollections(10000);
       
@@ -311,7 +312,7 @@ export default function SandwichCollectionLog() {
   // Use server-side pagination data
   const totalItems = pagination?.totalItems || 0;
   const totalPages = pagination?.totalPages || 1;
-  const paginatedCollections = filteredCollections;
+  const paginatedCollections = collections;
 
 
 
@@ -673,7 +674,7 @@ export default function SandwichCollectionLog() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedCollections(new Set(filteredCollections.map((c: SandwichCollection) => c.id)));
+      setSelectedCollections(new Set(paginatedCollections.map((c: SandwichCollection) => c.id)));
     } else {
       setSelectedCollections(new Set());
     }
@@ -1306,10 +1307,10 @@ export default function SandwichCollectionLog() {
         {paginatedCollections.length > 0 && (
           <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-200">
             <button
-              onClick={() => handleSelectAll(!selectedCollections.size || selectedCollections.size < filteredCollections.length)}
+              onClick={() => handleSelectAll(!selectedCollections.size || selectedCollections.size < paginatedCollections.length)}
               className="flex items-center space-x-2 text-sm text-slate-600 hover:text-slate-900"
             >
-              {selectedCollections.size === filteredCollections.length ? (
+              {selectedCollections.size === paginatedCollections.length ? (
                 <CheckSquare className="w-4 h-4" />
               ) : (
                 <Square className="w-4 h-4" />
@@ -1318,7 +1319,7 @@ export default function SandwichCollectionLog() {
             </button>
             {selectedCollections.size > 0 && (
               <span className="text-sm text-slate-500">
-                {selectedCollections.size} of {filteredCollections.length} selected
+                {selectedCollections.size} of {paginatedCollections.length} selected
               </span>
             )}
           </div>
@@ -1461,7 +1462,7 @@ export default function SandwichCollectionLog() {
             </div>
           )}
 
-          {collections.length > 0 && filteredCollections.length === 0 && (
+          {collections.length > 0 && paginatedCollections.length === 0 && (
             <div className="text-center py-8 text-slate-500">
               No entries match the current filters. Try adjusting your search criteria.
             </div>
@@ -1492,7 +1493,10 @@ export default function SandwichCollectionLog() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(1)}
+                  onClick={() => {
+                    console.log('Clicking First page');
+                    setCurrentPage(1);
+                  }}
                   disabled={currentPage === 1}
                 >
                   First
@@ -1500,7 +1504,10 @@ export default function SandwichCollectionLog() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(currentPage - 1)}
+                  onClick={() => {
+                    console.log('Clicking Previous page, current:', currentPage);
+                    setCurrentPage(currentPage - 1);
+                  }}
                   disabled={currentPage === 1}
                 >
                   Previous
@@ -1516,7 +1523,10 @@ export default function SandwichCollectionLog() {
                         key={pageNumber}
                         variant={pageNumber === currentPage ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setCurrentPage(pageNumber)}
+                        onClick={() => {
+                          console.log('Clicking page:', pageNumber, 'current:', currentPage);
+                          setCurrentPage(pageNumber);
+                        }}
                         className="w-10"
                       >
                         {pageNumber}
@@ -1528,7 +1538,10 @@ export default function SandwichCollectionLog() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
+                  onClick={() => {
+                    console.log('Clicking Next page, current:', currentPage, 'total:', totalPages);
+                    setCurrentPage(currentPage + 1);
+                  }}
                   disabled={currentPage === totalPages}
                 >
                   Next
@@ -1536,7 +1549,10 @@ export default function SandwichCollectionLog() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(totalPages)}
+                  onClick={() => {
+                    console.log('Clicking Last page, total:', totalPages);
+                    setCurrentPage(totalPages);
+                  }}
                   disabled={currentPage === totalPages}
                 >
                   Last
