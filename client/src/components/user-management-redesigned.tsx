@@ -62,9 +62,20 @@ export default function UserManagementRedesigned() {
   const [sortBy, setSortBy] = useState<"name" | "date" | "lastLogin">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  // Debug permissions
+  const canViewUsers = hasPermission(currentUser, PERMISSIONS.VIEW_USERS) || hasPermission(currentUser, PERMISSIONS.MANAGE_USERS);
+  console.log('User Management Debug:', {
+    currentUser: currentUser?.email,
+    permissions: currentUser?.permissions,
+    canViewUsers,
+    hasViewUsers: hasPermission(currentUser, PERMISSIONS.VIEW_USERS),
+    hasManageUsers: hasPermission(currentUser, PERMISSIONS.MANAGE_USERS)
+  });
+
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["users"],
     queryFn: async () => {
+      console.log('Fetching users from Supabase...');
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -74,6 +85,8 @@ export default function UserManagementRedesigned() {
         console.error('Error fetching users:', error);
         return [];
       }
+      
+      console.log('Users fetched:', data?.length || 0, 'users');
       
       return (data || []).map(user => ({
         id: user.id,
@@ -87,7 +100,7 @@ export default function UserManagementRedesigned() {
         createdAt: user.created_at
       }));
     },
-    enabled: hasPermission(currentUser, PERMISSIONS.VIEW_USERS),
+    enabled: hasPermission(currentUser, PERMISSIONS.VIEW_USERS) || hasPermission(currentUser, PERMISSIONS.MANAGE_USERS),
   });
 
   // Filter and sort users

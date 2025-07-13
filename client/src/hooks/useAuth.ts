@@ -76,11 +76,16 @@ export function useAuth() {
     isActive: userData.is_active ?? true,
   } : null;
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   return {
     user,
     session,
     isLoading: isLoading || userDataLoading || !hasInitialized,
     isAuthenticated: !!session,
     error: null,
+    signOut,
   };
 }

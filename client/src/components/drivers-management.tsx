@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +49,7 @@ import {
 
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface Driver {
   id: number;
@@ -344,7 +345,7 @@ export default function DriversManagement() {
 
   const handleSubmitVolunteer = () => {
     if (
-      !volunteerForm.submitted_by ||
+      !volunteerForm.submittedBy ||
       !volunteerForm.phone ||
       !volunteerForm.email ||
       !volunteerForm.agreementAccepted
@@ -459,7 +460,7 @@ export default function DriversManagement() {
           `"${driver.phone || ""}"`,
           `"${driver.email || ""}"`,
           `"${driver.zone || ""}"`,
-          driver.is_active ? "Yes" : "No",
+          driver.isActive ? "Yes" : "No",
           hasAgreement ? "Yes" : "No",
           driver.vanApproved ? "Yes" : "No",
           `"${driver.homeAddress || ""}"`,
@@ -529,7 +530,7 @@ export default function DriversManagement() {
 
   // Separate and sort drivers, then apply filters
   const allActiveDrivers = drivers
-    .filter((driver) => driver.is_active)
+    .filter((driver) => driver.isActive)
     .sort((a, b) => a.name.localeCompare(b.name));
   const allInactiveDrivers = drivers
     .filter((driver) => !driver.is_active)

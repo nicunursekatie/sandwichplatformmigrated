@@ -69,7 +69,7 @@ export default function UserManagement() {
         createdAt: user.created_at
       }));
     },
-    enabled: hasPermission(currentUser, PERMISSIONS.VIEW_USERS),
+    enabled: hasPermission(currentUser, PERMISSIONS.VIEW_USERS) || hasPermission(currentUser, PERMISSIONS.MANAGE_USERS),
   });
 
   const updateUserMutation = useMutation({

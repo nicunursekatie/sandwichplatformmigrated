@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Users, UserPlus, UserMinus, Mail, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { User, Project } from "@shared/schema";
 
 import { supabase } from '@/lib/supabase';
+import { queryClient } from "@/lib/queryClient";
 interface ProjectUserManagerProps {
   project: Project;
   onUpdate?: () => void;

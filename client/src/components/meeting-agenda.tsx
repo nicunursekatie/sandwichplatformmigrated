@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Calendar, Clock, User, Plus, CheckCircle, XCircle, Upload, MessageSquare, FileText, File, Edit, Trash2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 
 interface AgendaItem {
@@ -274,7 +275,7 @@ export default function MeetingAgenda() {
                     <Label htmlFor="submittedBy">Your Name</Label>
                     <Input
                       id="submittedBy"
-                      value={newItem.submitted_by}
+                      value={newItem.submittedBy}
                       onChange={(e) => setNewItem({ ...newItem, submittedBy: e.target.value })}
                       required
                     />
@@ -427,9 +428,9 @@ export default function MeetingAgenda() {
                             <CardTitle className="text-base">{item.title}</CardTitle>
                             <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
                               <User className="w-3 h-3" />
-                              <span>{item.submitted_by}</span>
+                              <span>{item.submittedBy}</span>
                               <span>•</span>
-                              <span>{new Date(item.submitted_at).toLocaleDateString()}</span>
+                              <span>{new Date(item.submittedAt).toLocaleDateString()}</span>
                             </div>
                           </>
                         )}
