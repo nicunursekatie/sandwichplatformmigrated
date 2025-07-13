@@ -142,6 +142,16 @@ const PERMISSION_CATEGORIES = [
       { key: PERMISSIONS.MANAGE_ANNOUNCEMENTS, label: "Manage Announcements", description: "Create and edit announcements" },
     ],
   },
+  {
+    id: "work_logs",
+    label: "Work Logs",
+    icon: FileText,
+    description: "Work logging and time tracking",
+    permissions: [
+      { key: PERMISSIONS.LOG_WORK, label: "Log Work", description: "Submit work log entries" },
+      { key: PERMISSIONS.MANAGE_WORK_LOGS, label: "Manage Work Logs", description: "View and manage all work logs (supervisor access)" },
+    ],
+  },
 ];
 
 export function UserPermissionsDialog({
@@ -216,7 +226,7 @@ export function UserPermissionsDialog({
           <DialogDescription>
             Configure role and permissions for{" "}
             <span className="font-semibold">
-              {user.first_name} {user.last_name}
+              {user.firstName} {user.lastName}
             </span>{" "}
             ({user.email})
           </DialogDescription>

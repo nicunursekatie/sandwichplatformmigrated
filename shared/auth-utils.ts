@@ -7,7 +7,8 @@ export const USER_ROLES = {
   VOLUNTEER: 'volunteer',
   RECIPIENT: 'recipient',
   VIEWER: 'viewer',
-  WORK_LOGGER: 'work_logger'
+  WORK_LOGGER: 'work_logger',
+  WORK_LOG_SUPERVISOR: 'work_log_supervisor'
 } as const;
 
 export const PERMISSIONS = {
@@ -186,7 +187,22 @@ export function getDefaultPermissionsForRole(role: string): string[] {
         PERMISSIONS.VIEW_REPORTS,
         PERMISSIONS.VIEW_PROJECTS,
         PERMISSIONS.SEND_MESSAGES,
-        'log_work' // Custom permission for work logging
+        PERMISSIONS.LOG_WORK // Can log their own work
+      ];
+    
+    case USER_ROLES.WORK_LOG_SUPERVISOR:
+      return [
+        PERMISSIONS.VIEW_PHONE_DIRECTORY,
+        PERMISSIONS.GENERAL_CHAT,
+        PERMISSIONS.DIRECT_MESSAGES,
+        PERMISSIONS.GROUP_MESSAGES,
+        PERMISSIONS.TOOLKIT_ACCESS,
+        PERMISSIONS.VIEW_COLLECTIONS,
+        PERMISSIONS.VIEW_REPORTS,
+        PERMISSIONS.VIEW_PROJECTS,
+        PERMISSIONS.SEND_MESSAGES,
+        PERMISSIONS.LOG_WORK, // Can log their own work
+        PERMISSIONS.MANAGE_WORK_LOGS // Can view and manage all work logs
       ];
     
     default:

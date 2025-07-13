@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { supabaseService } from "@/lib/supabase-service";
+import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 export default function WorkLogPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -14,7 +15,8 @@ export default function WorkLogPage() {
   const [minutes, setMinutes] = useState(0);
 
   // Check if user has permission to access work logs
-  const hasWorkLogPermission = user?.permissions?.includes('log_work') || 
+  const hasWorkLogPermission = hasPermission(user, PERMISSIONS.LOG_WORK) || 
+                              hasPermission(user, PERMISSIONS.MANAGE_WORK_LOGS) ||
                               user?.role === 'admin' || 
                               user?.role === 'super_admin' ||
                               user?.email === 'mdlouza@gmail.com';
@@ -138,14 +140,14 @@ export default function WorkLogPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {user?.role === 'admin' || user?.role === 'super_admin' || user?.email === 'mdlouza@gmail.com' 
+              {hasPermission(user, PERMISSIONS.MANAGE_WORK_LOGS) || user?.role === 'admin' || user?.role === 'super_admin' || user?.email === 'mdlouza@gmail.com' 
                 ? 'All Work Logs' 
                 : 'My Work Logs'
               }
             </CardTitle>
-            {(user?.role === 'admin' || user?.role === 'super_admin' || user?.email === 'mdlouza@gmail.com') && (
+            {(hasPermission(user, PERMISSIONS.MANAGE_WORK_LOGS) || user?.role === 'admin' || user?.role === 'super_admin' || user?.email === 'mdlouza@gmail.com') && (
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                You can see all work logs as an administrator. Regular users can only see their own logs.
+                You can see all work logs as a supervisor or administrator. Regular users can only see their own logs.
               </p>
             )}
           </CardHeader>
@@ -174,7 +176,7 @@ export default function WorkLogPage() {
                       )}
                     </div>
                   </div>
-                  {(user?.role === "super_admin" || user?.role === "admin" || user?.email === 'mdlouza@gmail.com' || log.user_id === user?.id) && (
+                  {(hasPermission(user, PERMISSIONS.MANAGE_WORK_LOGS) || user?.role === "super_admin" || user?.role === "admin" || user?.email === 'mdlouza@gmail.com' || log.user_id === user?.id) && (
                     <Button
                       variant="destructive"
                       size="sm"

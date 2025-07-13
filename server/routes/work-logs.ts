@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sql, eq } from "drizzle-orm";
 import { workLogs } from "@shared/schema";
 import { db } from "../db";
+import { PERMISSIONS } from "@shared/auth-utils";
 // Import the actual authentication middleware being used in the app
 const isAuthenticated = (req: any, res: any, next: any) => {
   const user = req.user || req.session?.user;
@@ -29,8 +30,22 @@ function isSuperAdmin(req) {
 
 // Middleware to check if user can log work
 function canLogWork(req) {
-  // Allow admin, super_admin, or users with general permissions
-  return req.user?.role === "admin" || req.user?.role === "super_admin" || req.user?.role === "work_logger";
+  // Allow admin, super_admin, work_logger, work_log_supervisor, or users with log_work permission
+  return req.user?.role === "admin" || 
+         req.user?.role === "super_admin" || 
+         req.user?.role === "work_logger" ||
+         req.user?.role === "work_log_supervisor" ||
+         req.user?.permissions?.includes(PERMISSIONS.LOG_WORK);
+}
+
+// Middleware to check if user can manage work logs
+function canManageWorkLogs(req) {
+  // Allow admin, super_admin, work_log_supervisor, or users with manage_work_logs permission
+  return req.user?.role === "admin" || 
+         req.user?.role === "super_admin" || 
+         req.user?.role === "work_log_supervisor" ||
+         req.user?.permissions?.includes(PERMISSIONS.MANAGE_WORK_LOGS) ||
+         req.user?.email === 'mdlouza@gmail.com';
 }
 
 // Get work logs - Admins see ALL, users see only their own
@@ -43,9 +58,9 @@ router.get("/work-logs", isAuthenticated, async (req, res) => {
     console.log(`[WORK LOGS] User: ${userId}, Email: ${userEmail}, Role: ${userRole}`);
     console.log(`[WORK LOGS] isSuperAdmin check: ${isSuperAdmin(req)}, isMarcy: ${userEmail === 'mdlouza@gmail.com'}`);
     
-    // Super admin and Marcy can see ALL work logs
-    if (isSuperAdmin(req) || userEmail === 'mdlouza@gmail.com') {
-      console.log(`[WORK LOGS] Admin access - fetching ALL logs`);
+    // Super admin, work log supervisors, and Marcy can see ALL work logs
+    if (isSuperAdmin(req) || canManageWorkLogs(req)) {
+      console.log(`[WORK LOGS] Admin/Supervisor access - fetching ALL logs`);
       const logs = await db.select().from(workLogs);
       console.log(`[WORK LOGS] Found ${logs.length} total logs:`, logs.map(l => `${l.id}: ${l.userId}`));
       return res.json(logs);
@@ -91,7 +106,7 @@ router.put("/work-logs/:id", isAuthenticated, async (req, res) => {
     // Only allow editing own log unless super admin or Marcy
     const log = await db.select().from(workLogs).where(eq(workLogs.id, logId));
     if (!log[0]) return res.status(404).json({ error: "Work log not found" });
-    if (!isSuperAdmin(req) && req.user.email !== 'mdlouza@gmail.com' && log[0].userId !== req.user.id) {
+    if (!isSuperAdmin(req) && !canManageWorkLogs(req) && log[0].userId !== req.user.id) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
     const updated = await db.update(workLogs).set({
@@ -119,7 +134,7 @@ router.delete("/work-logs/:id", isAuthenticated, async (req, res) => {
     
     if (!log[0]) return res.status(404).json({ error: "Work log not found" });
     
-    const hasPermission = isSuperAdmin(req) || req.user.email === 'mdlouza@gmail.com' || log[0].userId === req.user.id;
+    const hasPermission = isSuperAdmin(req) || canManageWorkLogs(req) || log[0].userId === req.user.id;
     console.log("[WORK LOGS DELETE] Permission check:", { hasPermission, userRole: req.user.role, userEmail: req.user.email, logUserId: log[0].userId });
     
     if (!hasPermission) {

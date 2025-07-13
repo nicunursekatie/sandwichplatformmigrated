@@ -102,7 +102,7 @@ export default function Dashboard({ initialSection = "dashboard" }: { initialSec
     // Resources section
     { id: "toolkit", label: "Toolkit", icon: FolderOpen },
     { id: "development", label: "Development", icon: FileText },
-    ...(hasPermission(user, 'log_work') ? [{ id: "work-log", label: "Work Log", icon: ClipboardList }] : []),
+    ...(hasPermission(user, PERMISSIONS.LOG_WORK) || hasPermission(user, PERMISSIONS.MANAGE_WORK_LOGS) ? [{ id: "work-log", label: "Work Log", icon: ClipboardList }] : []),
     { id: "ably-demo", label: "Ably Demo", icon: MessageCircle },
     
     // Admin section
