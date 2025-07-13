@@ -65,7 +65,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
       const { data, error } = await supabase
         .from('meetings')
         .select('*')
-        .order('meeting_date', { ascending: false })
+        .order('date', { ascending: false })
         .limit(5);
       
       if (error) {
@@ -80,9 +80,31 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   const { data: statsData } = useQuery({
     queryKey: ["sandwich-collections-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_collection_stats');
-      if (error) throw error;
-      return data;
+      const { data, error } = await supabase
+        .from('sandwich_collections')
+        .select('individual_sandwiches, group_collections');
+      
+      if (error) {
+        console.error('Error fetching collection stats:', error);
+        return { completeTotalSandwiches: 0 };
+      }
+      
+      // Calculate total sandwiches
+      let total = 0;
+      data?.forEach(collection => {
+        total += collection.individual_sandwiches || 0;
+        // Parse group collections if it's a string like "100 from Group A"
+        if (collection.group_collections) {
+          const matches = collection.group_collections.match(/\d+/g);
+          if (matches) {
+            matches.forEach(num => {
+              total += parseInt(num, 10);
+            });
+          }
+        }
+      });
+      
+      return { completeTotalSandwiches: total };
     },
     staleTime: 0, // Always fetch fresh data to show corrected totals
     refetchOnWindowFocus: true
