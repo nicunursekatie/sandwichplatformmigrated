@@ -407,26 +407,36 @@ export function UserPermissionsDialogRedesigned({
                 </Alert>
               </div>
 
-              {/* Permission Stats */}
+              {/* Permission Summary */}
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Permission Summary</CardTitle>
+                  <CardTitle className="text-sm">Current Permissions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Total Permissions</span>
-                      <span className="font-medium">{stats.selected} / {stats.total}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${stats.percentage}%` }}
-                      />
-                    </div>
-                    <div className="text-center text-sm text-gray-500">
-                      {stats.percentage}% enabled
-                    </div>
+                  <div className="space-y-2">
+                    {PERMISSION_CATEGORIES.map(category => {
+                      const enabledPerms = category.permissions.filter(p => editingPermissions.includes(p.key));
+                      if (enabledPerms.length === 0) return null;
+                      
+                      return (
+                        <div key={category.id} className="text-xs">
+                          <div className={`flex items-center gap-1 font-medium ${category.color}`}>
+                            <category.icon className="h-3 w-3" />
+                            {category.label}
+                          </div>
+                          <div className="ml-4 text-gray-600 dark:text-gray-400">
+                            {enabledPerms.length === category.permissions.length 
+                              ? "All permissions" 
+                              : `${enabledPerms.length} permission${enabledPerms.length > 1 ? 's' : ''}`}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {editingPermissions.length === 0 && (
+                      <div className="text-xs text-gray-400 italic text-center py-2">
+                        No permissions selected
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -532,29 +542,33 @@ export function UserPermissionsDialogRedesigned({
                             </div>
                           </CardHeader>
                           <CardContent>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-500">
-                                {selectedCount} of {category.permissions.length} permissions
-                              </span>
-                              <Badge variant={allSelected ? "default" : partiallySelected ? "secondary" : "outline"}>
-                                {Math.round((selectedCount / category.permissions.length) * 100)}%
-                              </Badge>
-                            </div>
-                            {/* Preview of permissions in this category */}
-                            <div className="text-xs text-gray-500 space-y-0.5">
-                              {category.permissions.slice(0, 3).map(perm => (
-                                <div key={perm.key} className="flex items-center gap-1">
-                                  {editingPermissions.includes(perm.key) ? (
-                                    <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                  ) : (
-                                    <XCircle className="h-3 w-3 text-gray-400" />
-                                  )}
-                                  {perm.label}
-                                </div>
-                              ))}
-                              {category.permissions.length > 3 && (
-                                <div className="text-gray-400 italic">
-                                  +{category.permissions.length - 3} more...
+                            {/* Show actual permissions this user has */}
+                            <div className="space-y-1">
+                              {selectedCount > 0 ? (
+                                <>
+                                  <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    User can:
+                                  </div>
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                                    {category.permissions
+                                      .filter(perm => editingPermissions.includes(perm.key))
+                                      .slice(0, 3)
+                                      .map(perm => (
+                                        <div key={perm.key} className="flex items-center gap-1">
+                                          <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                          <span className="truncate">{perm.label}</span>
+                                        </div>
+                                      ))}
+                                    {category.permissions.filter(p => editingPermissions.includes(p.key)).length > 3 && (
+                                      <div className="text-gray-500 italic">
+                                        +{category.permissions.filter(p => editingPermissions.includes(p.key)).length - 3} more permissions
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-xs text-gray-400 italic">
+                                  No permissions in this category
                                 </div>
                               )}
                             </div>
@@ -588,18 +602,13 @@ export function UserPermissionsDialogRedesigned({
                                 <p className="text-sm text-gray-500">{category.description}</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary">
-                                {selectedCount} / {category.permissions.length}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleCategoryToggle(categoryPermissionKeys)}
-                              >
-                                {selectedCount === category.permissions.length ? "Deselect All" : "Select All"}
-                              </Button>
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCategoryToggle(categoryPermissionKeys)}
+                            >
+                              {selectedCount === category.permissions.length ? "Deselect All" : "Select All"}
+                            </Button>
                           </div>
                           
                           <div className="grid gap-2 pl-14">
