@@ -220,7 +220,7 @@ export function UserPermissionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-auto">
         <DialogHeader>
           <DialogTitle>Edit User Permissions</DialogTitle>
           <DialogDescription>
@@ -232,7 +232,7 @@ export function UserPermissionsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-auto">
           <div className="space-y-6">
             {/* Role Selection */}
             <div className="space-y-2">
@@ -349,7 +349,7 @@ export function UserPermissionsDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex items-center justify-between">
+        <DialogFooter className="flex items-center justify-between sticky bottom-0 bg-white dark:bg-gray-900 z-10 p-4 border-t">
           <div className="flex items-center gap-2">
             <Badge variant="outline">
               {editingPermissions.length} permissions selected
@@ -364,7 +364,7 @@ export function UserPermissionsDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!hasChanges}>
+            <Button onClick={handleSave}>
               Save Changes
             </Button>
           </div>
