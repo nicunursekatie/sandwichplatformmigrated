@@ -244,7 +244,7 @@ export default function UserManagement() {
 
   const handleDeleteUser = (user: User) => {
     const confirmDelete = window.confirm(
-      `Are you sure you want to delete ${user.first_name} ${user.last_name}? This action cannot be undone.`
+      `Are you sure you want to delete ${user.firstName} ${user.lastName}? This action cannot be undone.`
     );
     
     if (confirmDelete) {
@@ -344,7 +344,7 @@ export default function UserManagement() {
                   <TableCell>
                     <div>
                       <div className="font-medium">
-                        {user.first_name} {user.last_name}
+                        {user.firstName} {user.lastName}
                       </div>
                       <div className="text-sm text-gray-500">{user.email}</div>
                     </div>
@@ -355,19 +355,19 @@ export default function UserManagement() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.is_active ? "default" : "secondary"}>
-                      {user.is_active ? "Active" : "Inactive"}
+                    <Badge variant={user.isActive ? "default" : "secondary"}>
+                      {user.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {user.last_login_at 
-                      ? new Date(user.last_login_at).toLocaleDateString() + ' ' + 
-                        new Date(user.last_login_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    {user.lastLoginAt 
+                      ? new Date(user.lastLoginAt).toLocaleDateString() + ' ' + 
+                        new Date(user.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                       : <span className="text-gray-500 italic">Never</span>
                     }
                   </TableCell>
                   <TableCell>
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {new Date(user.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -401,7 +401,7 @@ export default function UserManagement() {
                           <DialogHeader>
                             <DialogTitle>Reset Password</DialogTitle>
                             <DialogDescription>
-                              Reset password for {user.first_name} {user.last_name} ({user.email})
+                              Reset password for {user.firstName} {user.lastName} ({user.email})
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
@@ -452,10 +452,10 @@ export default function UserManagement() {
                         size="sm"
                         onClick={() => toggleUserStatus.mutate({
                           userId: user.id,
-                          isActive: !user.is_active
+                          isActive: !user.isActive
                         })}
                       >
-                        {user.is_active ? "Deactivate" : "Activate"}
+                        {user.isActive ? "Deactivate" : "Activate"}
                       </Button>
 
                       {/* Delete Button */}
