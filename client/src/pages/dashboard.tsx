@@ -29,7 +29,7 @@ import ImpactDashboard from "@/pages/impact-dashboard";
 import DataManagement from "@/pages/data-management";
 import PerformanceDashboard from "@/pages/performance-dashboard";
 import ReportingDashboard from "@/pages/reporting-dashboard";
-import UserManagement from "@/components/user-management";
+import UserManagement from "@/components/user-management-redesigned";
 import UserProfile from "@/components/user-profile";
 import { useState } from "react";
 import * as React from "react";

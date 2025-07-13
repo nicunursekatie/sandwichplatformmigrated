@@ -57,15 +57,15 @@ export default function SandwichCollectionLog() {
   const [selectedCollections, setSelectedCollections] = useState<Set<number>>(new Set());
   const [showBatchEdit, setShowBatchEdit] = useState(false);
   const [batchEditData, setBatchEditData] = useState({
-    hostName: "",
-    collectionDate: ""
+    host_name: "",
+    collection_date: ""
   });
   const [searchFilters, setSearchFilters] = useState({
-    hostName: "",
-    collectionDateFrom: "",
-    collectionDateTo: "",
-    createdAtFrom: "",
-    createdAtTo: ""
+    host_name: "",
+    collection_date_from: "",
+    collection_date_to: "",
+    created_at_from: "",
+    created_at_to: ""
   });
 
   const [sortConfig, setSortConfig] = useState({
@@ -76,19 +76,19 @@ export default function SandwichCollectionLog() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [editFormData, setEditFormData] = useState({
-    collectionDate: "",
-    hostName: "",
-    individualSandwiches: "",
-    groupCollections: ""
+    collection_date: "",
+    host_name: "",
+    individual_sandwiches: "",
+    group_collections: ""
   });
   const [editGroupCollections, setEditGroupCollections] = useState<Array<{id: string, groupName: string, sandwichCount: number}>>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showDataManagement, setShowDataManagement] = useState(false);
   const [newCollectionData, setNewCollectionData] = useState({
-    collectionDate: "",
-    hostName: "",
-    individualSandwiches: "",
-    groupCollections: ""
+    collection_date: "",
+    host_name: "",
+    individual_sandwiches: "",
+    group_collections: ""
   });
   const [newGroupCollections, setNewGroupCollections] = useState<Array<{id: string, groupName: string, sandwichCount: number}>>([
     { id: Math.random().toString(36), groupName: "", sandwichCount: 0 }
@@ -98,7 +98,7 @@ export default function SandwichCollectionLog() {
   // Memoize expensive computations
   const needsAllData = useMemo(() => 
     showFilters || Object.values(searchFilters).some(v => v) || 
-    sortConfig.field !== "collectionDate" || sortConfig.direction !== "desc",
+    sortConfig.field !== "collection_date" || sortConfig.direction !== "desc",
     [showFilters, searchFilters, sortConfig]
   );
 
@@ -118,36 +118,36 @@ export default function SandwichCollectionLog() {
         
         let filteredCollections = collections || [];
         // Apply filters
-        if (searchFilters.hostName) {
-          const searchTerm = searchFilters.hostName.toLowerCase();
+        if (searchFilters.host_name) {
+          const searchTerm = searchFilters.host_name.toLowerCase();
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
             c.host_name?.toLowerCase().includes(searchTerm)
           );
         }
         
-        if (searchFilters.collectionDateFrom) {
+        if (searchFilters.collection_date_from) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.collection_date >= searchFilters.collectionDateFrom
+            c.collection_date >= searchFilters.collection_date_from
           );
         }
         
-        if (searchFilters.collectionDateTo) {
+        if (searchFilters.collection_date_to) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.collection_date <= searchFilters.collectionDateTo
+            c.collection_date <= searchFilters.collection_date_to
           );
         }
         
-        if (searchFilters.createdAtFrom) {
+        if (searchFilters.created_at_from) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
             const submittedAtDate = typeof c.submitted_at === "string" ? new Date(c.submitted_at) : c.submitted_at;
-            const filterDate = typeof searchFilters.createdAtFrom === "string" ? new Date(searchFilters.createdAtFrom) : searchFilters.createdAtFrom;
+            const filterDate = typeof searchFilters.created_at_from === "string" ? new Date(searchFilters.created_at_from) : searchFilters.created_at_from;
             return submittedAtDate >= filterDate;
           });
         }
         
-        if (searchFilters.createdAtTo) {
+        if (searchFilters.created_at_to) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            new Date(c.submitted_at) <= new Date(searchFilters.createdAtTo)
+            new Date(c.submitted_at) <= new Date(searchFilters.created_at_to)
           );
         }
         
@@ -262,33 +262,33 @@ export default function SandwichCollectionLog() {
   const filteredCollections = collections
     .filter((collection: SandwichCollection) => {
       // Host name filter
-      if (searchFilters.hostName && !collection.host_name.toLowerCase().includes(searchFilters.hostName.toLowerCase())) {
+      if (searchFilters.host_name && !collection.host_name.toLowerCase().includes(searchFilters.host_name.toLowerCase())) {
         return false;
       }
 
       // Collection date range filter
-      if (searchFilters.collectionDateFrom) {
+      if (searchFilters.collection_date_from) {
         const collectionDate = new Date(collection.collection_date);
-        const fromDate = new Date(searchFilters.collectionDateFrom);
+        const fromDate = new Date(searchFilters.collection_date_from);
         if (collectionDate < fromDate) return false;
       }
 
-      if (searchFilters.collectionDateTo) {
+      if (searchFilters.collection_date_to) {
         const collectionDate = new Date(collection.collection_date);
-        const toDate = new Date(searchFilters.collectionDateTo);
+        const toDate = new Date(searchFilters.collection_date_to);
         if (collectionDate > toDate) return false;
       }
 
       // Created at date range filter
-      if (searchFilters.createdAtFrom) {
+      if (searchFilters.created_at_from) {
         const createdDate = new Date(collection.submitted_at);
-        const fromDate = new Date(searchFilters.createdAtFrom);
+        const fromDate = new Date(searchFilters.created_at_from);
         if (createdDate < fromDate) return false;
       }
 
-      if (searchFilters.createdAtTo) {
+      if (searchFilters.created_at_to) {
         const createdDate = new Date(collection.submitted_at);
-        const toDate = new Date(searchFilters.createdAtTo);
+        const toDate = new Date(searchFilters.created_at_to);
         // Add 23:59:59 to include the entire day
         toDate.setHours(23, 59, 59, 999);
         if (createdDate > toDate) return false;
@@ -462,10 +462,10 @@ export default function SandwichCollectionLog() {
       queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       setShowAddForm(false);
       setNewCollectionData({
-        collectionDate: "",
-        hostName: "",
-        individualSandwiches: "",
-        groupCollections: ""
+        collection_date: "",
+        host_name: "",
+        individual_sandwiches: "",
+        group_collections: ""
       });
       setNewGroupCollections([{ id: Math.random().toString(36), groupName: "", sandwichCount: 0 }]);
       setNewCollectionGroupOnlyMode(false);
@@ -583,7 +583,7 @@ export default function SandwichCollectionLog() {
       queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
       setSelectedCollections(new Set());
       setShowBatchEdit(false);
-      setBatchEditData({ hostName: "", collectionDate: "" });
+      setBatchEditData({ host_name: "", collection_date: "" });
       toast({
         title: "Batch edit completed",
         description: `Successfully updated ${result.updatedCount} of ${result.totalRequested} collections.`,
@@ -765,10 +765,10 @@ export default function SandwichCollectionLog() {
   const handleEdit = (collection: SandwichCollection) => {
     setEditingCollection(collection);
     setEditFormData({
-      collectionDate: collection.collection_date,
-      hostName: collection.host_name,
-      individualSandwiches: collection.individual_sandwiches.toString(),
-      groupCollections: collection.group_collections
+      collection_date: collection.collection_date,
+      host_name: collection.host_name,
+      individual_sandwiches: collection.individual_sandwiches.toString(),
+      group_collections: collection.group_collections
     });
     
     // Parse existing group collections for editing
@@ -777,7 +777,7 @@ export default function SandwichCollectionLog() {
       setEditGroupCollections(parsedGroups.map((group: any, index: number) => ({
         id: `edit-${index}`,
         groupName: group.groupName,
-        sandwichCount: group.sandwich_count
+        sandwichCount: group.sandwichCount
       })));
     } else {
       setEditGroupCollections([{ id: "edit-1", groupName: "", sandwichCount: 0 }]);
@@ -788,18 +788,18 @@ export default function SandwichCollectionLog() {
     if (!editingCollection) return;
 
     // Convert editGroupCollections back to JSON format with consistent property names
-    const validGroups = editGroupCollections.filter(g => g.groupName.trim() && g.sandwich_count > 0);
+    const validGroups = editGroupCollections.filter(g => g.groupName.trim() && g.sandwichCount > 0);
     const groupCollectionsString = validGroups.length > 0 
-      ? JSON.stringify(validGroups.map(g => ({ name: g.groupName.trim(), count: g.sandwich_count })))
+      ? JSON.stringify(validGroups.map(g => ({ name: g.groupName.trim(), count: g.sandwichCount })))
       : '[]';
 
     updateMutation.mutate({
       id: editingCollection.id,
       updates: {
-        collectionDate: editFormData.collection_date,
-        hostName: editFormData.host_name,
-        individualSandwiches: parseInt(editFormData.individual_sandwiches) || 0,
-        groupCollections: groupCollectionsString
+        collection_date: editFormData.collection_date,
+        host_name: editFormData.host_name,
+        individual_sandwiches: parseInt(editFormData.individual_sandwiches) || 0,
+        group_collections: groupCollectionsString
       }
     });
   };
@@ -843,7 +843,7 @@ export default function SandwichCollectionLog() {
       }
       
       const validGroupCollections = newGroupCollections.filter(
-        (g) => g.sandwich_count > 0,
+        (g) => g.sandwichCount > 0,
       );
       
       if (validGroupCollections.length === 0) {
@@ -867,19 +867,19 @@ export default function SandwichCollectionLog() {
     }
 
     // Format group collections as JSON to match the schema
-    const validGroupCollections = newGroupCollections.filter(group => group.sandwich_count > 0);
+    const validGroupCollections = newGroupCollections.filter(group => group.sandwichCount > 0);
     const formattedGroupCollections = validGroupCollections.length > 0 
       ? JSON.stringify(validGroupCollections.map(g => ({ 
           name: g.groupName.trim() || "Unnamed Group", 
-          count: g.sandwich_count 
+          count: g.sandwichCount 
         })))
       : '[]';
 
     const submissionData = {
-      collectionDate: newCollectionData.collection_date,
-      hostName: newCollectionGroupOnlyMode ? "Groups - Unassigned" : newCollectionData.host_name,
-      individualSandwiches: newCollectionGroupOnlyMode ? 0 : parseInt(newCollectionData.individual_sandwiches) || 0,
-      groupCollections: formattedGroupCollections
+      collection_date: newCollectionData.collection_date,
+      host_name: newCollectionGroupOnlyMode ? "Groups - Unassigned" : newCollectionData.host_name,
+      individual_sandwiches: newCollectionGroupOnlyMode ? 0 : parseInt(newCollectionData.individual_sandwiches) || 0,
+      group_collections: formattedGroupCollections
     };
 
     createMutation.mutate(submissionData);
@@ -923,11 +923,11 @@ export default function SandwichCollectionLog() {
 
   const handleClearFilters = () => {
     setSearchFilters({
-      hostName: "",
-      collectionDateFrom: "",
-      collectionDateTo: "",
-      createdAtFrom: "",
-      createdAtTo: ""
+      host_name: "",
+      collection_date_from: "",
+      collection_date_to: "",
+      created_at_from: "",
+      created_at_to: ""
     });
     setCurrentPage(1);
   };
@@ -1023,8 +1023,8 @@ export default function SandwichCollectionLog() {
                         if (checked) {
                           setNewCollectionData(prev => ({
                             ...prev,
-                            hostName: "",
-                            individualSandwiches: ""
+                            host_name: "",
+                            individual_sandwiches: ""
                           }));
                         }
                       }}
@@ -1045,7 +1045,7 @@ export default function SandwichCollectionLog() {
                         value={newCollectionData.collection_date}
                         onChange={(e) => setNewCollectionData(prev => ({
                           ...prev,
-                          collectionDate: e.target.value
+                          collection_date: e.target.value
                         }))}
                         required
                       />
@@ -1057,7 +1057,7 @@ export default function SandwichCollectionLog() {
                           value={newCollectionData.host_name}
                           onValueChange={(value) => setNewCollectionData(prev => ({
                             ...prev,
-                            hostName: value
+                            host_name: value
                           }))}
                         >
                           <SelectTrigger>
@@ -1085,7 +1085,7 @@ export default function SandwichCollectionLog() {
                         value={newCollectionData.individual_sandwiches}
                         onChange={(e) => setNewCollectionData(prev => ({
                           ...prev,
-                          individualSandwiches: e.target.value
+                          individual_sandwiches: e.target.value
                         }))}
                         placeholder="0"
                       />
@@ -1107,7 +1107,7 @@ export default function SandwichCollectionLog() {
                           type="number"
                           min="0"
                           placeholder="Count"
-                          value={group.sandwich_count}
+                          value={group.sandwichCount}
                           onChange={(e) => updateNewGroupCollection(group.id, 'sandwichCount', parseInt(e.target.value) || 0)}
                           className="w-24"
                         />
@@ -1207,18 +1207,18 @@ export default function SandwichCollectionLog() {
                 id="hostFilter"
                 placeholder="Search by host name..."
                 value={searchFilters.host_name}
-                onChange={(e) => handleFilterChange({ hostName: e.target.value })}
+                onChange={(e) => handleFilterChange({ host_name: e.target.value })}
                 className="mt-1"
               />
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
-                  onClick={() => handleFilterChange({ hostName: "OG Sandwich Project" })}
+                  onClick={() => handleFilterChange({ host_name: "OG Sandwich Project" })}
                   className="px-3 py-1 text-xs bg-amber-100 text-amber-800 border border-amber-300 rounded-full hover:bg-amber-200 transition-colors"
                 >
                   👑 Historical OG Project
                 </button>
                 <button
-                  onClick={() => handleFilterChange({ hostName: "" })}
+                  onClick={() => handleFilterChange({ host_name: "" })}
                   className="px-3 py-1 text-xs bg-slate-100 text-slate-700 border border-slate-300 rounded-full hover:bg-slate-200 transition-colors"
                 >
                   All Locations
@@ -1230,8 +1230,8 @@ export default function SandwichCollectionLog() {
               <Input
                 id="collectionFromDate"
                 type="date"
-                value={searchFilters.collection_dateFrom}
-                onChange={(e) => handleFilterChange({ collectionDateFrom: e.target.value })}
+                value={searchFilters.collection_date_from}
+                onChange={(e) => handleFilterChange({ collection_date_from: e.target.value })}
                 className="mt-1"
               />
             </div>
@@ -1240,8 +1240,8 @@ export default function SandwichCollectionLog() {
               <Input
                 id="collectionToDate"
                 type="date"
-                value={searchFilters.collection_dateTo}
-                onChange={(e) => handleFilterChange({ collectionDateTo: e.target.value })}
+                value={searchFilters.collection_date_to}
+                onChange={(e) => handleFilterChange({ collection_date_to: e.target.value })}
                 className="mt-1"
               />
             </div>
@@ -1250,8 +1250,8 @@ export default function SandwichCollectionLog() {
               <Input
                 id="createdFromDate"
                 type="date"
-                value={searchFilters.createdAtFrom}
-                onChange={(e) => handleFilterChange({ createdAtFrom: e.target.value })}
+                value={searchFilters.created_at_from}
+                onChange={(e) => handleFilterChange({ created_at_from: e.target.value })}
                 className="mt-1"
               />
             </div>
@@ -1260,8 +1260,8 @@ export default function SandwichCollectionLog() {
               <Input
                 id="createdToDate"
                 type="date"
-                value={searchFilters.createdAtTo}
-                onChange={(e) => handleFilterChange({ createdAtTo: e.target.value })}
+                value={searchFilters.created_at_to}
+                onChange={(e) => handleFilterChange({ created_at_to: e.target.value })}
                 className="mt-1"
               />
             </div>
@@ -1282,10 +1282,10 @@ export default function SandwichCollectionLog() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="collectionDate">Collection Date</SelectItem>
-                      <SelectItem value="hostName">Host Name</SelectItem>
-                      <SelectItem value="individualSandwiches">Sandwich Count</SelectItem>
-                      <SelectItem value="submittedAt">Created Date</SelectItem>
+                      <SelectItem value="collection_date">Collection Date</SelectItem>
+                      <SelectItem value="host_name">Host Name</SelectItem>
+                      <SelectItem value="individual_sandwiches">Sandwich Count</SelectItem>
+                      <SelectItem value="submitted_at">Created Date</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button
@@ -1432,7 +1432,7 @@ export default function SandwichCollectionLog() {
                       <span className="text-sm font-medium text-slate-700">Group Collections</span>
                       <span className="text-sm font-semibold text-slate-900">
                         {Array.isArray(groupData) 
-                          ? groupData.reduce((sum: number, group: any) => sum + (group.sandwich_count || 0), 0)
+                          ? groupData.reduce((sum: number, group: any) => sum + (group.sandwichCount || 0), 0)
                           : 0}
                       </span>
                     </div>
@@ -1444,7 +1444,7 @@ export default function SandwichCollectionLog() {
                               <Users className="w-3 h-3 mr-1" />
                               {group.groupName}
                             </span>
-                            <span className="text-slate-700 font-medium">{group.sandwich_count}</span>
+                            <span className="text-slate-700 font-medium">{group.sandwichCount}</span>
                           </div>
                         ))}
                       </div>
@@ -1658,13 +1658,13 @@ export default function SandwichCollectionLog() {
                 id="edit-date"
                 type="date"
                 value={editFormData.collection_date}
-                onChange={(e) => setEditFormData({ ...editFormData, collectionDate: e.target.value })}
+                onChange={(e) => setEditFormData({ ...editFormData, collection_date: e.target.value })}
               />
             </div>
 
             <div>
               <Label htmlFor="edit-host">Host Name</Label>
-              <Select value={editFormData.host_name} onValueChange={(value) => setEditFormData({ ...editFormData, hostName: value })}>
+              <Select value={editFormData.host_name} onValueChange={(value) => setEditFormData({ ...editFormData, host_name: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select host" />
                 </SelectTrigger>
@@ -1683,7 +1683,7 @@ export default function SandwichCollectionLog() {
                 type="number"
                 min="0"
                 value={editFormData.individual_sandwiches}
-                onChange={(e) => setEditFormData({ ...editFormData, individualSandwiches: e.target.value })}
+                onChange={(e) => setEditFormData({ ...editFormData, individual_sandwiches: e.target.value })}
               />
             </div>
 
@@ -1710,7 +1710,7 @@ export default function SandwichCollectionLog() {
                       type="number"
                       min="0"
                       placeholder="Count"
-                      value={group.sandwich_count || ""}
+                      value={group.sandwichCount || ""}
                       onChange={(e) => updateEditGroupCollection(group.id, "sandwichCount", parseInt(e.target.value) || 0)}
                       className="w-24"
                     />
@@ -1762,13 +1762,13 @@ export default function SandwichCollectionLog() {
                 id="batch-date"
                 type="date"
                 value={batchEditData.collection_date}
-                onChange={(e) => setBatchEditData({ ...batchEditData, collectionDate: e.target.value })}
+                onChange={(e) => setBatchEditData({ ...batchEditData, collection_date: e.target.value })}
               />
             </div>
 
             <div>
               <Label htmlFor="batch-host">Host Name</Label>
-              <Select value={batchEditData.host_name} onValueChange={(value) => setBatchEditData({ ...batchEditData, hostName: value })}>
+              <Select value={batchEditData.host_name} onValueChange={(value) => setBatchEditData({ ...batchEditData, host_name: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select host (optional)" />
                 </SelectTrigger>
