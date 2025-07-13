@@ -29,8 +29,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
     queryFn: async () => {
       const { data, error } = await supabase
         .from('drive_links')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
       
       if (error) {
         console.error('Error fetching drive links:', error);
@@ -47,7 +46,6 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
       const { data, error } = await supabase
         .from('weekly_reports')
         .select('*')
-        .order('created_at', { ascending: false })
         .limit(5);
       
       if (error) {
@@ -147,7 +145,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-sub-heading">Total Collections</h3>
-            <p className="text-xl font-main-heading">{totalCollectedSandwiches.toLocaleString()}</p>
+            <p className="text-xl font-main-heading">{totalCollectedSandwiches?.toLocaleString() || '0'}</p>
             <p className="text-xs font-body text-white/80">sandwiches collected</p>
           </div>
           <div className="bg-white bg-opacity-20 p-2 rounded-full">
