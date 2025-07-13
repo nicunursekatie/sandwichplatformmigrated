@@ -30,11 +30,13 @@ export function GoogleSheetsIntegration() {
   const analyzeSheet = async () => {
     setIsAnalyzing(true);
     try {
-      const response = await apiRequest('GET', `/api/google-sheets/sync/analyze?sheet=${sheetName}`);
-      setAnalysis(response.analysis);
+      const res = await apiRequest('GET', `/api/google-sheets/sync/analyze?sheet=${sheetName}`);
+      const response = await res.json();
+      // Assume the API returns the analysis object directly, not nested under 'analysis'
+      setAnalysis(response);
       toast({
         title: "Sheet Analysis Complete",
-        description: `Found ${response.analysis.totalRows} rows with ${response.analysis.headers.length} columns`,
+        description: `Found ${Array.isArray(response?.rows) ? response.rows.length : 0} rows with ${Array.isArray(response?.headers) ? response.headers.length : 0} columns`,
       });
     } catch (error) {
       console.error('Analysis failed:', error);

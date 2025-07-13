@@ -26,10 +26,10 @@ interface EditDialogProps {
 
 function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating }: EditDialogProps) {
   const [formData, setFormData] = useState({
-    collectionDate: collection?.collection_date || '',
-    hostName: collection?.host_name || '',
-    individualSandwiches: collection?.individual_sandwiches || 0,
-    groupCollections: collection?.group_collections || ''
+    collectionDate: collection?.collectionDate || '',
+    hostName: collection?.hostName || '',
+    individualSandwiches: collection?.individualSandwiches || 0,
+    groupCollections: collection?.groupCollections || ''
   });
 
   const handleSave = () => {
@@ -50,11 +50,10 @@ function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating 
             <Input
               id="collectionDate"
               type="date"
-              value={formData.collection_date}
+              value={formData.collectionDate}
               onChange={(e) => setFormData({ ...formData, collectionDate: e.target.value })}
             />
           </div>
-          
           <div>
             <Label htmlFor="hostName">Host Name</Label>
             <Input

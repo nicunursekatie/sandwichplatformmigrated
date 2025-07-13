@@ -52,7 +52,11 @@ export default function MeetingsCalendar() {
 
   const { data: allMeetings = [], isLoading } = useQuery({
     queryKey: ['/api/meetings'],
-    queryFn: () => supabase.from('meetings').select('*').then(res => res.json())
+    queryFn: async () => {
+      const { data, error } = await supabase.from('meetings').select('*');
+      if (error) throw error;
+      return data ?? [];
+    }
   });
 
   const createMeetingMutation = useMutation({

@@ -873,7 +873,7 @@ export default function UserManagementRedesigned() {
                   </table>
                 </div>
               </div>
-
+            )}
               {/* Empty State */}
               {filteredUsers.length === 0 && (
                 <div className="text-center py-12">
