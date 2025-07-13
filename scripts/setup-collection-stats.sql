@@ -38,4 +38,4 @@ BEGIN
     individual_sandwiches + group_sandwiches as complete_total_sandwiches
   FROM stats;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql; 

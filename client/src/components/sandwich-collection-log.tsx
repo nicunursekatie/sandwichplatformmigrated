@@ -14,7 +14,6 @@ import { queryClient } from "@/lib/queryClient";
 import { supabaseService } from "@/lib/supabase-service";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
-import { supabaseService } from "@/lib/supabase-service";
 import type { SandwichCollection, Host } from "@/lib/supabase";
 interface ImportResult {
   totalRecords: number;
@@ -119,22 +118,22 @@ export default function SandwichCollectionLog() {
         
         let filteredCollections = collections || [];
         // Apply filters
-        if (searchFilters.host_name) {
-          const searchTerm = searchFilters.host_name.toLowerCase();
+        if (searchFilters.hostName) {
+          const searchTerm = searchFilters.hostName.toLowerCase();
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
             c.host_name?.toLowerCase().includes(searchTerm)
           );
         }
         
-        if (searchFilters.collection_dateFrom) {
+        if (searchFilters.collectionDateFrom) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.collection_date >= searchFilters.collection_dateFrom
+            c.collection_date >= searchFilters.collectionDateFrom
           );
         }
         
-        if (searchFilters.collection_dateTo) {
+        if (searchFilters.collectionDateTo) {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.collection_date <= searchFilters.collection_dateTo
+            c.collection_date <= searchFilters.collectionDateTo
           );
         }
         
@@ -207,8 +206,55 @@ export default function SandwichCollectionLog() {
   const { data: totalStats } = useQuery({
     queryKey: ["sandwich-collections-stats"],
     queryFn: async () => {
-      const stats = await supabaseService.sandwichCollection.getCollectionStats();
-      return stats?.[0] || null;
+      try {
+        // Try to get stats from RPC function first
+        const stats = await supabaseService.sandwichCollection.getCollectionStats();
+        if (stats && stats[0]) {
+          return {
+            completeTotalSandwiches: stats[0].complete_total_sandwiches || 0,
+            individual_sandwiches: stats[0].individual_sandwiches || 0,
+            groupSandwiches: stats[0].group_sandwiches || 0
+          };
+        }
+      } catch (error) {
+        console.warn('RPC function failed, calculating stats from collections:', error);
+      }
+      
+      // Fallback: calculate stats from all collections
+      const allCollections = await supabaseService.sandwichCollection.getAllCollections(10000);
+      
+      let individualTotal = 0;
+      let groupTotal = 0;
+      
+      allCollections.forEach((collection: SandwichCollection) => {
+        individualTotal += collection.individual_sandwiches || 0;
+        
+        // Calculate group collections total
+        try {
+          if (collection.group_collections && collection.group_collections !== "[]" && collection.group_collections !== "") {
+            const groupData = JSON.parse(collection.group_collections);
+            if (Array.isArray(groupData)) {
+              groupTotal += groupData.reduce((sum: number, group: any) => 
+                sum + (Number(group.sandwich_count) || Number(group.count) || 0), 0
+              );
+            }
+          }
+        } catch (error) {
+          // Handle text format like "Marketing Team: 8, Development: 6"
+          if (collection.group_collections && collection.group_collections !== "[]") {
+            const matches = collection.group_collections.match(/(\d+)/g);
+            if (matches) {
+              groupTotal += matches.reduce((sum, num) => sum + parseInt(num), 0);
+            }
+          }
+        }
+      });
+      
+      return {
+        completeTotalSandwiches: individualTotal + groupTotal,
+        individual_sandwiches: individualTotal,
+        groupSandwiches: groupTotal
+      };
     }
   });
 
@@ -216,20 +262,20 @@ export default function SandwichCollectionLog() {
   const filteredCollections = collections
     .filter((collection: SandwichCollection) => {
       // Host name filter
-      if (searchFilters.host_name && !collection.host_name.toLowerCase().includes(searchFilters.host_name.toLowerCase())) {
+      if (searchFilters.hostName && !collection.host_name.toLowerCase().includes(searchFilters.hostName.toLowerCase())) {
         return false;
       }
 
       // Collection date range filter
-      if (searchFilters.collection_dateFrom) {
+      if (searchFilters.collectionDateFrom) {
         const collectionDate = new Date(collection.collection_date);
-        const fromDate = new Date(searchFilters.collection_dateFrom);
+        const fromDate = new Date(searchFilters.collectionDateFrom);
         if (collectionDate < fromDate) return false;
       }
 
-      if (searchFilters.collection_dateTo) {
+      if (searchFilters.collectionDateTo) {
         const collectionDate = new Date(collection.collection_date);
-        const toDate = new Date(searchFilters.collection_dateTo);
+        const toDate = new Date(searchFilters.collectionDateTo);
         if (collectionDate > toDate) return false;
       }
 
