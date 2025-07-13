@@ -148,10 +148,8 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
           <div>
             <h3 className="text-sm font-sub-heading">Total Collections</h3>
             <p className="text-xl font-main-heading">
-  {(typeof totalCollectedSandwiches === 'number'
-    ? totalCollectedSandwiches.toLocaleString()
-    : '0')}
-</p>
+            {Number(totalCollectedSandwiches || 0).toLocaleString()}
+            </p>
             <p className="text-xs font-body text-white/80">sandwiches collected</p>
           </div>
           <div className="bg-white bg-opacity-20 p-2 rounded-full">
