@@ -48,6 +48,8 @@ import {
   Info,
   Copy,
   Sparkles,
+  ChevronDown,
+  ClipboardList,
 } from "lucide-react";
 import {
   Tooltip,
@@ -56,6 +58,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { Separator } from "@/components/ui/separator";
 
 interface User {
   id: string;
@@ -153,6 +161,18 @@ const PERMISSION_CATEGORIES = [
     ],
   },
   {
+    id: "work_logs",
+    label: "Work Logs",
+    icon: ClipboardList,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50",
+    description: "Work logging and time tracking",
+    permissions: [
+      { key: PERMISSIONS.LOG_WORK, label: "Log Work", description: "Submit work log entries" },
+      { key: PERMISSIONS.MANAGE_WORK_LOGS, label: "Manage Work Logs", description: "View and manage all work logs (supervisor access)" },
+    ],
+  },
+  {
     id: "admin",
     label: "Administration",
     icon: Shield,
@@ -168,28 +188,60 @@ const PERMISSION_CATEGORIES = [
   },
 ];
 
-// Predefined role templates
+// Get all permissions flat list
+const ALL_PERMISSIONS = PERMISSION_CATEGORIES.flatMap(cat => cat.permissions);
+
+// Predefined role templates with detailed permission breakdowns
 const ROLE_TEMPLATES = {
   [USER_ROLES.ADMIN]: {
     label: "Administrator",
     description: "Full system access with all permissions",
     color: "bg-red-100 text-red-800",
+    permissions: getDefaultPermissionsForRole(USER_ROLES.ADMIN),
   },
   [USER_ROLES.COMMITTEE_MEMBER]: {
     label: "Committee Member",
     description: "Manage operations and view reports",
     color: "bg-blue-100 text-blue-800",
+    permissions: getDefaultPermissionsForRole(USER_ROLES.COMMITTEE_MEMBER),
   },
   [USER_ROLES.VOLUNTEER]: {
     label: "Volunteer",
     description: "Submit data and participate in chats",
     color: "bg-green-100 text-green-800",
+    permissions: getDefaultPermissionsForRole(USER_ROLES.VOLUNTEER),
   },
   [USER_ROLES.VIEWER]: {
     label: "Viewer",
     description: "Read-only access to most features",
     color: "bg-gray-100 text-gray-800",
+    permissions: getDefaultPermissionsForRole(USER_ROLES.VIEWER),
   },
+};
+
+// Helper function to get permission details
+const getPermissionDetails = (permissionKey: string) => {
+  for (const category of PERMISSION_CATEGORIES) {
+    const permission = category.permissions.find(p => p.key === permissionKey);
+    if (permission) {
+      return { ...permission, category: category.label, categoryIcon: category.icon };
+    }
+  }
+  return null;
+};
+
+// Helper function to group permissions by category
+const groupPermissionsByCategory = (permissions: string[]) => {
+  const grouped: Record<string, Array<{key: string, label: string, description: string}>> = {};
+  
+  for (const category of PERMISSION_CATEGORIES) {
+    const categoryPerms = category.permissions.filter(p => permissions.includes(p.key));
+    if (categoryPerms.length > 0) {
+      grouped[category.label] = categoryPerms;
+    }
+  }
+  
+  return grouped;
 };
 
 export function UserPermissionsDialogRedesigned({
@@ -202,6 +254,7 @@ export function UserPermissionsDialogRedesigned({
   const [editingPermissions, setEditingPermissions] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -256,21 +309,58 @@ export function UserPermissionsDialogRedesigned({
   };
 
   const handleApplyTemplate = (role: string) => {
-    const defaultPerms = getDefaultPermissionsForRole(role);
-    setEditingPermissions(defaultPerms);
-    setHasChanges(true);
+    const template = ROLE_TEMPLATES[role];
+    if (template) {
+      setEditingPermissions([...template.permissions]);
+      setHasChanges(true);
+    }
   };
 
   if (!user) return null;
 
   const getPermissionStats = () => {
-    const total = Object.values(PERMISSIONS).length;
+    const total = Object.values(PERMISSIONS).length + 3; // +3 for additional permissions not in PERMISSIONS constant
     const selected = editingPermissions.length;
     const percentage = Math.round((selected / total) * 100);
     return { total, selected, percentage };
   };
 
   const stats = getPermissionStats();
+
+  // Template Preview Component
+  const TemplatePreview = ({ roleKey, template }: { roleKey: string; template: typeof ROLE_TEMPLATES[keyof typeof ROLE_TEMPLATES] }) => {
+    const groupedPerms = groupPermissionsByCategory(template.permissions);
+    
+    return (
+      <div className="space-y-3 text-sm">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-medium">Permissions included:</span>
+          <Badge variant="secondary">{template.permissions.length} total</Badge>
+        </div>
+        {Object.entries(groupedPerms).map(([category, perms]) => {
+          const categoryInfo = PERMISSION_CATEGORIES.find(c => c.label === category);
+          if (!categoryInfo) return null;
+          
+          return (
+            <div key={category} className="space-y-1">
+              <div className={`flex items-center gap-2 font-medium ${categoryInfo.color}`}>
+                <categoryInfo.icon className="h-3 w-3" />
+                {category}
+              </div>
+              <ul className="ml-5 space-y-0.5 text-gray-600 dark:text-gray-400">
+                {perms.map(perm => (
+                  <li key={perm.key} className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    {perm.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -309,6 +399,12 @@ export function UserPermissionsDialogRedesigned({
                     ))}
                   </SelectContent>
                 </Select>
+                <Alert className="py-2">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Changing the role automatically applies the default permissions for that role
+                  </AlertDescription>
+                </Alert>
               </div>
 
               {/* Permission Stats */}
@@ -335,21 +431,37 @@ export function UserPermissionsDialogRedesigned({
                 </CardContent>
               </Card>
 
-              {/* Quick Templates */}
+              {/* Quick Templates with Preview */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Quick Templates</Label>
                 <div className="space-y-2">
                   {Object.entries(ROLE_TEMPLATES).map(([role, template]) => (
-                    <Button
-                      key={role}
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => handleApplyTemplate(role)}
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Apply {template.label} Template
-                    </Button>
+                    <HoverCard key={role} openDelay={200}>
+                      <HoverCardTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-between group"
+                          onClick={() => handleApplyTemplate(role)}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4" />
+                            {template.label}
+                          </span>
+                          <Info className="h-3 w-3 text-gray-400 group-hover:text-gray-600" />
+                        </Button>
+                      </HoverCardTrigger>
+                      <HoverCardContent side="right" className="w-80 max-h-96 overflow-y-auto">
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="font-semibold">{template.label} Template</h4>
+                            <p className="text-sm text-gray-500">{template.description}</p>
+                          </div>
+                          <Separator />
+                          <TemplatePreview roleKey={role} template={template} />
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
                   ))}
                 </div>
               </div>
@@ -361,7 +473,7 @@ export function UserPermissionsDialogRedesigned({
             <DialogHeader className="p-6 pb-0">
               <DialogTitle>Edit Permissions</DialogTitle>
               <DialogDescription>
-                Configure detailed permissions for this user
+                Configure detailed permissions for this user. Hover over templates to preview included permissions.
               </DialogDescription>
             </DialogHeader>
 
@@ -389,9 +501,11 @@ export function UserPermissionsDialogRedesigned({
                           className={`cursor-pointer transition-all hover:shadow-md ${
                             allSelected ? 'ring-2 ring-blue-500' : ''
                           }`}
-                          onClick={() => handleCategoryToggle(categoryPermissionKeys)}
                         >
-                          <CardHeader className="pb-3">
+                          <CardHeader 
+                            className="pb-3"
+                            onClick={() => handleCategoryToggle(categoryPermissionKeys)}
+                          >
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-lg ${category.bgColor}`}>
@@ -418,13 +532,31 @@ export function UserPermissionsDialogRedesigned({
                             </div>
                           </CardHeader>
                           <CardContent>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between mb-2">
                               <span className="text-sm text-gray-500">
                                 {selectedCount} of {category.permissions.length} permissions
                               </span>
                               <Badge variant={allSelected ? "default" : partiallySelected ? "secondary" : "outline"}>
                                 {Math.round((selectedCount / category.permissions.length) * 100)}%
                               </Badge>
+                            </div>
+                            {/* Preview of permissions in this category */}
+                            <div className="text-xs text-gray-500 space-y-0.5">
+                              {category.permissions.slice(0, 3).map(perm => (
+                                <div key={perm.key} className="flex items-center gap-1">
+                                  {editingPermissions.includes(perm.key) ? (
+                                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                  ) : (
+                                    <XCircle className="h-3 w-3 text-gray-400" />
+                                  )}
+                                  {perm.label}
+                                </div>
+                              ))}
+                              {category.permissions.length > 3 && (
+                                <div className="text-gray-400 italic">
+                                  +{category.permissions.length - 3} more...
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -456,9 +588,18 @@ export function UserPermissionsDialogRedesigned({
                                 <p className="text-sm text-gray-500">{category.description}</p>
                               </div>
                             </div>
-                            <Badge variant="secondary">
-                              {selectedCount} / {category.permissions.length}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">
+                                {selectedCount} / {category.permissions.length}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCategoryToggle(categoryPermissionKeys)}
+                              >
+                                {selectedCount === category.permissions.length ? "Deselect All" : "Select All"}
+                              </Button>
+                            </div>
                           </div>
                           
                           <div className="grid gap-2 pl-14">
@@ -501,7 +642,7 @@ export function UserPermissionsDialogRedesigned({
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      <p>Copy permission key</p>
+                                      <p>Copy permission key: {key}</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>

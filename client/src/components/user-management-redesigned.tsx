@@ -21,6 +21,7 @@ import {
 import AnnouncementManager from "@/components/announcement-manager";
 import AuthDebug from "@/components/auth-debug";
 import { UserPermissionsDialogRedesigned as UserPermissionsDialog } from "@/components/user-permissions-dialog-redesigned";
+import PermissionTemplatesManager from "@/components/permission-templates-manager";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +53,7 @@ export default function UserManagementRedesigned() {
   const { user: currentUser, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const { celebration, triggerCelebration, hideCelebration } = useCelebration();
-  const [activeTab, setActiveTab] = useState<"users" | "announcements" | "auth-debug">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "templates" | "announcements" | "auth-debug">("users");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
