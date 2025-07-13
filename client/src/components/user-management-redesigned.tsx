@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import AnnouncementManager from "@/components/announcement-manager";
 import AuthDebug from "@/components/auth-debug";
-import { UserPermissionsDialog } from "@/components/user-permissions-dialog";
+import { UserPermissionsDialogRedesigned as UserPermissionsDialog } from "@/components/user-permissions-dialog-redesigned";
 import {
   DropdownMenu,
   DropdownMenuContent,

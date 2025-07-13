@@ -50,7 +50,7 @@ export default function Dashboard({ initialSection = "dashboard" }: { initialSec
   const [activeSection, setActiveSection] = useState(initialSection);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   // Make setActiveSection available globally for embedded components
   React.useEffect(() => {
@@ -371,8 +371,7 @@ export default function Dashboard({ initialSection = "dashboard" }: { initialSec
             onClick={async () => {
               try {
                 // Sign out from Supabase
-                const { error } = await supabase.auth.signOut();
-                if (error) throw error;
+                await signOut();
                 
                 // Clear query cache
                 queryClient.clear();
