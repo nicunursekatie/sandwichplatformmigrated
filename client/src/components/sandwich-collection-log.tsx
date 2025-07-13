@@ -74,7 +74,7 @@ export default function SandwichCollectionLog() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   const [editFormData, setEditFormData] = useState({
     collection_date: "",
     host_name: "",
@@ -118,7 +118,7 @@ export default function SandwichCollectionLog() {
     queryFn: useCallback(async () => {
       console.log('Query function called with:', { currentPage, itemsPerPage, searchFilters, sortConfig });
       // Always fetch all collections to get accurate pagination
-      const collections = await supabaseService.sandwichCollection.getAllCollections(10000);
+      const collections = await supabaseService.sandwichCollection.getAllCollections();
       
       let filteredCollections = collections || [];
       
@@ -173,6 +173,15 @@ export default function SandwichCollectionLog() {
       const startIndex = (currentPage - 1) * itemsPerPage;
       const paginatedResults = filteredCollections.slice(startIndex, startIndex + itemsPerPage);
       
+      console.log('Pagination debug:', {
+        totalCollections: filteredCollections.length,
+        startIndex,
+        endIndex: startIndex + itemsPerPage,
+        paginatedResultsLength: paginatedResults.length,
+        currentPage,
+        itemsPerPage
+      });
+      
       return {
         collections: paginatedResults,
         pagination: {
@@ -214,7 +223,7 @@ export default function SandwichCollectionLog() {
       }
       
       // Fallback: calculate stats from all collections
-      const allCollections = await supabaseService.sandwichCollection.getAllCollections(10000);
+      const allCollections = await supabaseService.sandwichCollection.getAllCollections();
       
       let individualTotal = 0;
       let groupTotal = 0;

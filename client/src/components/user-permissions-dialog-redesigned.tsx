@@ -365,10 +365,11 @@ export function UserPermissionsDialogRedesigned({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] p-0">
-        <div className="flex h-full">
+        <div className="flex h-full max-h-[90vh]">
           {/* Left sidebar with user info */}
-          <div className="w-80 bg-gray-50 dark:bg-gray-900 p-6 border-r">
-            <div className="space-y-6">
+          <div className="w-80 bg-gray-50 dark:bg-gray-900 border-r flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-6 pb-6">
               {/* User Avatar and Info */}
               <div className="text-center">
                 <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-semibold mx-auto mb-4">
@@ -476,10 +477,11 @@ export function UserPermissionsDialogRedesigned({
                 </div>
               </div>
             </div>
+            </div>
           </div>
 
           {/* Main content area */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <DialogHeader className="p-6 pb-0">
               <DialogTitle>Edit Permissions</DialogTitle>
               <DialogDescription>
@@ -487,14 +489,14 @@ export function UserPermissionsDialogRedesigned({
               </DialogDescription>
             </DialogHeader>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="mx-6">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="detailed">Detailed Permissions</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="flex-1 p-6 pt-4">
-                <ScrollArea className="h-[450px]">
+              <TabsContent value="overview" className="flex-1 p-6 pt-4 overflow-hidden">
+                <ScrollArea className="h-full">
                   <div className="grid grid-cols-2 gap-4">
                     {PERMISSION_CATEGORIES.map((category) => {
                       const categoryPermissionKeys = category.permissions.map((p) => p.key);
@@ -580,8 +582,8 @@ export function UserPermissionsDialogRedesigned({
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="detailed" className="flex-1 p-6 pt-4">
-                <ScrollArea className="h-[450px]">
+              <TabsContent value="detailed" className="flex-1 p-6 pt-4 overflow-hidden">
+                <ScrollArea className="h-full">
                   <div className="space-y-6">
                     {PERMISSION_CATEGORIES.map((category) => {
                       const Icon = category.icon;
@@ -666,7 +668,7 @@ export function UserPermissionsDialogRedesigned({
               </TabsContent>
             </Tabs>
 
-            <DialogFooter className="p-6 pt-0">
+            <DialogFooter className="p-6 border-t bg-gray-50 dark:bg-gray-900">
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-3">
                   {hasChanges && (
@@ -682,7 +684,7 @@ export function UserPermissionsDialogRedesigned({
                   <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSave} disabled={!hasChanges}>
+                  <Button onClick={handleSave} disabled={!hasChanges} className="bg-blue-600 hover:bg-blue-700">
                     Save Changes
                   </Button>
                 </div>

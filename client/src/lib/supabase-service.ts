@@ -117,12 +117,17 @@ export const projectService = {
 
 // Sandwich Collection Services
 export const sandwichCollectionService = {
-  async getAllCollections(limit = 1000): Promise<SandwichCollection[]> {
-    const { data, error } = await supabase
+  async getAllCollections(limit?: number): Promise<SandwichCollection[]> {
+    let query = supabase
       .from('sandwich_collections')
       .select('*')
-      .order('collection_date', { ascending: false })
-      .limit(limit);
+      .order('collection_date', { ascending: false });
+    
+    if (limit) {
+      query = query.limit(limit);
+    }
+    
+    const { data, error } = await query;
     
     if (error) handleError(error, 'get all collections');
     return data || [];

@@ -663,229 +663,229 @@ export default function UserManagementRedesigned() {
                 </div>
               </div>
             ) : (
-            <div className="rounded-lg border">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className="p-4 text-left">
-                        <Checkbox
-                          checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </th>
-                      <th className="p-4 text-left">
-                        <button
-                          className="flex items-center gap-1 font-medium text-sm"
-                          onClick={() => {
-                            setSortBy("name");
-                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                          }}
-                        >
-                          User
-                          {sortBy === "name" && (
-                            sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="p-4 text-left">Role</th>
-                      <th className="p-4 text-left">Status</th>
-                      <th className="p-4 text-left">
-                        <button
-                          className="flex items-center gap-1 font-medium text-sm"
-                          onClick={() => {
-                            setSortBy("lastLogin");
-                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                          }}
-                        >
-                          Last Login
-                          {sortBy === "lastLogin" && (
-                            sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="p-4 text-left">
-                        <button
-                          className="flex items-center gap-1 font-medium text-sm"
-                          onClick={() => {
-                            setSortBy("date");
-                            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                          }}
-                        >
-                          Joined
-                          {sortBy === "date" && (
-                            sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="p-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="p-4">
+              <div className="rounded-lg border">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th className="p-4 text-left">
                           <Checkbox
-                            checked={selectedUsers.has(user.id)}
-                            onCheckedChange={() => handleSelectUser(user.id)}
+                            checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                            onCheckedChange={handleSelectAll}
                           />
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                              {user.firstName[0]}{user.lastName[0]}
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {user.firstName} {user.lastName}
-                              </div>
-                              <div className="text-sm text-gray-500 flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {user.email}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Badge className={getRoleBadgeColor(user.role)}>
-                            {getRoleDisplayName(user.role)}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            {user.isActive ? (
-                              <>
-                                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                <span className="text-sm">Active</span>
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm text-gray-500">Inactive</span>
-                              </>
+                        </th>
+                        <th className="p-4 text-left">
+                          <button
+                            className="flex items-center gap-1 font-medium text-sm"
+                            onClick={() => {
+                              setSortBy("name");
+                              setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                            }}
+                          >
+                            User
+                            {sortBy === "name" && (
+                              sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
                             )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="text-sm">
-                            {user.lastLoginAt ? (
+                          </button>
+                        </th>
+                        <th className="p-4 text-left">Role</th>
+                        <th className="p-4 text-left">Status</th>
+                        <th className="p-4 text-left">
+                          <button
+                            className="flex items-center gap-1 font-medium text-sm"
+                            onClick={() => {
+                              setSortBy("lastLogin");
+                              setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                            }}
+                          >
+                            Last Login
+                            {sortBy === "lastLogin" && (
+                              sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </button>
+                        </th>
+                        <th className="p-4 text-left">
+                          <button
+                            className="flex items-center gap-1 font-medium text-sm"
+                            onClick={() => {
+                              setSortBy("date");
+                              setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                            }}
+                          >
+                            Joined
+                            {sortBy === "date" && (
+                              sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                            )}
+                          </button>
+                        </th>
+                        <th className="p-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {filteredUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <td className="p-4">
+                            <Checkbox
+                              checked={selectedUsers.has(user.id)}
+                              onCheckedChange={() => handleSelectUser(user.id)}
+                            />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                                {user.firstName[0]}{user.lastName[0]}
+                              </div>
                               <div>
-                                <div>{new Date(user.lastLoginAt).toLocaleDateString()}</div>
-                                <div className="text-gray-500">
-                                  {new Date(user.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                <div className="font-medium">
+                                  {user.firstName} {user.lastName}
+                                </div>
+                                <div className="text-sm text-gray-500 flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {user.email}
                                 </div>
                               </div>
-                            ) : (
-                              <span className="text-gray-500 italic">Never</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="text-sm">
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <Badge className={getRoleBadgeColor(user.role)}>
+                              {getRoleDisplayName(user.role)}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              {user.isActive ? (
+                                <>
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  <span className="text-sm">Active</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-4 w-4 text-gray-400" />
+                                  <span className="text-sm text-gray-500">Inactive</span>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="text-sm">
+                              {user.lastLoginAt ? (
+                                <div>
+                                  <div>{new Date(user.lastLoginAt).toLocaleDateString()}</div>
+                                  <div className="text-gray-500">
+                                    {new Date(user.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-500 italic">Never</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="text-sm">
+                              {new Date(user.createdAt).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        const achievements = [
+                                          "making a real difference in our mission",
+                                          "way to go"
+                                        ];
+                                        const randomAchievement = achievements[Math.floor(Math.random() * achievements.length)];
+                                        const congratsMessage = `${user.firstName} ${user.lastName} - ${randomAchievement}! From ${currentUser?.firstName || 'Admin'}`;
+                                        triggerCelebration(congratsMessage);
+                                        toast({
+                                          title: "Congratulations Sent!",
+                                          description: `Celebrated ${user.firstName} ${user.lastName}'s achievements.`,
+                                        });
+                                      }}
+                                    >
+                                      <Award className="h-4 w-4 text-green-600" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Send congratulations</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => setSelectedUser(user)}>
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Edit Permissions
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <Key className="h-4 w-4 mr-2" />
+                                    Reset Password
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => toggleUserStatus.mutate({
+                                    userId: user.id,
+                                    isActive: !user.isActive
+                                  })}>
+                                    {user.isActive ? (
+                                      <>
+                                        <UserX className="h-4 w-4 mr-2" />
+                                        Deactivate
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        Activate
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="text-red-600"
                                     onClick={() => {
-                                      const achievements = [
-                                        "making a real difference in our mission",
-                                        "way to go"
-                                      ];
-                                      const randomAchievement = achievements[Math.floor(Math.random() * achievements.length)];
-                                      const congratsMessage = `${user.firstName} ${user.lastName} - ${randomAchievement}! From ${currentUser?.firstName || 'Admin'}`;
-                                      triggerCelebration(congratsMessage);
-                                      toast({
-                                        title: "Congratulations Sent!",
-                                        description: `Celebrated ${user.firstName} ${user.lastName}'s achievements.`,
-                                      });
+                                      const confirmDelete = window.confirm(
+                                        `Are you sure you want to delete ${user.firstName} ${user.lastName}? This action cannot be undone.`
+                                      );
+                                      if (confirmDelete) {
+                                        deleteUserMutation.mutate(user.id);
+                                      }
                                     }}
                                   >
-                                    <Award className="h-4 w-4 text-green-600" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Send congratulations</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => setSelectedUser(user)}>
-                                  <Settings className="h-4 w-4 mr-2" />
-                                  Edit Permissions
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Key className="h-4 w-4 mr-2" />
-                                  Reset Password
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => toggleUserStatus.mutate({
-                                  userId: user.id,
-                                  isActive: !user.isActive
-                                })}>
-                                  {user.isActive ? (
-                                    <>
-                                      <UserX className="h-4 w-4 mr-2" />
-                                      Deactivate
-                                    </>
-                                  ) : (
-                                    <>
-                                      <UserCheck className="h-4 w-4 mr-2" />
-                                      Activate
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  className="text-red-600"
-                                  onClick={() => {
-                                    const confirmDelete = window.confirm(
-                                      `Are you sure you want to delete ${user.firstName} ${user.lastName}? This action cannot be undone.`
-                                    );
-                                    if (confirmDelete) {
-                                      deleteUserMutation.mutate(user.id);
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete User
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete User
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            {/* Empty State */}
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-12">
-                <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-                <p className="text-gray-500">
-                  {searchQuery || roleFilter !== "all" || statusFilter !== "all" 
-                    ? "Try adjusting your filters or search terms" 
-                    : "No users have been added yet"}
-                </p>
-              </div>
-            )}
+              {/* Empty State */}
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-12">
+                  <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                  <p className="text-gray-500">
+                    {searchQuery || roleFilter !== "all" || statusFilter !== "all" 
+                      ? "Try adjusting your filters or search terms" 
+                      : "No users have been added yet"}
+                  </p>
+                </div>
+              )}
             )}
           </CardContent>
         </Card>
