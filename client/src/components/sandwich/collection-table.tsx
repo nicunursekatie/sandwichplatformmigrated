@@ -127,7 +127,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
   const calculateTotal = (collection: SandwichCollection) => {
     const groupCollections = parseGroupCollections(collection.group_collections);
     const groupTotal = groupCollections.reduce((sum: number, group: any) => 
-      sum + (group.sandwich_count || 0), 0
+      sum + (group.sandwichCount || group.sandwich_count || 0), 0
     );
     return collection.individual_sandwiches + groupTotal;
   };
@@ -196,7 +196,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
                       <div className="space-y-1">
                         {groupCollections.map((group: any, idx: number) => (
                           <div key={idx} className="text-sm">
-                            <span className="font-medium">{group.groupName}:</span> {group.sandwich_count}
+                            <span className="font-medium">{group.groupName}:</span> {group.sandwichCount || group.sandwich_count}
                           </div>
                         ))}
                       </div>

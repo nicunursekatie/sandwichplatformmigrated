@@ -19,7 +19,7 @@ BEGIN
             (SELECT COALESCE(SUM(
               CASE 
                 WHEN jsonb_typeof(value) = 'object' THEN
-                  COALESCE((value->>'sandwich_count')::int, (value->>'count')::int, 0)
+                  COALESCE((value->>'sandwichCount')::int, (value->>'sandwich_count')::int, (value->>'count')::int, 0)
                 WHEN jsonb_typeof(value) = 'number' THEN
                   value::int
                 ELSE 0

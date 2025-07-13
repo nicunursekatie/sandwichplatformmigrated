@@ -46,7 +46,7 @@ export default function StrategicAnalytics() {
         try {
           const parsed = JSON.parse(groups);
           if (Array.isArray(parsed)) {
-            return parsed.reduce((sum: number, g: any) => sum + (Number(g.sandwich_count) || 0), 0);
+            return parsed.reduce((sum: number, g: any) => sum + (Number(g.sandwichCount) || Number(g.sandwich_count) || 0), 0);
           }
           return Number(parsed) || 0;
         } catch {
@@ -54,7 +54,7 @@ export default function StrategicAnalytics() {
         }
       }
       if (Array.isArray(groups)) {
-        return groups.reduce((sum: number, g: any) => sum + (Number(g.sandwich_count) || 0), 0);
+        return groups.reduce((sum: number, g: any) => sum + (Number(g.sandwichCount) || Number(g.sandwich_count) || 0), 0);
       }
       return Number(groups) || 0;
     };

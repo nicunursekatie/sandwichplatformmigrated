@@ -235,7 +235,7 @@ export default function SandwichCollectionLog() {
             const groupData = JSON.parse(collection.group_collections);
             if (Array.isArray(groupData)) {
               groupTotal += groupData.reduce((sum: number, group: any) => 
-                sum + (Number(group.sandwich_count) || Number(group.count) || 0), 0
+                sum + (Number(group.sandwichCount) || Number(group.sandwich_count) || Number(group.count) || 0), 0
               );
             }
           }
@@ -369,11 +369,11 @@ export default function SandwichCollectionLog() {
       // Try to parse as JSON first
       const groupData = JSON.parse(collection.group_collections);
       if (Array.isArray(groupData)) {
-        groupTotal = groupData.reduce((sum: number, group: any) => sum + (Number(group.sandwich_count) || 0), 0);
+        groupTotal = groupData.reduce((sum: number, group: any) => sum + (Number(group.sandwichCount) || Number(group.sandwich_count) || 0), 0);
       } else if (typeof groupData === 'number') {
         groupTotal = Number(groupData);
-      } else if (typeof groupData === 'object' && groupData.sandwich_count) {
-        groupTotal = Number(groupData.sandwich_count);
+      } else if (typeof groupData === 'object' && (groupData.sandwichCount || groupData.sandwich_count)) {
+        groupTotal = Number(groupData.sandwichCount || groupData.sandwich_count);
       }
     } catch (error) {
       // Handle text format like "Marketing Team: 8, Development: 6"

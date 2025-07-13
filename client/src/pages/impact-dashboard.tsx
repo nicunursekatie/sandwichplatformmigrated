@@ -124,7 +124,7 @@ export default function ImpactDashboard() {
               ? JSON.parse(collection.group_collections) 
               : collection.group_collections;
             if (Array.isArray(groupData)) {
-              groupCount = groupData.reduce((sum, group) => sum + (group.sandwich_count || 0), 0);
+              groupCount = groupData.reduce((sum, group) => sum + (group.sandwichCount || group.sandwich_count || 0), 0);
             }
           } catch (e) {
             groupCount = 0;
@@ -195,7 +195,7 @@ export default function ImpactDashboard() {
             ? JSON.parse(collection.group_collections) 
             : collection.group_collections;
           if (Array.isArray(groupData)) {
-            groupCount = groupData.reduce((sum, group) => sum + (group.sandwich_count || 0), 0);
+                          groupCount = groupData.reduce((sum, group) => sum + (group.sandwichCount || group.sandwich_count || 0), 0);
           }
         } catch (e) {
           groupCount = 0;
