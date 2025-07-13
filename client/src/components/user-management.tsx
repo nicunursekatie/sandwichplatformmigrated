@@ -45,6 +45,30 @@ export default function UserManagement() {
   // ALL HOOKS MUST BE CALLED FIRST, BEFORE ANY CONDITIONAL LOGIC
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching users:', error);
+        return [];
+      }
+      
+      // Map the database fields to the expected User interface
+      return (data || []).map(user => ({
+        id: user.id,
+        email: user.email || '',
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        role: user.role || 'viewer',
+        permissions: user.permissions || [],
+        isActive: user.is_active ?? true,
+        lastLoginAt: user.last_login_at,
+        createdAt: user.created_at
+      }));
+    },
     enabled: hasPermission(currentUser, PERMISSIONS.VIEW_USERS),
   });
 
