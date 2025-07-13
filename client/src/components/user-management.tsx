@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useCelebration, CelebrationToast } from "@/components/celebration-toast";
 import { hasPermission, USER_ROLES, PERMISSIONS, getDefaultPermissionsForRole, getRoleDisplayName } from "@shared/auth-utils";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { supabaseService } from "@/lib/supabase-service";
 import { Users, Shield, Settings, Key, Award, Megaphone, Trash2, Bug } from "lucide-react";
 import AnnouncementManager from "@/components/announcement-manager";
@@ -33,7 +33,7 @@ interface User {
 }
 
 export default function UserManagement() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const { celebration, triggerCelebration, hideCelebration } = useCelebration();
   const [activeTab, setActiveTab] = useState<"users" | "announcements" | "auth-debug">("users");
@@ -41,23 +41,7 @@ export default function UserManagement() {
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState<string>("");
 
-  // Check if current user can manage users
-  if (!hasPermission(currentUser, PERMISSIONS.MANAGE_USERS)) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Access Denied
-          </CardTitle>
-          <CardDescription>
-            You don't have permission to manage users.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
+  // ALL HOOKS MUST BE CALLED FIRST, BEFORE ANY CONDITIONAL LOGIC
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["users"],
     enabled: hasPermission(currentUser, PERMISSIONS.VIEW_USERS),
@@ -65,7 +49,7 @@ export default function UserManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: { userId: string; role: string; permissions: string[] }) => {
-      return apiRequest("PATCH", `/api/users/${data.user_id}`, {
+      return apiRequest("PATCH", `/api/users/${data.userId}`, {
         role: data.role,
         permissions: data.permissions,
       });
@@ -89,8 +73,8 @@ export default function UserManagement() {
 
   const toggleUserStatus = useMutation({
     mutationFn: async (data: { userId: string; isActive: boolean }) => {
-      return apiRequest("PATCH", `/api/users/${data.user_id}/status`, {
-        isActive: data.is_active,
+      return apiRequest("PATCH", `/api/users/${data.userId}/status`, {
+        isActive: data.isActive,
       });
     },
     onSuccess: () => {
@@ -148,6 +132,42 @@ export default function UserManagement() {
     },
   });
 
+  // NOW SAFE TO HAVE EARLY RETURNS AFTER ALL HOOKS ARE CALLED
+  if (authLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            User Management
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Check if current user can manage users
+  if (!hasPermission(currentUser, PERMISSIONS.MANAGE_USERS)) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Access Denied
+          </CardTitle>
+          <CardDescription>
+            You don't have permission to manage users.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
   };
@@ -168,13 +188,13 @@ export default function UserManagement() {
     ];
     
     const randomAchievement = achievements[Math.floor(Math.random() * achievements.length)];
-    const congratsMessage = `${user.first_name} ${user.last_name} - ${randomAchievement}! From ${currentUser?.first_name || 'Admin'}`;
+    const congratsMessage = `${user.firstName} ${user.lastName} - ${randomAchievement}! From ${currentUser?.firstName || 'Admin'}`;
     
     triggerCelebration(congratsMessage);
     
     toast({
       title: "Congratulations Sent!",
-      description: `Celebrated ${user.first_name} ${user.last_name}'s achievements.`,
+      description: `Celebrated ${user.firstName} ${user.lastName}'s achievements.`,
     });
   };
 
@@ -202,24 +222,6 @@ export default function UserManagement() {
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            User Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-6">

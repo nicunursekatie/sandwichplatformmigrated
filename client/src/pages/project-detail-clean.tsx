@@ -242,21 +242,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
     }
   });
 
-  // Update project mutation
-  const updateProjectMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await supabase.from('projects').update(data).eq('id', projectId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setIsEditingProject(false);
-      toast({ title: "Project updated successfully", description: "The project has been updated." });
-    },
-    onError: () => {
-      toast({ title: "Failed to update project", description: "Please try again later.", variant: "destructive" });
-    },
-  });
+  // Note: updateProjectMutation is already defined above at line 98
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
