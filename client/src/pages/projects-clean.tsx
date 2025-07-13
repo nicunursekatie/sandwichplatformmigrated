@@ -40,6 +40,8 @@ import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { Project, InsertProject } from "@shared/schema";
 
 import { supabase } from '@/lib/supabase';
+import { queryClient } from "@/lib/queryClient";
+
 export default function ProjectsClean() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -63,8 +65,23 @@ export default function ProjectsClean() {
   });
 
   // Fetch all projects
-  const { data: projects = [], isLoading } = useQuery<Project[]>({
+  const { data: projects = [], isLoading, error } = useQuery<Project[]>({
     queryKey: ["projects"],
+    queryFn: async () => {
+      console.log('Fetching projects...');
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching projects:', error);
+        throw error;
+      }
+      
+      console.log('Projects fetched successfully:', data?.length || 0, 'projects');
+      return data || [];
+    },
   });
 
   // Update project status mutation
