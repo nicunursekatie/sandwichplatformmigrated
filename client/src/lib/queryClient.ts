@@ -7,11 +7,16 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// @deprecated - Use Supabase client directly instead
+// Keeping this temporarily while migrating remaining components
 export async function apiRequest(
   method: string,
   url: string,
   body?: any
 ): Promise<Response> {
+  console.warn(`apiRequest is deprecated. Called with: ${method} ${url}`);
+  console.warn('Please use Supabase client directly instead');
+  
   const isFormData = body instanceof FormData;
   
   const res = await fetch(url, {

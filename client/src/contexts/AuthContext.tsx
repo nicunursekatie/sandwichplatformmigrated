@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Set Ably client ID when user logs in
+      // Set  when user logs in
       if (session?.user?.id) {
         setClientId(session.user.id);
       }

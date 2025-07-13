@@ -30,7 +30,6 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
       const { data, error } = await supabase
         .from('drive_links')
         .select('*')
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
       
       if (error) {
