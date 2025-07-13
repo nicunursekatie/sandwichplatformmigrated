@@ -17,7 +17,7 @@ interface Meeting {
   id: number;
   title: string;
   description: string;
-  meeting_date: string;
+  date: string;
   start_time: string;
   end_time: string;
   location: string;
@@ -70,7 +70,7 @@ export default function MeetingCalendar() {
       const { data, error } = await supabase
         .from('meetings')
         .select('*')
-        .order('meeting_date', { ascending: true });
+        .order('date', { ascending: true });
       
       if (error) {
         console.error('Error fetching meetings:', error);
@@ -88,7 +88,7 @@ export default function MeetingCalendar() {
         .insert({
           title: data.title,
           description: data.description,
-          meeting_date: data.meetingDate,
+          date: data.meetingDate,
           start_time: data.startTime,
           end_time: data.endTime,
           location: data.location,
@@ -187,11 +187,11 @@ export default function MeetingCalendar() {
   };
 
   const upcomingMeetings = meetings.filter((meeting: Meeting) => 
-    isUpcoming(meeting.meeting_date, meeting.start_time) && meeting.status === "scheduled"
+    isUpcoming(meeting.date, meeting.start_time) && meeting.status === "scheduled"
   );
 
   const pastMeetings = meetings.filter((meeting: Meeting) => 
-    !isUpcoming(meeting.meeting_date, meeting.start_time) || meeting.status === "completed"
+    !isUpcoming(meeting.date, meeting.start_time) || meeting.status === "completed"
   );
 
   if (isLoading) {
@@ -419,7 +419,7 @@ export default function MeetingCalendar() {
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {new Date(meeting.meeting_date).toLocaleDateString()}
+                              {new Date(meeting.date).toLocaleDateString()}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
@@ -476,7 +476,7 @@ export default function MeetingCalendar() {
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {new Date(meeting.meeting_date).toLocaleDateString()}
+                              {new Date(meeting.date).toLocaleDateString()}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />

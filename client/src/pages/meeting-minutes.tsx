@@ -27,7 +27,7 @@ interface Meeting {
 interface MeetingMinutes {
   id: number;
   meeting_title: string;
-  meeting_date: string;
+  date: string;
   attendees: string;
   agenda_items: string;
   discussion_points: string;
@@ -103,7 +103,7 @@ export default function MeetingMinutes() {
       const { data, error } = await supabase
         .from('meetings')
         .select('*')
-        .order('meeting_date', { ascending: false });
+        .order('date', { ascending: false });
       
       if (error) {
         console.error('Error fetching meetings:', error);
@@ -120,7 +120,7 @@ export default function MeetingMinutes() {
       const { data, error } = await supabase
         .from('meeting_minutes')
         .select('*')
-        .order('meeting_date', { ascending: false });
+        .order('date', { ascending: false });
       
       if (error) {
         console.error('Error fetching meeting minutes:', error);
@@ -137,7 +137,7 @@ export default function MeetingMinutes() {
         .from('meeting_minutes')
         .insert({
           meeting_title: data.meetingTitle,
-          meeting_date: data.meetingDate,
+          date: data.meetingDate,
           attendees: data.attendees,
           agenda_items: data.agendaItems,
           discussion_points: data.discussionPoints,
