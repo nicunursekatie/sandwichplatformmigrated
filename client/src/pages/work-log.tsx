@@ -13,6 +13,27 @@ export default function WorkLogPage() {
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
 
+  // Check if user has permission to access work logs
+  const hasWorkLogPermission = user?.permissions?.includes('log_work') || 
+                              user?.role === 'admin' || 
+                              user?.role === 'super_admin' ||
+                              user?.email === 'mdlouza@gmail.com';
+
+  if (!hasWorkLogPermission) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+            Access Restricted
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300">
+            You don't have permission to access the work log feature.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { data: logs = [], refetch, isLoading, error } = useQuery({
     queryKey: ["work-logs"],
     queryFn: async () => {
@@ -33,11 +54,13 @@ export default function WorkLogPage() {
 
   const createLog = useMutation({
     mutationFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
       return await supabaseService.workLog.createWorkLog({ 
         description, 
         hours, 
         minutes,
-        userId: user?.id
+        user_id: user.id,
+        date: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
       });
     },
     onSuccess: () => {
@@ -114,7 +137,17 @@ export default function WorkLogPage() {
       <div className="mt-8">
         <Card>
           <CardHeader>
-            <CardTitle>My Work Logs</CardTitle>
+            <CardTitle>
+              {user?.role === 'admin' || user?.role === 'super_admin' || user?.email === 'mdlouza@gmail.com' 
+                ? 'All Work Logs' 
+                : 'My Work Logs'
+              }
+            </CardTitle>
+            {(user?.role === 'admin' || user?.role === 'super_admin' || user?.email === 'mdlouza@gmail.com') && (
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                You can see all work logs as an administrator. Regular users can only see their own logs.
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             {isLoading && <div className="py-4 text-gray-500">Loading work logs...</div>}
@@ -134,10 +167,14 @@ export default function WorkLogPage() {
                     <div className="font-medium">{log.description}</div>
                     <div className="text-sm text-gray-500">
                       {log.hours}h {log.minutes}m &middot; {new Date(log.created_at).toLocaleString()}
-                      {log.user_id !== user?.id && <span className="ml-2 text-blue-600">(by other user)</span>}
+                      {log.user && (
+                        <span className="ml-2 text-blue-600">
+                          by {log.user.first_name} {log.user.last_name} ({log.user.email})
+                        </span>
+                      )}
                     </div>
                   </div>
-                  {(user?.role === "super_admin" || user?.email === 'mdlouza@gmail.com' || log.user_id === user?.id) && (
+                  {(user?.role === "super_admin" || user?.role === "admin" || user?.email === 'mdlouza@gmail.com' || log.user_id === user?.id) && (
                     <Button
                       variant="destructive"
                       size="sm"

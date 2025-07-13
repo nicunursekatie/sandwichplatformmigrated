@@ -369,7 +369,16 @@ export const workLogService = {
   async getAllWorkLogs(): Promise<WorkLog[]> {
     const { data, error } = await supabase
       .from('work_logs')
-      .select('*')
+      .select(`
+        *,
+        user:users!work_logs_user_id_fkey(
+          id,
+          email,
+          first_name,
+          last_name,
+          role
+        )
+      `)
       .order('created_at', { ascending: false });
     
     if (error) handleError(error, 'get all work logs');

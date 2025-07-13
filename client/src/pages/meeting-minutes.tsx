@@ -27,6 +27,7 @@ interface Meeting {
 interface MeetingMinutes {
   id: number;
   meeting_title: string;
+  title: string;
   date: string;
   attendees: string;
   agenda_items: string;
@@ -39,6 +40,17 @@ interface MeetingMinutes {
   file_path?: string;
   google_docs_url?: string;
   created_at: string;
+  summary: string;
+  fileName?: string;
+}
+
+interface InsertMeeting {
+  title: string;
+  date: string;
+  time: string;
+  type: string;
+  location: string;
+  description: string;
 }
 
 interface MeetingMinutesFormData {
@@ -114,7 +126,7 @@ export default function MeetingMinutes() {
     }
   });
 
-  const { data: minutes = [], isLoading } = useQuery<MeetingMinutes[]>({
+  const { data: minutes = [], isLoading: minutesLoading } = useQuery<MeetingMinutes[]>({
     queryKey: ["meeting-minutes"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -215,6 +227,56 @@ export default function MeetingMinutes() {
  },
  });
 
+ const uploadMutation = useMutation({
+   mutationFn: async (data: { meetingId: number; file?: File; googleDocsUrl?: string }) => {
+     if (data.file) {
+       // File upload logic
+       const formData = new FormData();
+       formData.append('file', data.file);
+       formData.append('meetingId', data.meetingId.toString());
+       
+       const response = await fetch('/api/meeting-minutes/upload', {
+         method: 'POST',
+         body: formData,
+       });
+       
+       if (!response.ok) throw new Error('Failed to upload file');
+       return response.json();
+     } else if (data.googleDocsUrl) {
+       // Google Docs link logic
+       const { error } = await supabase
+         .from('meeting_minutes')
+         .insert({
+           meeting_title: 'Meeting Minutes',
+           date: new Date().toISOString(),
+           google_docs_url: data.googleDocsUrl,
+           summary: `Google Docs link: ${data.googleDocsUrl}`,
+           status: 'completed'
+         });
+       
+       if (error) throw error;
+     }
+   },
+   onSuccess: () => {
+     queryClient.invalidateQueries({ queryKey: ["meeting-minutes"] });
+     setIsUploadingMinutes(false);
+     setSelectedMeetingId(null);
+     setSelectedFile(null);
+     setGoogleDocsUrl("");
+     toast({
+       title: "Minutes uploaded",
+       description: "Meeting minutes have been uploaded successfully.",
+     });
+   },
+   onError: (error) => {
+     toast({
+       title: "Upload failed",
+       description: "Failed to upload meeting minutes. Please try again.",
+       variant: "destructive",
+     });
+   }
+ });
+
  const createMeetingMutation = useMutation({
  mutationFn: async (meetingData: InsertMeeting) => {
  const response = await fetch("/api/meetings", {
@@ -282,17 +344,33 @@ export default function MeetingMinutes() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMinutesMutation.mutate({
-      meetingTitle: formData.meetingTitle,
-      meetingDate: formData.meetingDate,
-      attendees: formData.attendees,
-      agendaItems: formData.agendaItems,
-      discussionPoints: formData.discussionPoints,
-      actionItems: formData.actionItems,
-      decisionsMade: formData.decisionsMade,
-      nextMeetingDate: formData.nextMeetingDate,
-      notes: formData.notes
-    });
+    if (isUploadingMinutes && selectedMeetingId) {
+      // Upload minutes for existing meeting
+      if (uploadType === "file" && selectedFile) {
+        uploadMutation.mutate({
+          meetingId: selectedMeetingId,
+          file: selectedFile
+        });
+      } else if (uploadType === "google_docs" && googleDocsUrl) {
+        uploadMutation.mutate({
+          meetingId: selectedMeetingId,
+          googleDocsUrl: googleDocsUrl
+        });
+      }
+    } else {
+      // Create new meeting minutes
+      createMinutesMutation.mutate({
+        meetingTitle: formData.meetingTitle,
+        meetingDate: formData.meetingDate,
+        attendees: formData.attendees,
+        agendaItems: formData.agendaItems,
+        discussionPoints: formData.discussionPoints,
+        actionItems: formData.actionItems,
+        decisionsMade: formData.decisionsMade,
+        nextMeetingDate: formData.nextMeetingDate,
+        notes: formData.notes
+      });
+    }
   };
 
   const handleDeleteMinutes = (minutesId: number) => {

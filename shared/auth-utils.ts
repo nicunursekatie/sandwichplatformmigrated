@@ -65,7 +65,11 @@ export const PERMISSIONS = {
   RESPOND_TO_SUGGESTIONS: 'respond_to_suggestions',
   
   // Data sheet access
-  VIEW_SANDWICH_DATA: 'view_sandwich_data'
+  VIEW_SANDWICH_DATA: 'view_sandwich_data',
+  
+  // Work log permissions
+  LOG_WORK: 'log_work',
+  MANAGE_WORK_LOGS: 'manage_work_logs'
 } as const;
 
 export function getDefaultPermissionsForRole(role: string): string[] {
