@@ -3,12 +3,7 @@
   "outputDirectory": "client/dist",
   "framework": "vite",
   "installCommand": "npm install",
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "rewrites": [
-  { "source": "/(.*)", "destination": "/index.html" }
-]
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
