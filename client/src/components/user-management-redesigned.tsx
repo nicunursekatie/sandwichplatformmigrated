@@ -83,10 +83,19 @@ export default function UserManagementRedesigned() {
       
       if (error) {
         console.error('Error fetching users:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         return [];
       }
       
       console.log('Users fetched:', data?.length || 0, 'users');
+      if (data && data.length > 0) {
+        console.log('Sample user data:', data[0]);
+      }
       
       return (data || []).map(user => ({
         id: user.id,
@@ -100,7 +109,7 @@ export default function UserManagementRedesigned() {
         createdAt: user.created_at
       }));
     },
-    enabled: hasPermission(currentUser, PERMISSIONS.VIEW_USERS) || hasPermission(currentUser, PERMISSIONS.MANAGE_USERS),
+    enabled: canViewUsers,
   });
 
   // Filter and sort users
@@ -576,6 +585,20 @@ export default function UserManagementRedesigned() {
               )}
             </div>
 
+            {/* Debug Info - Remove in production */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-sm">
+                <strong>Debug Info:</strong> 
+                Current User: {currentUser?.email || 'None'} | 
+                Role: {currentUser?.role || 'None'} | 
+                Auth Loading: {authLoading ? 'Yes' : 'No'} | 
+                Query Enabled: {canViewUsers ? 'Yes' : 'No'} | 
+                Loading: {isLoading ? 'Yes' : 'No'} | 
+                Users Count: {users.length} | 
+                Filtered Count: {filteredUsers.length}
+              </p>
+            </div>
+
             {/* User Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <Card>
@@ -632,6 +655,14 @@ export default function UserManagementRedesigned() {
             </div>
 
             {/* User List */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading users...</p>
+                </div>
+              </div>
+            ) : (
             <div className="rounded-lg border">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -854,6 +885,7 @@ export default function UserManagementRedesigned() {
                     : "No users have been added yet"}
                 </p>
               </div>
+            )}
             )}
           </CardContent>
         </Card>
