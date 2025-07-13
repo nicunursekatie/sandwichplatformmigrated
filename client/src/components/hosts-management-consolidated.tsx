@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, Plus, Edit, Trash2, Phone, Mail, User, AlertCircle, MapPin, Star, Building2, UserPlus, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import type { Host, InsertHost, HostContact, InsertHostContact } from "@shared/s
 
 import { supabase } from '@/lib/supabase';
 import { supabaseService } from "@/lib/supabase-service";
+
 interface HostWithContacts extends Host {
   contacts: HostContact[];
 }
@@ -26,6 +27,7 @@ interface HostWithContacts extends Host {
 export default function HostsManagementConsolidated() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const canEdit = hasPermission(user, PERMISSIONS.EDIT_COLLECTIONS);
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -83,7 +85,39 @@ export default function HostsManagementConsolidated() {
   });
 
   const { data: hosts = [], isLoading } = useQuery<HostWithContacts[]>({
-    queryKey: ['/api/hosts-with-contacts'],
+    queryKey: ['hosts-with-contacts'],
+    queryFn: async () => {
+      const { data: hostsData, error: hostsError } = await supabase
+        .from('hosts')
+        .select('*')
+        .order('name');
+      
+      if (hostsError) {
+        console.error('Error fetching hosts:', hostsError);
+        return [];
+      }
+
+      // Fetch contacts for each host
+      const hostsWithContacts = await Promise.all(
+        (hostsData || []).map(async (host) => {
+          const { data: contacts, error: contactsError } = await supabase
+            .from('host_contacts')
+            .select('*')
+            .eq('host_id', host.id)
+            .order('is_primary', { ascending: false })
+            .order('name');
+          
+          if (contactsError) {
+            console.error('Error fetching contacts for host:', host.id, contactsError);
+            return { ...host, contacts: [] };
+          }
+          
+          return { ...host, contacts: contacts || [] };
+        })
+      );
+
+      return hostsWithContacts;
+    }
   });
 
   const createHostMutation = useMutation({
@@ -91,7 +125,7 @@ export default function HostsManagementConsolidated() {
       return await supabase.from('hosts').insert(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['hosts-with-contacts'] });
       setNewHost({ name: "", address: "", status: "active", notes: "" });
       setIsAddModalOpen(false);
       toast({
@@ -113,7 +147,7 @@ export default function HostsManagementConsolidated() {
       return await supabaseService.host.updateHost(data.id, data.updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['hosts-with-contacts'] });
       setEditingHost(null);
       toast({
         title: "Host updated",
@@ -131,10 +165,10 @@ export default function HostsManagementConsolidated() {
 
   const deleteHostMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest('DELETE', `/api/hosts/${id}`);
+      return await supabaseService.host.deleteHost(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['hosts-with-contacts'] });
       queryClient.invalidateQueries({ queryKey: ["hosts"] });
       toast({
         title: "Host deleted",
@@ -156,7 +190,7 @@ export default function HostsManagementConsolidated() {
       return await supabase.from('host_contacts').insert(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['hosts-with-contacts'] });
       setNewContact({ name: "", role: "", phone: "", email: "", isPrimary: false, notes: "" });
       setIsAddingContact(false);
       toast({
@@ -175,10 +209,15 @@ export default function HostsManagementConsolidated() {
 
   const updateContactMutation = useMutation({
     mutationFn: async (data: { id: number; updates: Partial<HostContact> }) => {
-      return await apiRequest('PATCH', `/api/host-contacts/${data.id}`, data.updates);
+      return await supabase
+        .from('host_contacts')
+        .update(data.updates)
+        .eq('id', data.id)
+        .select()
+        .single();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['hosts-with-contacts'] });
       setEditingContact(null);
       toast({
         title: "Contact updated",
@@ -196,10 +235,13 @@ export default function HostsManagementConsolidated() {
 
   const deleteContactMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest('DELETE', `/api/host-contacts/${id}`);
+      return await supabase
+        .from('host_contacts')
+        .delete()
+        .eq('id', id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/hosts-with-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['hosts-with-contacts'] });
       toast({
         title: "Contact deleted",
         description: "Contact has been deleted successfully.",

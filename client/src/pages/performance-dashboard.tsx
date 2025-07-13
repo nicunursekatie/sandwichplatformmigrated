@@ -21,51 +21,25 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 import SimpleNav from "@/components/simple-nav";
+import { supabase } from "@/lib/supabase";
 
-interface PerformanceMetrics {
-  database: {
-    connectionPool: {
-      total_connections: number;
-      active_connections: number;
-      idle_connections: number;
-    };
-    slowQueries: Array<{
-      query: string;
-      calls: number;
-      total_exec_time: number;
-      mean_exec_time: number;
-      rows: number;
-    }>;
-    indexUsage: Array<{
-      schemaname: string;
-      tablename: string;
-      indexname: string;
-      idx_scan: number;
-      idx_tup_read: number;
-    }>;
-    tableStats: Array<{
-      tablename: string;
-      inserts: number;
-      updates: number;
-      deletes: number;
-      live_tuples: number;
-      dead_tuples: number;
-    }>;
-    optimizationSuggestions: Array<{
-      type: string;
-      message: string;
-      recommendation: string;
-      tables?: string[];
-      indexes?: string[];
-    }>;
-  };
-  cache: Record<string, {
-    size: number;
-    maxSize: number;
-    hitRate: number;
-    missCount: number;
-  }>;
+interface PerformanceData {
+  id: number;
+  metric_name: string;
+  metric_value: number;
   timestamp: string;
+  category: string;
+  created_at: string;
+}
+
+interface UserStats {
+  id: number;
+  total_users: number;
+  active_users: number;
+  new_users_this_month: number;
+  total_sessions: number;
+  avg_session_duration: number;
+  created_at: string;
 }
 
 export default function PerformanceDashboard() {
@@ -73,10 +47,39 @@ export default function PerformanceDashboard() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { data: metrics, isLoading, refetch } = useQuery<PerformanceMetrics>({
-    queryKey: ['/api/performance/dashboard'],
-    refetchInterval: 30000, // Refresh every 30 seconds
-    staleTime: 15000 // Consider stale after 15 seconds
+  const { data: performanceData, isLoading } = useQuery<PerformanceData[]>({
+    queryKey: ["performance-data"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('performance_metrics')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      
+      if (error) {
+        console.error('Error fetching performance data:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
+  });
+
+  const { data: userStats, isLoading: userStatsLoading } = useQuery<UserStats>({
+    queryKey: ["user-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_statistics')
+        .select('*')
+        .single();
+      
+      if (error) {
+        console.error('Error fetching user stats:', error);
+        return null;
+      }
+      
+      return data;
+    }
   });
 
   const optimizeMutation = useMutation({
@@ -143,6 +146,57 @@ export default function PerformanceDashboard() {
     if (avgHitRate > 0.6) return "good";
     if (avgHitRate > 0.4) return "fair";
     return "poor";
+  };
+
+  const handleRefreshMetrics = async () => {
+    try {
+      // TODO: Implement metrics refresh with Supabase RPC
+      toast({
+        title: "Refresh not implemented",
+        description: "Metrics refresh is being migrated to Supabase.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh metrics. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOptimizeDatabase = async () => {
+    try {
+      // TODO: Implement database optimization with Supabase RPC
+      toast({
+        title: "Optimization not implemented",
+        description: "Database optimization is being migrated to Supabase.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to optimize database. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClearCache = async () => {
+    try {
+      // TODO: Implement cache clearing with Supabase RPC
+      toast({
+        title: "Cache clear not implemented",
+        description: "Cache clearing is being migrated to Supabase.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear cache. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {

@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessaging } from "@/hooks/useMessaging";
+import { queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 
 import { formatDistanceToNow } from "date-fns";
 import { 
@@ -54,6 +56,16 @@ interface Message {
   readAt?: string;
 }
 
+interface MessageFormData {
+  senderId: string;
+  recipientId: string;
+  subject: string;
+  content: string;
+  messageType: string;
+  priority: string;
+  status?: string;
+}
+
 export default function InboxPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -71,38 +83,85 @@ export default function InboxPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [replyContent, setReplyContent] = useState("");
   const [showComposer, setShowComposer] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
+  const [composeData, setComposeData] = useState<MessageFormData>({
+    senderId: "",
+    recipientId: "",
+    subject: "",
+    content: "",
+    messageType: "direct",
+    priority: "normal"
+  });
 
   // Fetch all messages with fresh user data
-  const { data: allMessages = [], refetch: refetchMessages } = useQuery({
-    queryKey: ['/api/messaging/messages', selectedTab],
+  const { data: messages = [], isLoading, refetch: refetchMessages } = useQuery<Message[]>({
+    queryKey: ["messages"],
     queryFn: async () => {
-      try {
-        let endpoint = '/api/messaging/messages';
-        if (selectedTab !== 'all') {
-          endpoint += `?contextType=${selectedTab}`;
-        }
-        const response = await apiRequest('GET', endpoint);
-        return (response as any).messages || [];
-      } catch (error) {
-        console.error('Failed to fetch messages:', error);
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching messages:', error);
         return [];
       }
+      
+      return data || [];
+    }
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (data: MessageFormData) => {
+      const { data: result, error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: data.senderId,
+          recipient_id: data.recipientId,
+          subject: data.subject,
+          content: data.content,
+          message_type: data.messageType,
+          priority: data.priority,
+          status: data.status || 'sent'
+        });
+      
+      if (error) throw error;
+      return result;
     },
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 30000, // Cache for 30 seconds only
-    refetchInterval: 60000, // Refetch every minute
-    refetchOnWindowFocus: true,
-    // Only run if user is authenticated
-    enabled: !!user,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+      setIsComposing(false);
+      setComposeData({
+        senderId: "",
+        recipientId: "",
+        subject: "",
+        content: "",
+        messageType: "direct",
+        priority: "normal"
+      });
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Send message error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Fetch thread messages when a message is selected with fresh user data
   const { data: threadMessages = [] } = useQuery({
-    queryKey: ['/api/messaging/thread', selectedMessage?.contextType, selectedMessage?.contextId],
+    queryKey: ['messaging-thread', selectedMessage?.contextType, selectedMessage?.contextId],
     queryFn: async () => {
       try {
         if (!selectedMessage?.contextType || !selectedMessage?.contextId) return [];
-        return await getContextMessages(selectedMessage.contextType, selectedMessage.contextId);
+        // TODO: Implement thread fetching with Supabase
+        return [];
       } catch (error) {
         console.error('Failed to fetch thread messages:', error);
         return [];
@@ -110,7 +169,7 @@ export default function InboxPage() {
     },
     enabled: !!selectedMessage?.contextType && !!selectedMessage?.contextId && !!user,
     staleTime: 0, // Always fetch fresh data
-    cacheTime: 30000, // Cache for 30 seconds only
+    gcTime: 30000, // Cache for 30 seconds only
     refetchOnWindowFocus: true,
   });
 
@@ -129,11 +188,13 @@ export default function InboxPage() {
     if (!replyContent.trim() || !selectedMessage) return;
 
     try {
-      await sendMessage({
-        recipientIds: [selectedMessage.sender_id],
+      await sendMessageMutation.mutateAsync({
+        senderId: user?.id || '',
+        recipientId: selectedMessage.senderId,
+        subject: `Re: Message`,
         content: replyContent,
-        contextType: selectedMessage.contextType as any,
-        contextId: selectedMessage.contextId,
+        messageType: "direct",
+        priority: "normal"
       });
       
       setReplyContent("");
@@ -148,18 +209,18 @@ export default function InboxPage() {
   };
 
   // Debug logging to understand invalid messages
-  console.log('Raw allMessages array:', allMessages);
-  console.log('Invalid allMessages:', allMessages?.filter(msg => !msg || !msg.senderName));
+  console.log('Raw allMessages array:', messages);
+  console.log('Invalid allMessages:', messages?.filter(msg => !msg || !msg.senderName));
   
   // Filter out undefined/invalid messages first
-  const validMessages = (allMessages || [])
+  const validMessages = (messages || [])
     .filter(msg => msg && typeof msg === 'object' && msg.senderName && msg.content) || [];
   
   console.log('Valid messages after filtering:', validMessages);
   
   // Debug threadMessages too
-  console.log('Raw threadMessages array:', threadMessages);
-  console.log('Invalid threadMessages:', threadMessages?.filter(msg => !msg || !msg.senderName));
+  const validThreadMessages = (threadMessages || [])
+    .filter(msg => msg && typeof msg === 'object' && msg.senderName) || [];
   
   // Filter messages based on search
   const filteredMessages = validMessages.filter((message: Message) => {
@@ -308,7 +369,7 @@ export default function InboxPage() {
                               {message?.senderName || 'Unknown'}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {message?.created_at ? formatDistanceToNow(new Date(message.created_at), { addSuffix: true }) : 'Unknown time'}
+                              {message?.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : 'Unknown time'}
                             </p>
                           </div>
                         </div>
@@ -363,7 +424,7 @@ export default function InboxPage() {
                   <div>
                     <h3 className="font-semibold">{selectedMessage.senderName || 'Unknown'}</h3>
                     <p className="text-sm text-gray-500">
-                      {formatDistanceToNow(new Date(selectedMessage.created_at), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(selectedMessage.createdAt), { addSuffix: true })}
                       {selectedMessage.editedAt && ' (edited)'}
                     </p>
                   </div>
@@ -420,7 +481,7 @@ export default function InboxPage() {
                   <div 
                     key={message.id} 
                     className={`rounded-lg p-4 ${
-                      message.sender_id === (user as any)?.id 
+                      message.senderId === user?.id 
                         ? 'bg-blue-50 ml-auto max-w-[80%]' 
                         : 'bg-gray-50 mr-auto max-w-[80%]'
                     }`}
@@ -428,7 +489,7 @@ export default function InboxPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <p className="font-medium text-sm">{message?.senderName || 'Unknown'}</p>
                       <p className="text-xs text-gray-500">
-                        {message?.created_at ? formatDistanceToNow(new Date(message.created_at), { addSuffix: true }) : 'Unknown time'}
+                        {message?.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : 'Unknown time'}
                       </p>
                     </div>
                     <p className="text-sm whitespace-pre-wrap">

@@ -33,12 +33,12 @@ export default function WorkLogPage() {
 
   const createLog = useMutation({
     mutationFn: async () => {
-      return await supabaseService.workLog.createWorkLog({ 
+      const response = await supabaseService.workLog.createWorkLog({ 
         description, 
         hours, 
-        minutes,
-        userId: user?.id
+        minutes
       });
+      return await response.json();
     },
     onSuccess: () => {
       setDescription("");
@@ -51,7 +51,12 @@ export default function WorkLogPage() {
 
   const deleteLog = useMutation({
     mutationFn: async (id: number) => {
-      return await supabaseService.workLog.deleteWorkLog(id);
+      const response = await apiRequest("DELETE", `/api/work-logs/${id}`);
+      // DELETE requests typically return empty responses, so handle accordingly
+      if (response.status === 204) {
+        return null; // 204 No Content
+      }
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["work-logs"] });

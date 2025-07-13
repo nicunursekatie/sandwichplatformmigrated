@@ -110,42 +110,59 @@ export default function SuggestionsPortal() {
   const canManage = hasPermission(currentUser, 'manage_suggestions');
   const canRespond = hasPermission(currentUser, 'respond_to_suggestions');
 
-  // Fetch suggestions
-  const { data: suggestions = [], isLoading } = useQuery({
-    queryKey: ['suggestions'],
-    enabled: hasPermission(currentUser, 'view_suggestions'),
-    staleTime: 0
+  const { data: suggestions = [], isLoading } = useQuery<Suggestion[]>({
+    queryKey: ["suggestions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('suggestions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching suggestions:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
-  // Update selected suggestion when suggestions data changes
-  useEffect(() => {
-    if (selectedSuggestion && suggestions.length > 0) {
-      const updatedSuggestion = suggestions.find((s: Suggestion) => s.id === selectedSuggestion.id);
-      if (updatedSuggestion) {
-        setSelectedSuggestion(updatedSuggestion);
-      }
-    }
-  }, [suggestions, selectedSuggestion]);
-
-  // Submit suggestion mutation
-  const submitSuggestionMutation = useMutation({
-    mutationFn: (data: SuggestionFormData) => {
-      return supabase.from('suggestions').insert(data);
+  const createSuggestionMutation = useMutation({
+    mutationFn: async (data: SuggestionFormData) => {
+      const { data: result, error } = await supabase
+        .from('suggestions')
+        .insert({
+          title: data.title,
+          description: data.description,
+          category: data.category,
+          priority: data.priority,
+          submitted_by: data.submittedBy,
+          status: data.status || 'pending'
+        });
+      
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suggestions'] });
-      setShowSubmissionForm(false);
-      suggestionForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["suggestions"] });
+      setIsSubmitting(false);
+      setFormData({
+        title: "",
+        description: "",
+        category: "general",
+        priority: "medium"
+      });
       toast({
-        title: "Success",
-        description: "Your suggestion has been submitted successfully!"
+        title: "Suggestion submitted",
+        description: "Your suggestion has been submitted successfully.",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
+      console.error("Create suggestion error:", error);
       toast({
         title: "Error",
-        description: error?.message || "Failed to submit suggestion",
-        variant: "destructive"
+        description: "Failed to submit suggestion. Please try again.",
+        variant: "destructive",
       });
     }
   });
@@ -257,7 +274,47 @@ export default function SuggestionsPortal() {
   });
 
   const onSubmitSuggestion = (data: SuggestionFormData) => {
-    submitSuggestionMutation.mutate(data);
+    createSuggestionMutation.mutate({
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      priority: data.priority,
+      submittedBy: user?.firstName || user?.email?.split('@')[0] || 'Anonymous',
+      status: 'pending'
+    });
+  };
+
+  const handleUpdateSuggestion = async (id: number, updates: Partial<Suggestion>) => {
+    try {
+      await updateSuggestionMutation.mutateAsync({ id, updates });
+    } catch (error) {
+      console.error("Update suggestion error:", error);
+    }
+  };
+
+  const handleDeleteSuggestion = async (id: number) => {
+    try {
+      await deleteSuggestionMutation.mutateAsync(id);
+    } catch (error) {
+      console.error("Delete suggestion error:", error);
+    }
+  };
+
+  const handleUpvoteSuggestion = async (suggestionId: number) => {
+    try {
+      // TODO: Implement upvote functionality with Supabase
+      toast({
+        title: "Upvote not implemented",
+        description: "Upvoting suggestions is being migrated to Supabase.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upvote suggestion. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -492,8 +549,8 @@ export default function SuggestionsPortal() {
                     <Button type="button" variant="outline" onClick={() => setShowSubmissionForm(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={submitSuggestionMutation.isPending}>
-                      {submitSuggestionMutation.isPending ? "Submitting..." : "Submit Suggestion"}
+                    <Button type="submit" disabled={createSuggestionMutation.isPending}>
+                      {createSuggestionMutation.isPending ? "Submitting..." : "Submit Suggestion"}
                     </Button>
                   </div>
                 </form>
@@ -721,7 +778,7 @@ export default function SuggestionsPortal() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              upvoteMutation.mutate(suggestion.id);
+                              handleUpvoteSuggestion(suggestion.id);
                             }}
                             className="flex items-center gap-1 h-8 px-2 hover:bg-blue-50 hover:text-blue-600"
                           >
@@ -739,10 +796,7 @@ export default function SuggestionsPortal() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              updateSuggestionMutation.mutate({ 
-                                id: suggestion.id, 
-                                updates: { status: 'under_review', assignedTo: currentUser?.id } 
-                              });
+                              handleUpdateSuggestion(suggestion.id, { status: 'under_review', assignedTo: currentUser?.id });
                             }}
                             disabled={suggestion.status === 'under_review'}
                             className="h-8 px-3 text-xs text-blue-700 hover:bg-blue-50 hover:text-blue-800"
@@ -755,10 +809,7 @@ export default function SuggestionsPortal() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              updateSuggestionMutation.mutate({ 
-                                id: suggestion.id, 
-                                updates: { status: 'in_progress', assignedTo: currentUser?.id } 
-                              });
+                              handleUpdateSuggestion(suggestion.id, { status: 'in_progress', assignedTo: currentUser?.id });
                             }}
                             disabled={suggestion.status === 'in_progress'}
                             className="h-8 px-3 text-xs text-orange-700 hover:bg-orange-50 hover:text-orange-800"
@@ -771,10 +822,7 @@ export default function SuggestionsPortal() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              updateSuggestionMutation.mutate({ 
-                                id: suggestion.id, 
-                                updates: { status: 'completed', assignedTo: currentUser?.id } 
-                              });
+                              handleUpdateSuggestion(suggestion.id, { status: 'completed', assignedTo: currentUser?.id });
                             }}
                             disabled={suggestion.status === 'completed'}
                             className="h-8 px-3 text-xs text-green-700 hover:bg-green-50 hover:text-green-800"
@@ -800,7 +848,7 @@ export default function SuggestionsPortal() {
                             onClick={(e) => {
                               e.stopPropagation();
                               if (confirm('Are you sure you want to delete this suggestion? This action cannot be undone.')) {
-                                deleteSuggestionMutation.mutate(suggestion.id);
+                                handleDeleteSuggestion(suggestion.id);
                               }
                             }}
                             className="h-8 px-3 text-xs text-red-700 hover:bg-red-50 hover:text-red-800"
@@ -851,7 +899,7 @@ export default function SuggestionsPortal() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => upvoteMutation.mutate(selectedSuggestion.id)}
+                    onClick={() => handleUpvoteSuggestion(selectedSuggestion.id)}
                     className="flex items-center space-x-1"
                   >
                     <ThumbsUp className="h-4 w-4" />

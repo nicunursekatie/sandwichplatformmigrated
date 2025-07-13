@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "./useAuth";
 import { useToast } from "./use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface UnreadCounts {
   general: number;
@@ -72,10 +73,12 @@ export function useMessaging() {
       if (!user?.id) return null;
       try {
         const response = await apiRequest('GET', '/api/message-notifications/unread-counts');
+        const responseData = await response.json();
         // Add context-specific counts
-        const contextCounts = await apiRequest('GET', '/api/messaging/unread?groupByContext=true');
+        const contextResponse = await apiRequest('GET', '/api/messaging/unread?groupByContext=true');
+        const contextCounts = await contextResponse.json();
         return {
-          ...response,
+          ...responseData,
           suggestion: contextCounts.suggestion || 0,
           project: contextCounts.project || 0,
           task: contextCounts.task || 0,
@@ -108,7 +111,8 @@ export function useMessaging() {
     queryFn: async () => {
       if (!user?.id) return [];
       const response = await apiRequest('GET', '/api/messaging/unread');
-      return response.messages || [];
+      const responseData = await response.json();
+      return responseData.messages || [];
     },
     enabled: !!user?.id,
   });
@@ -235,7 +239,8 @@ export function useMessaging() {
   const getContextMessages = useCallback(async (contextType: string, contextId: string) => {
     try {
       const response = await apiRequest('GET', `/api/messaging/context/${contextType}/${contextId}`);
-      return response.messages || [];
+      const responseData = await response.json();
+      return responseData.messages || [];
     } catch (error) {
       console.error('Failed to fetch context messages:', error);
       return [];
@@ -246,7 +251,7 @@ export function useMessaging() {
     // Data
     unreadCounts,
     unreadMessages,
-    totalUnread: unreadCounts.total + unreadCounts.suggestion + unreadCounts.project + unreadCounts.task,
+    totalUnread: (unreadCounts?.total || 0) + (unreadCounts?.suggestion || 0) + (unreadCounts?.project || 0) + (unreadCounts?.task || 0),
 
     // Actions
     sendMessage,

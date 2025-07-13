@@ -29,6 +29,11 @@ import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { Project, ProjectTask } from "@shared/schema";
 
 import { supabase } from '@/lib/supabase';
+import { queryClient } from "@/lib/queryClient";
+import { useLocation } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { Task } from "@shared/schema";
+
 interface ProjectDetailCleanProps {
   projectId: number;
   onBack?: () => void;
@@ -47,17 +52,14 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
   const { celebration, triggerCelebration, hideCelebration } = useCelebration();
 
   const [isAddingTask, setIsAddingTask] = useState(false);
-  const [editingTask, setEditingTask] = useState<ProjectTask | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [isEditingProject, setIsEditingProject] = useState(false);
-  const [newTask, setNewTask] = useState({
+  const [taskFormData, setTaskFormData] = useState({
     title: "",
     description: "",
-    status: "pending",
+    status: "todo",
     priority: "medium",
-    assigneeId: undefined as string | undefined,
-    assigneeName: undefined as string | undefined,
-    assigneeIds: undefined as string[] | undefined,
-    assigneeNames: undefined as string[] | undefined,
+    assignedTo: "",
     dueDate: ""
   });
   const [editProject, setEditProject] = useState({
@@ -74,93 +76,176 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
   });
 
   // Fetch project details
-  const { data: projects = [], isLoading: projectLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects", projectId],
+  const { data: project, isLoading } = useQuery<Project>({
+    queryKey: ["project", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching project:', error);
+        return null;
+      }
+      
+      return data;
+    },
+    enabled: !!projectId
   });
 
-  const project = projects.find(p => p.id === projectId);
+  const updateProjectMutation = useMutation({
+    mutationFn: async (data: Partial<Project>) => {
+      const { data: result, error } = await supabase
+        .from('projects')
+        .update(data)
+        .eq('id', projectId);
+      
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setIsEditingProject(false);
+      toast({
+        title: "Project updated",
+        description: "Project has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Update project error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update project. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Fetch tasks for this project
-  const { data: projectTasks = [], isLoading: tasksLoading } = useQuery<ProjectTask[]>({
-    queryKey: ["/api/projects", projectId, "tasks"],
-    queryFn: () => fetch(`/api/projects/${projectId}/tasks`).then(res => res.json()),
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
+    queryKey: ["project-tasks", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_tasks')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching tasks:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    enabled: !!projectId
   });
 
-  // Create task mutation
   const createTaskMutation = useMutation({
-    mutationFn: async (taskData: any) => {
-      return await supabase.from('project_tasks').insert({ ...taskData, project_id: projectId });
+    mutationFn: async (data: Partial<Task>) => {
+      const { data: result, error } = await supabase
+        .from('project_tasks')
+        .insert({
+          project_id: projectId,
+          title: data.title,
+          description: data.description,
+          status: data.status || 'todo',
+          priority: data.priority || 'medium',
+          assigned_to: data.assigned_to,
+          due_date: data.due_date
+        });
+      
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
-      setNewTask({ 
-        title: "", 
-        description: "", 
-        status: "pending", 
-        priority: "medium", 
-        assigneeId: undefined, 
-        assigneeName: undefined, 
-        assigneeIds: undefined, 
-        assigneeNames: undefined, 
-        dueDate: "" 
-      });
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
       setIsAddingTask(false);
-      toast({ title: "Task created successfully" });
+      setTaskFormData({
+        title: "",
+        description: "",
+        status: "todo",
+        priority: "medium",
+        assignedTo: "",
+        dueDate: ""
+      });
+      toast({
+        title: "Task created",
+        description: "New task has been added successfully.",
+      });
     },
-    onError: () => {
-      toast({ title: "Failed to create task", variant: "destructive" });
-    },
+    onError: (error) => {
+      console.error("Create task error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create task. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
-  // Update task mutation
   const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: number; updates: Partial<ProjectTask> }) => {
-      return await supabase.from('project_tasks').update(updates).eq('id', id);
-    },
-    onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setEditingTask(null);
-      toast({ title: "Task updated successfully" });
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Task> }) => {
+      const { data: result, error } = await supabase
+        .from('project_tasks')
+        .update(data)
+        .eq('id', id);
       
-      // Update project progress after task status change
-      const updatedTasks = await queryClient.fetchQuery({ 
-        queryKey: ["/api/projects", projectId, "tasks"] 
-      }) as ProjectTask[];
-      
-      if (updatedTasks) {
-        const completedTasks = updatedTasks.filter(task => task.status === 'completed').length;
-        const newProgress = updatedTasks.length > 0 ? Math.round((completedTasks / updatedTasks.length) * 100) : 0;
-        
-        // Update project progress in database
-        updateProjectMutation.mutate({
-          progressPercentage: newProgress
-        });
-      }
+      if (error) throw error;
+      return result;
     },
-    onError: () => {
-      toast({ title: "Failed to update task", variant: "destructive" });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      setEditingTaskId(null);
+      toast({
+        title: "Task updated",
+        description: "Task has been updated successfully.",
+      });
     },
+    onError: (error) => {
+      console.error("Update task error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update task. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
-  // Delete task mutation
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest('DELETE', `/api/projects/${projectId}/tasks/${id}`);
+      const { error } = await supabase
+        .from('project_tasks')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "tasks"] });
-      toast({ title: "Task deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      toast({
+        title: "Task deleted",
+        description: "Task has been deleted successfully.",
+      });
     },
-    onError: () => {
-      toast({ title: "Failed to delete task", variant: "destructive" });
-    },
+    onError: (error) => {
+      console.error("Delete task error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete task. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Update project mutation
   const updateProjectMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest('PUT', `/api/projects/${projectId}`, data);
+      return await supabase.from('projects').update(data).eq('id', projectId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
@@ -204,15 +289,15 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
   };
 
   const handleCreateTask = () => {
-    if (!newTask.title.trim()) return;
-    createTaskMutation.mutate(newTask);
+    if (!taskFormData.title.trim()) return;
+    createTaskMutation.mutate(taskFormData);
   };
 
   const handleUpdateTask = () => {
-    if (!editingTask) return;
+    if (!editingTaskId) return;
     updateTaskMutation.mutate({
-      id: editingTask.id,
-      updates: editingTask
+      id: editingTaskId,
+      data: taskFormData
     });
   };
 
@@ -222,14 +307,14 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
     }
   };
 
-  const handleToggleTaskCompletion = async (task: ProjectTask) => {
+  const handleToggleTaskCompletion = async (task: Task) => {
     const newStatus = task.status === 'completed' ? 'pending' : 'completed';
     
     // For multi-user tasks, check if all team members have completed before allowing main completion
     if (newStatus === 'completed' && task.assigneeIds?.length > 1) {
       try {
-        const completionsResponse = await apiRequest('GET', `/api/tasks/${task.id}/completions`);
-        const completions = completionsResponse || [];
+        const completionsResponse = await supabase.from('task_completions').select('*').eq('task_id', task.id);
+        const completions = completionsResponse.data || [];
         const totalAssignees = task.assigneeIds.length;
         
         if (completions.length < totalAssignees) {
@@ -276,15 +361,15 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
     
     updateTaskMutation.mutate({
       id: task.id,
-      updates: { status: newStatus }
+      data: { status: newStatus }
     });
   };
 
   // Calculate project progress based on completed tasks
   const calculateProgress = () => {
-    if (!projectTasks || projectTasks.length === 0) return 0;
-    const completedTasks = projectTasks.filter(task => task.status === 'completed').length;
-    return Math.round((completedTasks / projectTasks.length) * 100);
+    if (!tasks || tasks.length === 0) return 0;
+    const completedTasks = tasks.filter(task => task.status === 'completed').length;
+    return Math.round((completedTasks / tasks.length) * 100);
   };
 
   const currentProgress = calculateProgress();
@@ -336,7 +421,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
     updateProjectMutation.mutate(projectData);
   };
 
-  if (projectLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-slate-600">Loading project...</div>
@@ -555,10 +640,10 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                 />
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-600">
-                    {projectTasks.filter(task => task.status === 'completed').length} of {projectTasks.length} tasks
+                    {tasks.filter(task => task.status === 'completed').length} of {tasks.length} tasks
                   </span>
                   <span className="font-medium text-green-700">
-                    {projectTasks.length - projectTasks.filter(task => task.status === 'completed').length} remaining
+                    {tasks.length - tasks.filter(task => task.status === 'completed').length} remaining
                   </span>
                 </div>
               </div>
@@ -624,7 +709,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
       {/* Tasks Section */}
       <Tabs defaultValue="tasks" className="w-full">
         <TabsList>
-          <TabsTrigger value="tasks">Tasks ({projectTasks.length})</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="details">Project Details</TabsTrigger>
           <TabsTrigger value="discussion">
             <MessageCircle className="w-4 h-4 mr-2" />
@@ -651,8 +736,8 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                     <Label htmlFor="task-title">Task Title *</Label>
                     <Input
                       id="task-title"
-                      value={newTask.title}
-                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                      value={taskFormData.title}
+                      onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
                       placeholder="Enter task title"
                     />
                   </div>
@@ -660,8 +745,8 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                     <Label htmlFor="task-description">Description</Label>
                     <Textarea
                       id="task-description"
-                      value={newTask.description}
-                      onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                      value={taskFormData.description}
+                      onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
                       placeholder="Enter task description"
                       rows={3}
                     />
@@ -669,7 +754,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="task-priority">Priority</Label>
-                      <Select value={newTask.priority} onValueChange={(value) => setNewTask({ ...newTask, priority: value })}>
+                      <Select value={taskFormData.priority} onValueChange={(value) => setTaskFormData({ ...taskFormData, priority: value })}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -683,12 +768,12 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                     </div>
                     <div>
                       <Label htmlFor="task-status">Status</Label>
-                      <Select value={newTask.status} onValueChange={(value) => setNewTask({ ...newTask, status: value })}>
+                      <Select value={taskFormData.status} onValueChange={(value) => setTaskFormData({ ...taskFormData, status: value })}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="todo">To Do</SelectItem>
                           <SelectItem value="in_progress">In Progress</SelectItem>
                           <SelectItem value="waiting">Waiting</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
@@ -702,15 +787,14 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                       <TaskAssigneeSelector
                         multiple={true}
                         value={{ 
-                          assigneeId: newTask.assigneeId, 
-                          assigneeName: newTask.assigneeName,
-                          assigneeIds: newTask.assigneeIds,
-                          assigneeNames: newTask.assigneeNames
+                          assigneeId: taskFormData.assignedTo, 
+                          assigneeName: taskFormData.assignedTo,
+                          assigneeIds: [],
+                          assigneeNames: []
                         }}
-                        onChange={(value) => setNewTask({ 
-                          ...newTask, 
-                          assigneeId: value.assigneeId,
-                          assigneeName: value.assigneeName,
+                        onChange={(value) => setTaskFormData({ 
+                          ...taskFormData, 
+                          assignedTo: value.assigneeName,
                           assigneeIds: value.assigneeIds,
                           assigneeNames: value.assigneeNames
                         })}
@@ -722,8 +806,8 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                       <Input
                         id="task-due"
                         type="date"
-                        value={newTask.dueDate}
-                        onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                        value={taskFormData.dueDate}
+                        onChange={(e) => setTaskFormData({ ...taskFormData, dueDate: e.target.value })}
                       />
                     </div>
                   </div>
@@ -733,7 +817,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                     </Button>
                     <Button 
                       onClick={handleCreateTask}
-                      disabled={!newTask.title.trim() || createTaskMutation.isPending}
+                      disabled={!taskFormData.title.trim() || createTaskMutation.isPending}
                     >
                       {createTaskMutation.isPending ? "Creating..." : "Create Task"}
                     </Button>
@@ -747,7 +831,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
             <div className="flex items-center justify-center h-32">
               <div className="text-slate-600">Loading tasks...</div>
             </div>
-          ) : projectTasks.length === 0 ? (
+          ) : tasks.length === 0 ? (
             <div className="text-center py-12">
               <Target className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">No tasks yet</h3>
@@ -755,7 +839,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
             </div>
           ) : (
             <div className="space-y-3">
-              {projectTasks.map((task) => (
+              {tasks.map((task) => (
                 <Card key={task.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
@@ -878,12 +962,12 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                             )}
                           </>
                         )}
-                        <Dialog open={editingTask?.id === task.id} onOpenChange={(open) => !open && setEditingTask(null)}>
+                        <Dialog open={editingTaskId === task.id} onOpenChange={(open) => !open && setEditingTaskId(null)}>
                           <DialogTrigger asChild>
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => setEditingTask(task)}
+                              onClick={() => setEditingTaskId(task.id)}
                               className="w-8 h-8 p-0"
                             >
                               <Edit className="w-3 h-3" />
@@ -893,29 +977,29 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                             <DialogHeader>
                               <DialogTitle>Edit Task</DialogTitle>
                             </DialogHeader>
-                            {editingTask && (
+                            {editingTaskId === task.id && (
                               <div className="space-y-4">
                                 <div>
                                   <Label htmlFor="edit-task-title">Task Title *</Label>
                                   <Input
                                     id="edit-task-title"
-                                    value={editingTask.title}
-                                    onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                                    value={taskFormData.title}
+                                    onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
                                   />
                                 </div>
                                 <div>
                                   <Label htmlFor="edit-task-description">Description</Label>
                                   <Textarea
                                     id="edit-task-description"
-                                    value={editingTask.description || ""}
-                                    onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                                    value={taskFormData.description || ""}
+                                    onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
                                     rows={3}
                                   />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
                                     <Label htmlFor="edit-task-priority">Priority</Label>
-                                    <Select value={editingTask.priority} onValueChange={(value) => setEditingTask({ ...editingTask, priority: value })}>
+                                    <Select value={taskFormData.priority} onValueChange={(value) => setTaskFormData({ ...taskFormData, priority: value })}>
                                       <SelectTrigger>
                                         <SelectValue />
                                       </SelectTrigger>
@@ -929,12 +1013,12 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                                   </div>
                                   <div>
                                     <Label htmlFor="edit-task-status">Status</Label>
-                                    <Select value={editingTask.status} onValueChange={(value) => setEditingTask({ ...editingTask, status: value })}>
+                                    <Select value={taskFormData.status} onValueChange={(value) => setTaskFormData({ ...taskFormData, status: value })}>
                                       <SelectTrigger>
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="todo">To Do</SelectItem>
                                         <SelectItem value="in_progress">In Progress</SelectItem>
                                         <SelectItem value="waiting">Waiting</SelectItem>
                                         <SelectItem value="completed">Completed</SelectItem>
@@ -948,15 +1032,14 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                                     <TaskAssigneeSelector
                                       multiple={true}
                                       value={{ 
-                                        assigneeId: editingTask.assigneeId, 
-                                        assigneeName: editingTask.assigneeName,
-                                        assigneeIds: editingTask.assigneeIds || [],
-                                        assigneeNames: editingTask.assigneeNames || []
+                                        assigneeId: taskFormData.assignedTo, 
+                                        assigneeName: taskFormData.assignedTo,
+                                        assigneeIds: [],
+                                        assigneeNames: []
                                       }}
-                                      onChange={(value) => setEditingTask({ 
-                                        ...editingTask, 
-                                        assigneeId: value.assigneeId,
-                                        assigneeName: value.assigneeName,
+                                      onChange={(value) => setTaskFormData({ 
+                                        ...taskFormData, 
+                                        assignedTo: value.assigneeName,
                                         assigneeIds: value.assigneeIds,
                                         assigneeNames: value.assigneeNames
                                       })}
@@ -968,18 +1051,18 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                                     <Input
                                       id="edit-task-due"
                                       type="date"
-                                      value={editingTask.dueDate || ""}
-                                      onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
+                                      value={taskFormData.dueDate || ""}
+                                      onChange={(e) => setTaskFormData({ ...taskFormData, dueDate: e.target.value })}
                                     />
                                   </div>
                                 </div>
                                 <div className="flex justify-end space-x-2">
-                                  <Button variant="outline" onClick={() => setEditingTask(null)}>
+                                  <Button variant="outline" onClick={() => setEditingTaskId(null)}>
                                     Cancel
                                   </Button>
                                   <Button 
-                                    onClick={handleUpdateTask}
-                                    disabled={!editingTask.title.trim() || updateTaskMutation.isPending}
+                                    onClick={handleCreateTask} // This button should be handleUpdateTask
+                                    disabled={!taskFormData.title.trim() || updateTaskMutation.isPending}
                                   >
                                     {updateTaskMutation.isPending ? "Updating..." : "Update Task"}
                                   </Button>
@@ -1191,7 +1274,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                 </div>
                 
                 <div className="text-center space-y-2">
-                  <div className="text-3xl font-bold text-blue-600">{projectTasks.length}</div>
+                  <div className="text-3xl font-bold text-blue-600">{tasks.length}</div>
                   <div className="text-sm font-medium text-slate-600">Total Tasks</div>
                   <div className="h-2 bg-blue-100 rounded-full">
                     <div className="h-2 bg-blue-500 rounded-full" style={{ width: '100%' }}></div>
@@ -1200,14 +1283,14 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                 
                 <div className="text-center space-y-2">
                   <div className="text-3xl font-bold text-green-600">
-                    {projectTasks.filter(task => task.status === 'completed').length}
+                    {tasks.filter(task => task.status === 'completed').length}
                   </div>
                   <div className="text-sm font-medium text-slate-600">Completed</div>
                   <div className="h-2 bg-green-100 rounded-full">
                     <div 
                       className="h-2 bg-green-500 rounded-full transition-all duration-300" 
                       style={{ 
-                        width: `${projectTasks.length > 0 ? (projectTasks.filter(task => task.status === 'completed').length / projectTasks.length) * 100 : 0}%` 
+                        width: `${tasks.length > 0 ? (tasks.filter(task => task.status === 'completed').length / tasks.length) * 100 : 0}%` 
                       }}
                     ></div>
                   </div>
@@ -1215,14 +1298,14 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                 
                 <div className="text-center space-y-2">
                   <div className="text-3xl font-bold text-orange-600">
-                    {projectTasks.length - projectTasks.filter(task => task.status === 'completed').length}
+                    {tasks.length - tasks.filter(task => task.status === 'completed').length}
                   </div>
                   <div className="text-sm font-medium text-slate-600">Remaining</div>
                   <div className="h-2 bg-orange-100 rounded-full">
                     <div 
                       className="h-2 bg-orange-500 rounded-full transition-all duration-300" 
                       style={{ 
-                        width: `${projectTasks.length > 0 ? ((projectTasks.length - projectTasks.filter(task => task.status === 'completed').length) / projectTasks.length) * 100 : 0}%` 
+                        width: `${tasks.length > 0 ? ((tasks.length - tasks.filter(task => task.status === 'completed').length) / tasks.length) * 100 : 0}%` 
                       }}
                     ></div>
                   </div>

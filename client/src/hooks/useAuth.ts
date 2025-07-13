@@ -45,7 +45,7 @@ export function useAuth() {
 
   // Always call useQuery, but with a stable query key
   const { data: userData, isLoading: userDataLoading } = useQuery({
-    queryKey: ['user-data', supabaseUser?.id || 'no-user'],
+    queryKey: ['user-data', supabaseUser?.email || 'no-user'],
     queryFn: async () => {
       if (!supabaseUser?.email) return null;
       

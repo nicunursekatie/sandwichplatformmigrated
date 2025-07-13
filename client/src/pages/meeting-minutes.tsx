@@ -1,77 +1,184 @@
-import { useState } from"react";
-import { useQuery, useMutation } from"@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from"@/components/ui/card";
-import { Button } from"@/components/ui/button";
-import { Input } from"@/components/ui/input";
-import { Badge } from"@/components/ui/badge";
-import { Textarea } from"@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from"@/components/ui/select";
-import { Calendar, Clock, FileText, Upload, Eye, Download, Link, Edit, Trash2, Plus, ArrowLeft } from"lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Clock, FileText, Upload, Eye, Download, Link, Edit, Trash2, Plus, ArrowLeft } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
-import { supabaseService } from "@/lib/supabase-service";
-import { useToast } from"@/hooks/use-toast";
-import { useLocation } from"wouter";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { DocumentViewer } from '@/components/DocumentViewer';
-import type { Meeting, MeetingMinutes, InsertMeeting } from"@shared/schema";
+
+interface Meeting {
+  id: number;
+  title: string;
+  date: string;
+  time: string;
+  type: string;
+  location: string;
+  description: string;
+  status: string;
+}
+
+interface MeetingMinutes {
+  id: number;
+  meeting_title: string;
+  meeting_date: string;
+  attendees: string;
+  agenda_items: string;
+  discussion_points: string;
+  action_items: string;
+  decisions_made: string;
+  next_meeting_date: string;
+  notes: string;
+  status: string;
+  file_path?: string;
+  google_docs_url?: string;
+  created_at: string;
+}
+
+interface MeetingMinutesFormData {
+  meetingTitle: string;
+  meetingDate: string;
+  attendees: string;
+  agendaItems: string;
+  discussionPoints: string;
+  actionItems: string;
+  decisionsMade: string;
+  nextMeetingDate: string;
+  notes: string;
+  status?: string;
+}
 
 export default function MeetingMinutes() {
- const [, setLocation] = useLocation();
- const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
- const [isUploadingMinutes, setIsUploadingMinutes] = useState(false);
- const [viewingMinutes, setViewingMinutes] = useState<MeetingMinutes | null>(null);
- const [previewDocument, setPreviewDocument] = useState<{path: string, name: string, type: string} | null>(null);
- const [selectedFile, setSelectedFile] = useState<File | null>(null);
- const [googleDocsUrl, setGoogleDocsUrl] = useState("");
- const [uploadType, setUploadType] = useState<"file" |"google_docs">("file");
- const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
- const [isEditingMeeting, setIsEditingMeeting] = useState(false);
- const [editingMeetingId, setEditingMeetingId] = useState<number | null>(null);
- const [newMeetingData, setNewMeetingData] = useState({
- title:"",
- date:"",
- time:"",
- type:"core_team" as"core_team" |"board" |"committee" |"special",
- location:"",
- description:""
- });
- const [editMeetingData, setEditMeetingData] = useState({
- title:"",
- date:"",
- time:"",
- type:"core_team" as"core_team" |"board" |"committee" |"special",
- location:"",
- description:""
- });
- const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
+  const [isUploadingMinutes, setIsUploadingMinutes] = useState(false);
+  const [viewingMinutes, setViewingMinutes] = useState<MeetingMinutes | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<{path: string, name: string, type: string} | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [googleDocsUrl, setGoogleDocsUrl] = useState("");
+  const [uploadType, setUploadType] = useState<"file" | "google_docs">("file");
+  const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
+  const [isEditingMeeting, setIsEditingMeeting] = useState(false);
+  const [editingMeetingId, setEditingMeetingId] = useState<number | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formData, setFormData] = useState<MeetingMinutesFormData>({
+    meetingTitle: "",
+    meetingDate: "",
+    attendees: "",
+    agendaItems: "",
+    discussionPoints: "",
+    actionItems: "",
+    decisionsMade: "",
+    nextMeetingDate: "",
+    notes: ""
+  });
+  const [newMeetingData, setNewMeetingData] = useState({
+    title: "",
+    date: "",
+    time: "",
+    type: "core_team" as "core_team" | "board" | "committee" | "special",
+    location: "",
+    description: ""
+  });
+  const [editMeetingData, setEditMeetingData] = useState({
+    title: "",
+    date: "",
+    time: "",
+    type: "core_team" as "core_team" | "board" | "committee" | "special",
+    location: "",
+    description: ""
+  });
+  const { toast } = useToast();
 
- // Fetch all meetings
- const { data: meetings = [], isLoading: meetingsLoading } = useQuery({
- queryKey: ["/api/meetings"],
- });
+  // Fetch all meetings
+  const { data: meetings = [], isLoading: meetingsLoading } = useQuery<Meeting[]>({
+    queryKey: ["meetings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .order('meeting_date', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching meetings:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
+  });
 
- // Fetch all meeting minutes
- const { data: minutes = [], isLoading: minutesLoading } = useQuery({
- queryKey: ["/api/meeting-minutes"],
- });
+  const { data: minutes = [], isLoading } = useQuery<MeetingMinutes[]>({
+    queryKey: ["meeting-minutes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meeting_minutes')
+        .select('*')
+        .order('meeting_date', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching meeting minutes:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
+  });
 
- const uploadMutation = useMutation({
- mutationFn: async (formData: FormData) => {
- const response = await fetch("/api/meeting-minutes/upload", {
- method:"POST",
- body: formData,
- });
- if (!response.ok) throw new Error("Failed to upload minutes");
- return response.json();
- },
- onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["/api/meeting-minutes"] });
- setIsUploadingMinutes(false);
- setSelectedMeetingId(null);
- setSelectedFile(null);
- setGoogleDocsUrl("");
- toast({ title:"Meeting minutes uploaded successfully" });
- },
- });
+  const createMinutesMutation = useMutation({
+    mutationFn: async (data: MeetingMinutesFormData) => {
+      const { data: result, error } = await supabase
+        .from('meeting_minutes')
+        .insert({
+          meeting_title: data.meetingTitle,
+          meeting_date: data.meetingDate,
+          attendees: data.attendees,
+          agenda_items: data.agendaItems,
+          discussion_points: data.discussionPoints,
+          action_items: data.actionItems,
+          decisions_made: data.decisionsMade,
+          next_meeting_date: data.nextMeetingDate,
+          notes: data.notes,
+          status: data.status || 'draft'
+        });
+      
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meeting-minutes"] });
+      setIsAddModalOpen(false);
+      setFormData({
+        meetingTitle: "",
+        meetingDate: "",
+        attendees: "",
+        agendaItems: "",
+        discussionPoints: "",
+        actionItems: "",
+        decisionsMade: "",
+        nextMeetingDate: "",
+        notes: ""
+      });
+      toast({
+        title: "Meeting minutes created",
+        description: "New meeting minutes have been saved successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Create meeting minutes error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create meeting minutes. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
 
  const deleteMeetingMutation = useMutation({
  mutationFn: async (meetingId: number) => {
@@ -173,31 +280,64 @@ export default function MeetingMinutes() {
  }
  });
 
- const handleSubmit = (e: React.FormEvent) => {
- e.preventDefault();
- if (!selectedMeetingId) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMinutesMutation.mutate({
+      meetingTitle: formData.meetingTitle,
+      meetingDate: formData.meetingDate,
+      attendees: formData.attendees,
+      agendaItems: formData.agendaItems,
+      discussionPoints: formData.discussionPoints,
+      actionItems: formData.actionItems,
+      decisionsMade: formData.decisionsMade,
+      nextMeetingDate: formData.nextMeetingDate,
+      notes: formData.notes
+    });
+  };
 
- const selectedMeeting = (meetings as Meeting[]).find((m: Meeting) => m.id === selectedMeetingId);
- if (!selectedMeeting) return;
+  const handleDeleteMinutes = (minutesId: number) => {
+    if (confirm("Are you sure you want to delete these meeting minutes?")) {
+      // TODO: Implement delete mutation
+      toast({
+        title: "Delete not implemented",
+        description: "Meeting minutes deletion is being migrated to Supabase.",
+        variant: "destructive",
+      });
+    }
+  };
 
- const formData = new FormData();
- formData.append("meetingId", selectedMeetingId.toString());
- formData.append("title", selectedMeeting.title);
- formData.append("date", selectedMeeting.date);
+  const handleCreateMeeting = (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: Implement create meeting mutation
+    toast({
+      title: "Create not implemented",
+      description: "Meeting creation is being migrated to Supabase.",
+      variant: "destructive",
+    });
+  };
 
- if (uploadType ==="file" && selectedFile) {
- formData.append("file", selectedFile);
- formData.append("summary", `Uploaded file: ${selectedFile.name}`);
- } else if (uploadType ==="google_docs" && googleDocsUrl) {
- formData.append("googleDocsUrl", googleDocsUrl);
- formData.append("summary", `Google Docs link: ${googleDocsUrl}`);
- } else {
- toast({ title:"Please select a file or provide a Google Docs URL", variant:"destructive" });
- return;
- }
+  const handleEditMeeting = (meeting: Meeting) => {
+    setEditingMeetingId(meeting.id);
+    setEditMeetingData({
+      title: meeting.title,
+      date: meeting.date,
+      time: meeting.time,
+      type: meeting.type as "core_team" | "board" | "committee" | "special",
+      location: meeting.location,
+      description: meeting.description
+    });
+    setIsEditingMeeting(true);
+  };
 
- uploadMutation.mutate(formData);
- };
+  const handleEditMeetingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: Implement edit meeting mutation
+    toast({
+      title: "Edit not implemented",
+      description: "Meeting editing is being migrated to Supabase.",
+      variant: "destructive",
+    });
+  };
 
  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
  const file = e.target.files?.[0];
@@ -259,58 +399,10 @@ export default function MeetingMinutes() {
  }
  };
 
- const handleEditMeeting = (meeting: Meeting) => {
- setEditingMeetingId(meeting.id);
- setEditMeetingData({
- title: meeting.title,
- date: meeting.date,
- time: meeting.time ||"",
- type: meeting.type,
- location: meeting.location ||"",
- description: meeting.description ||""
- });
- setIsEditingMeeting(true);
- };
-
  const handleDeleteMeeting = (meetingId: number) => {
  if (confirm("Are you sure you want to delete this meeting? This action cannot be undone.")) {
  deleteMeetingMutation.mutate(meetingId);
  }
- };
-
- const handleCreateMeeting = (e: React.FormEvent) => {
- e.preventDefault();
- 
- const meetingData: InsertMeeting = {
- title: newMeetingData.title,
- date: newMeetingData.date,
- time: newMeetingData.time ||"TBD",
- type: newMeetingData.type,
- location: newMeetingData.location || undefined,
- description: newMeetingData.description || undefined,
- status:"scheduled"
- };
-
- createMeetingMutation.mutate(meetingData);
- };
-
- const handleEditMeetingSubmit = (e: React.FormEvent) => {
- e.preventDefault();
- 
- if (!editingMeetingId) return;
- 
- const meetingData = {
- id: editingMeetingId,
- title: editMeetingData.title,
- date: editMeetingData.date,
- time: editMeetingData.time ||"TBD",
- type: editMeetingData.type,
- location: editMeetingData.location || undefined,
- description: editMeetingData.description || undefined,
- status:"scheduled" as const
- };
-
- editMeetingMutation.mutate(meetingData);
  };
 
  const getMeetingMinutes = (meetingId: number) => {

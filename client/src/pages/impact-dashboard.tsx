@@ -18,19 +18,34 @@ import {
   Activity
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart, Cell, Pie } from "recharts";
+import { supabase } from "@/lib/supabase";
 
 export default function ImpactDashboard() {
   // Fetch sandwich collections data
-  const { data: collectionsData } = useQuery({
+  const { data: collections = [] } = useQuery({
     queryKey: ["sandwich-collections"],
-    queryFn: () => apiRequest('/api/sandwich-collections?limit=10000')
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sandwich_collections')
+        .select('*')
+        .limit(10000);
+      
+      if (error) {
+        console.error('Error fetching collections:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
-  
-  const collections = collectionsData?.collections || [];
 
-  // Fetch collection stats
-  const { data: stats } = useQuery({
-    queryKey: ["/api/sandwich-collections/stats"],
+  const { data: statsData } = useQuery({
+    queryKey: ["sandwich-collections-stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_collection_stats');
+      if (error) throw error;
+      return data;
+    }
   });
 
   // Fetch hosts data
@@ -177,7 +192,7 @@ export default function ImpactDashboard() {
 
   const calculateImpactMetrics = () => {
     // Use the stats API for total sandwiches since it's calculated server-side
-    const totalSandwiches = (stats as any)?.completeTotalSandwiches || 0;
+    const totalSandwiches = (statsData as any)?.completeTotalSandwiches || 0;
     const totalCollections = collections?.length || 0;
     const uniqueHosts = Array.isArray(hosts) ? hosts.length : 0;
     

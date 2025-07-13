@@ -197,16 +197,18 @@ export default function SandwichCollectionLog() {
   const pagination = collectionsResponse?.pagination;
 
   const { data: hostsList = [] } = useQuery<Host[]>({
-    queryKey: ["hosts"]
+    queryKey: ["hosts"],
+    queryFn: async () => {
+      return await supabaseService.host.getAllHosts();
+    }
   });
 
   // Query for complete database totals including both individual and group collections
   const { data: totalStats } = useQuery({
-    queryKey: ["/api/sandwich-collections/stats"],
+    queryKey: ["sandwich-collections-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_collection_stats');
-      if (error) throw error;
-      return data;
+      const stats = await supabaseService.sandwichCollection.getCollectionStats();
+      return stats?.[0] || null;
     }
   });
 
@@ -527,19 +529,7 @@ export default function SandwichCollectionLog() {
   const batchEditMutation = useMutation({
     mutationFn: async (data: { ids: number[], updates: Partial<SandwichCollection> }) => {
       console.log("Batch edit request:", data);
-      const response = await fetch("/api/sandwich-collections/batch-edit", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Batch edit error response:", errorData);
-        throw new Error(errorData.message || "Failed to update collections");
-      }
-
-      const result = await response.json();
+      const result = await supabaseService.sandwichCollection.batchUpdateCollections(data.ids, data.updates);
       console.log("Batch edit success response:", result);
       return result;
     },
@@ -618,12 +608,7 @@ export default function SandwichCollectionLog() {
 
   const batchDeleteMutation = useMutation({
     mutationFn: async (ids: number[]) => {
-      const response = await fetch("/api/sandwich-collections/batch-delete", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids })
-      });
-      return response.json();
+      return await supabaseService.sandwichCollection.batchDeleteCollections(ids);
     },
     onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });

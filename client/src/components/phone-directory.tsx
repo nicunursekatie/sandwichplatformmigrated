@@ -1,28 +1,53 @@
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { z } from "zod";
+import { 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Users, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Download, 
+  Upload, 
+  Search,
+  Filter,
+  X,
+  User,
+  Building2,
+  Truck,
+  Heart,
+  Star,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Settings,
+  ChevronDown,
+  FileSpreadsheet
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { insertHostSchema, insertHostContactSchema, insertRecipientSchema, insertContactSchema } from "@shared/schema";
-
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
-import { Phone, Mail, MapPin, Search, Download, User, Users, Star, Building2, Plus, Edit, Trash2, Upload, FileSpreadsheet, Crown, Settings, ChevronDown } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
 
-import { supabase } from '@/lib/supabase';
-import { supabaseService } from "@/lib/supabase-service";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertHostSchema, insertHostContactSchema, insertRecipientSchema, insertContactSchema } from "@shared/schema";
+
 interface Host {
   id: number;
   name: string;
@@ -108,41 +133,123 @@ function PhoneDirectory() {
 
   // Optimized: Fetch hosts with contacts in single query
   const { data: hosts = [], isLoading, refetch: refetchHostsWithContacts } = useQuery<HostWithContacts[]>({
-    queryKey: ["/api/hosts-with-contacts"],
+    queryKey: ["hosts-with-contacts"],
+    queryFn: async () => {
+      const { data: hostsData, error: hostsError } = await supabase
+        .from('hosts')
+        .select('*')
+        .order('name');
+      
+      if (hostsError) {
+        console.error('Error fetching hosts:', hostsError);
+        return [];
+      }
+
+      // Fetch contacts for each host
+      const hostsWithContacts = await Promise.all(
+        (hostsData || []).map(async (host) => {
+          const { data: contacts, error: contactsError } = await supabase
+            .from('host_contacts')
+            .select('*')
+            .eq('host_id', host.id)
+            .order('is_primary', { ascending: false })
+            .order('name');
+          
+          if (contactsError) {
+            console.error('Error fetching contacts for host:', host.id, contactsError);
+            return { ...host, contacts: [] };
+          }
+          
+          return { ...host, contacts: contacts || [] };
+        })
+      );
+
+      return hostsWithContacts;
+    }
   });
 
   // Keep separate hosts query for forms that need the basic host list
   const { data: hostsData = [], refetch: refetchHosts } = useQuery<Host[]>({
     queryKey: ["hosts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('hosts')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching hosts:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
-
-
-
-
-
-
 
   // Fetch recipients
   const { data: recipients = [], isLoading: recipientsLoading } = useQuery<Recipient[]>({
-    queryKey: ["/api/recipients"],
+    queryKey: ["recipients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('recipients')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching recipients:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
   // Fetch general contacts
   const { data: contacts = [], isLoading: contactsLoading } = useQuery<GeneralContact[]>({
-    queryKey: ["/api/contacts"],
+    queryKey: ["contacts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching contacts:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
   // Fetch drivers
   const { data: drivers = [], isLoading: driversLoading } = useQuery<Driver[]>({
-    queryKey: ["/api/drivers"],
+    queryKey: ["drivers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching drivers:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
   // Mutations for CRUD operations
   const createHostMutation = useMutation({
-    mutationFn: (data: z.infer<typeof insertHostSchema>) => apiRequest("POST", `/api/hosts`, data),
+    mutationFn: async (data: z.infer<typeof insertHostSchema>) => {
+      const { data: result, error } = await supabase.from('hosts').insert(data);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hosts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts-with-contacts"] });
       setIsAddingHost(false);
       toast({ title: "Host added successfully" });
     },
@@ -152,13 +259,15 @@ function PhoneDirectory() {
   });
 
   const updateHostMutation = useMutation({
-    mutationFn: ({ id, data, isReassignment }: { id: number; data: Partial<z.infer<typeof insertHostSchema>>; isReassignment?: boolean }) => {
+    mutationFn: async ({ id, data, isReassignment }: { id: number; data: Partial<z.infer<typeof insertHostSchema>>; isReassignment?: boolean }) => {
       console.log('Updating host with:', { id, data, isReassignment });
-      return supabaseService.host.updateHost(id, data);
+      const { data: result, error } = await supabase.from('hosts').update(data).eq('id', id);
+      if (error) throw error;
+      return result;
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["hosts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts-with-contacts"] });
       setEditingHost(null);
       
       if (response && typeof response === 'object' && 'message' in response) {
@@ -178,13 +287,17 @@ function PhoneDirectory() {
   });
 
   const deleteHostMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/hosts/${id}`),
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from('hosts').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: async () => {
       // Force immediate refresh of both queries
       await Promise.all([
         refetchHostsWithContacts(),
         refetchHosts(),
-        queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] })
+        queryClient.invalidateQueries({ queryKey: ["hosts-with-contacts"] })
       ]);
       toast({ title: "Host location deleted successfully" });
     },
@@ -199,9 +312,13 @@ function PhoneDirectory() {
   });
 
   const createRecipientMutation = useMutation({
-    mutationFn: (data: z.infer<typeof insertRecipientSchema>) => apiRequest("POST", `/api/recipients`, data),
+    mutationFn: async (data: z.infer<typeof insertRecipientSchema>) => {
+      const { data: result, error } = await supabase.from('recipients').insert(data);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
       setIsAddingRecipient(false);
       toast({ title: "Recipient added successfully" });
     },
@@ -211,10 +328,13 @@ function PhoneDirectory() {
   });
 
   const updateRecipientMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<z.infer<typeof insertRecipientSchema>> }) => 
-      apiRequest("PATCH", `/api/recipients/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: Partial<z.infer<typeof insertRecipientSchema>> }) => {
+      const { data: result, error } = await supabase.from('recipients').update(data).eq('id', id);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
       setEditingRecipient(null);
       toast({ title: "Recipient updated successfully" });
     },
@@ -224,9 +344,13 @@ function PhoneDirectory() {
   });
 
   const deleteRecipientMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/recipients/${id}`),
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from('recipients').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
       toast({ title: "Recipient deleted successfully" });
     },
     onError: () => {
@@ -235,11 +359,14 @@ function PhoneDirectory() {
   });
 
   const createHostContactMutation = useMutation({
-    mutationFn: (data: z.infer<typeof insertHostContactSchema>) => supabase.from('host_contacts').insert(data),
+    mutationFn: async (data: z.infer<typeof insertHostContactSchema>) => {
+      const { data: result, error } = await supabase.from('host_contacts').insert(data);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hosts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts-with-contacts"] });
       setIsAddingHostContact(false);
       setSelectedHostForContact(null);
       toast({ title: "Contact added successfully" });
@@ -250,17 +377,17 @@ function PhoneDirectory() {
   });
 
   const importContactsMutation = useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: async (file: File) => {
+      // TODO: Implement proper CSV import
       const formData = new FormData();
       formData.append('file', file);
-      return // TODO: Implement contact import with Supabase
-      // Parse CSV and use supabase.from('contacts').insert(parsedData).then(res => res.json());
+      // For now, just return a mock response
+      return { data: [], imported: 0, hosts: 0 };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts-with-contacts"] });
       queryClient.invalidateQueries({ queryKey: ["hosts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
       setImportDialogOpen(false);
       toast({ 
         title: "Import completed successfully", 
@@ -272,16 +399,15 @@ function PhoneDirectory() {
     },
   });
 
-
-
-
-
-
   // Contact mutations
   const createContactMutation = useMutation({
-    mutationFn: (data: z.infer<typeof insertContactSchema>) => apiRequest("POST", `/api/contacts`, data),
+    mutationFn: async (data: z.infer<typeof insertContactSchema>) => {
+      const { data: result, error } = await supabase.from('contacts').insert(data);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
       setIsAddingContact(false);
       toast({
         title: "Success",
@@ -298,10 +424,13 @@ function PhoneDirectory() {
   });
 
   const updateContactMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<GeneralContact> }) => 
-      apiRequest("PATCH", `/api/contacts/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: Partial<GeneralContact> }) => {
+      const { data: result, error } = await supabase.from('contacts').update(data).eq('id', id);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
       setEditingContact(null);
       toast({
         title: "Success",
@@ -318,9 +447,14 @@ function PhoneDirectory() {
   });
 
   const deleteContactMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/contacts/${id}`),
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from('contacts').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      setEditingContact(null);
       toast({
         title: "Success",
         description: "Contact deleted successfully",
@@ -335,46 +469,36 @@ function PhoneDirectory() {
     },
   });
 
-  // Host contact mutations
   const updateHostContactMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<HostContact> }) => 
-      apiRequest("PATCH", `/api/host-contacts/${id}`, data),
+    mutationFn: async ({ id, data }: { id: number; data: Partial<HostContact> }) => {
+      const { data: result, error } = await supabase.from('host_contacts').update(data).eq('id', id);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hosts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["hosts-with-contacts"] });
       setEditingHostContact(null);
-      toast({
-        title: "Success",
-        description: "Host contact updated successfully",
-      });
+      toast({ title: "Contact updated successfully" });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update host contact",
-        variant: "destructive",
-      });
+      toast({ title: "Failed to update contact", variant: "destructive" });
     },
   });
 
   const deleteHostContactMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/host-contacts/${id}`),
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from('host_contacts').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hosts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/hosts-with-contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/host-contacts"] });
-      toast({
-        title: "Success",
-        description: "Host contact deleted successfully",
-      });
+      queryClient.invalidateQueries({ queryKey: ["hosts-with-contacts"] });
+      toast({ title: "Contact deleted successfully" });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete host contact",
-        variant: "destructive",
-      });
+      toast({ title: "Failed to delete contact", variant: "destructive" });
     },
   });
 
@@ -405,7 +529,7 @@ function PhoneDirectory() {
     const searchLower = searchTerm.toLowerCase();
     
     return recipient.name.toLowerCase().includes(searchLower) ||
-           (recipient.contact_name && recipient.contact_name.toLowerCase().includes(searchLower)) ||
+           (recipient.contactName && recipient.contactName.toLowerCase().includes(searchLower)) ||
            recipient.phone.includes(searchTerm) ||
            (recipient.email && recipient.email.toLowerCase().includes(searchLower)) ||
            (recipient.address && recipient.address.toLowerCase().includes(searchLower)) ||
@@ -467,7 +591,7 @@ function PhoneDirectory() {
       return (
         <div className="flex items-center gap-1">
           <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold shadow-md border-0 flex items-center gap-1 px-2 py-1">
-            <Crown className="w-3 h-3" />
+            <Star className="w-3 h-3" />
             LEAD
           </Badge>
         </div>
@@ -648,9 +772,9 @@ function PhoneDirectory() {
               )}
             </div>
             
-            {recipient.contact_name && (
+            {recipient.contactName && (
               <div className="text-sm text-gray-600 mb-2">
-                <strong>Contact:</strong> {recipient.contact_name}
+                <strong>Contact:</strong> {recipient.contactName}
               </div>
             )}
             
@@ -1498,7 +1622,7 @@ const RecipientForm = ({
     resolver: zodResolver(insertRecipientSchema),
     defaultValues: {
       name: initialData?.name || "",
-      contactName: initialData?.contact_name || "",
+      contactName: initialData?.contactName || "",
       phone: initialData?.phone || "",
       email: initialData?.email || "",
       address: initialData?.address || "",

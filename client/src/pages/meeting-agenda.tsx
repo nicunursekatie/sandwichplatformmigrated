@@ -13,15 +13,30 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import { useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
 
 interface AgendaItem {
   id: number;
-  meetingId: number;
-  submittedBy: string;
   title: string;
   description: string;
-  status: "pending" | "approved" | "rejected" | "postponed";
-  submittedAt: string;
+  category: string;
+  priority: string;
+  estimated_duration: number;
+  assigned_to: string;
+  status: string;
+  submitted_by: string;
+  submitted_at: string;
+}
+
+interface AgendaItemFormData {
+  title: string;
+  description: string;
+  category: string;
+  priority: string;
+  estimatedDuration: number;
+  assignedTo: string;
+  status: string;
+  submittedBy: string;
 }
 
 export default function MeetingAgenda() {
@@ -34,71 +49,166 @@ export default function MeetingAgenda() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    submittedBy: user?.first_name || "User"
+    category: "general",
+    priority: "medium",
+    estimatedDuration: 15,
+    assignedTo: "",
+    status: "pending",
+    submittedBy: user?.firstName || "Admin User"
   });
   const { toast } = useToast();
 
-  const { data: agendaItems = [], isLoading } = useQuery({
-    queryKey: ["/api/agenda-items"],
+  const { data: agendaItems = [], isLoading } = useQuery<AgendaItem[]>({
+    queryKey: ["agenda-items"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agenda_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching agenda items:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch("/api/agenda-items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          meetingId: 1
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to create agenda item");
-      return response.json();
+  const createAgendaItemMutation = useMutation({
+    mutationFn: async (data: AgendaItemFormData) => {
+      const { data: result, error } = await supabase
+        .from('agenda_items')
+        .insert({
+          title: data.title,
+          description: data.description,
+          category: data.category,
+          priority: data.priority,
+          estimated_duration: data.estimatedDuration,
+          assigned_to: data.assignedTo,
+          status: data.status || 'pending',
+          submitted_by: data.submittedBy
+        });
+      
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agenda-items"] });
+      queryClient.invalidateQueries({ queryKey: ["agenda-items"] });
       setIsCreating(false);
-      setFormData({ title: "", description: "", submittedBy: "Admin User" });
-      toast({ title: "Agenda item created successfully" });
+      setFormData({
+        title: "",
+        description: "",
+        category: "general",
+        priority: "medium",
+        estimatedDuration: 15,
+        assignedTo: "",
+        status: "pending",
+        submittedBy: user?.firstName || "Admin User"
+      });
+      toast({
+        title: "Agenda item created",
+        description: "New agenda item has been added successfully.",
+      });
     },
+    onError: (error) => {
+      console.error("Create agenda item error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add agenda item. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const response = await fetch(`/api/agenda-items/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) throw new Error("Failed to update status");
-      return response.json();
+  const updateAgendaItemMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<AgendaItemFormData> }) => {
+      const { data: result, error } = await supabase
+        .from('agenda_items')
+        .update({
+          title: data.title,
+          description: data.description,
+          category: data.category,
+          priority: data.priority,
+          estimated_duration: data.estimatedDuration,
+          assigned_to: data.assignedTo,
+          status: data.status
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agenda-items"] });
-      toast({ title: "Status updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["agenda-items"] });
+      setEditingId(null);
+      toast({
+        title: "Agenda item updated",
+        description: "Agenda item has been updated successfully.",
+      });
     },
+    onError: (error) => {
+      console.error("Update agenda item error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update agenda item. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
-  const deleteMutation = useMutation({
+  const deleteAgendaItemMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(`/api/agenda-items/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete agenda item");
+      const { error } = await supabase
+        .from('agenda_items')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agenda-items"] });
-      toast({ title: "Agenda item deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["agenda-items"] });
+      toast({
+        title: "Agenda item deleted",
+        description: "Agenda item has been deleted successfully.",
+      });
     },
+    onError: (error) => {
+      console.error("Delete agenda item error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete agenda item. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate(formData);
+    createAgendaItemMutation.mutate({
+      title: formData.title,
+      description: formData.description,
+      category: formData.category,
+      priority: formData.priority,
+      estimatedDuration: formData.estimatedDuration,
+      assignedTo: formData.assignedTo,
+      status: formData.status,
+      submittedBy: formData.submittedBy
+    });
   };
 
   const handleStatusChange = (item: AgendaItem, newStatus: string) => {
-    updateStatusMutation.mutate({ id: item.id, status: newStatus });
+    updateAgendaItemMutation.mutate({ 
+      id: item.id, 
+      data: { status: newStatus } 
+    });
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("Are you sure you want to delete this agenda item?")) {
+      deleteAgendaItemMutation.mutate(id);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -240,15 +350,15 @@ export default function MeetingAgenda() {
                   <div>
                     <label className="block text-sm font-medium mb-2">Submitted By</label>
                     <Input
-                      value={formData.submitted_by}
+                      value={formData.submittedBy}
                       onChange={(e) => setFormData({ ...formData, submittedBy: e.target.value })}
                       placeholder="Your name"
                       required
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button type="submit" disabled={createMutation.isPending}>
-                      {createMutation.isPending ? "Creating..." : "Create Item"}
+                    <Button type="submit" disabled={createAgendaItemMutation.isPending}>
+                      {createAgendaItemMutation.isPending ? "Creating..." : "Create Item"}
                     </Button>
                     <Button type="button" variant="outline" onClick={() => setIsCreating(false)}>
                       Cancel
@@ -300,7 +410,7 @@ export default function MeetingAgenda() {
                             size="sm" 
                             className="bg-green-600 hover:bg-green-700 text-white"
                             onClick={() => handleStatusChange(item, "approved")}
-                            disabled={updateStatusMutation.isPending}
+                            disabled={updateAgendaItemMutation.isPending}
                           >
                             Approve
                           </Button>
@@ -309,7 +419,7 @@ export default function MeetingAgenda() {
                             variant="outline" 
                             className="border-red-300 text-red-600 hover:bg-red-50"
                             onClick={() => handleStatusChange(item, "rejected")}
-                            disabled={updateStatusMutation.isPending}
+                            disabled={updateAgendaItemMutation.isPending}
                           >
                             Reject
                           </Button>
@@ -318,7 +428,7 @@ export default function MeetingAgenda() {
                             variant="outline"
                             className="border-orange-300 text-orange-600 hover:bg-orange-50"
                             onClick={() => handleStatusChange(item, "postponed")}
-                            disabled={updateStatusMutation.isPending}
+                            disabled={updateAgendaItemMutation.isPending}
                           >
                             Delay
                           </Button>
@@ -331,7 +441,7 @@ export default function MeetingAgenda() {
                             size="sm" 
                             variant="outline"
                             onClick={() => handleStatusChange(item, "pending")}
-                            disabled={updateStatusMutation.isPending}
+                            disabled={updateAgendaItemMutation.isPending}
                           >
                             Reset to Pending
                           </Button>
@@ -343,8 +453,8 @@ export default function MeetingAgenda() {
                           variant="outline" 
                           size="sm" 
                           className="text-red-600 hover:text-red-700"
-                          onClick={() => deleteMutation.mutate(item.id)}
-                          disabled={deleteMutation.isPending}
+                          onClick={() => handleDelete(item.id)}
+                          disabled={deleteAgendaItemMutation.isPending}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

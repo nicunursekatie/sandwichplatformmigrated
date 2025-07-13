@@ -8,25 +8,39 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Video, Phone, ArrowLeft } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
-import { supabaseService } from "@/lib/supabase-service";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Meeting {
   id: number;
+  title: string;
+  description: string;
+  meeting_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  meeting_type: string;
+  max_attendees: number;
+  organizer: string;
+  agenda: string;
+  status: string;
+  created_at: string;
+}
+
+interface MeetingFormData {
   title: string;
   description: string;
   meetingDate: string;
   startTime: string;
   endTime: string;
   location: string;
-  meetingType: "in_person" | "virtual" | "hybrid";
-  maxAttendees?: number;
+  meetingType: 'in_person' | 'virtual' | 'hybrid';
+  maxAttendees: number;
   organizer: string;
-  agenda?: string;
-  meetingLink?: string;
-  status: "scheduled" | "in_progress" | "completed" | "cancelled";
-  createdAt: string;
+  agenda: string;
+  meetingLink: string;
 }
 
 export default function MeetingCalendar() {
@@ -34,37 +48,62 @@ export default function MeetingCalendar() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<MeetingFormData>({
     title: "",
     description: "",
     meetingDate: "",
     startTime: "",
     endTime: "",
     location: "",
-    meetingType: "in_person" as const,
-    maxAttendees: 20,
+    meetingType: 'in_person',
+    maxAttendees: 10,
     organizer: "",
     agenda: "",
     meetingLink: ""
   });
+  const { user } = useAuth();
   const { toast } = useToast();
 
-  const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["/api/meetings"],
+  const { data: meetings = [], isLoading } = useQuery<Meeting[]>({
+    queryKey: ["meetings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .order('meeting_date', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching meetings:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch("/api/meetings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create meeting");
-      return response.json();
+  const createMeetingMutation = useMutation({
+    mutationFn: async (data: MeetingFormData) => {
+      const { data: result, error } = await supabase
+        .from('meetings')
+        .insert({
+          title: data.title,
+          description: data.description,
+          meeting_date: data.meetingDate,
+          start_time: data.startTime,
+          end_time: data.endTime,
+          location: data.location,
+          meeting_type: data.meetingType,
+          max_attendees: data.maxAttendees,
+          organizer: data.organizer,
+          agenda: data.agenda,
+          status: 'scheduled'
+        });
+      
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
       setIsCreating(false);
       setFormData({
         title: "",
@@ -74,18 +113,52 @@ export default function MeetingCalendar() {
         endTime: "",
         location: "",
         meetingType: "in_person",
-        maxAttendees: 20,
+        maxAttendees: 10,
         organizer: "",
         agenda: "",
         meetingLink: ""
       });
-      toast({ title: "Meeting scheduled successfully" });
+      toast({
+        title: "Meeting scheduled successfully",
+        description: "New meeting has been scheduled successfully.",
+      });
     },
+    onError: (error) => {
+      console.error("Create meeting error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create meeting. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate(formData);
+    createMeetingMutation.mutate({
+      title: formData.title,
+      description: formData.description,
+      meetingDate: formData.meetingDate,
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      location: formData.location,
+      meetingType: formData.meetingType,
+      maxAttendees: formData.maxAttendees,
+      organizer: formData.organizer,
+      agenda: formData.agenda,
+      meetingLink: formData.meetingLink
+    });
+  };
+
+  const handleDeleteMeeting = (meetingId: number) => {
+    if (confirm("Are you sure you want to delete this meeting?")) {
+      // TODO: Implement delete mutation
+      toast({
+        title: "Delete not implemented",
+        description: "Meeting deletion is being migrated to Supabase.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -100,23 +173,25 @@ export default function MeetingCalendar() {
 
   const getMeetingTypeIcon = (type: string) => {
     switch (type) {
-      case "virtual": return <Video className="w-4 h-4" />;
-      case "hybrid": return <Phone className="w-4 h-4" />;
+      case 'in_person': return <MapPin className="w-4 h-4" />;
+      case 'virtual': return <Video className="w-4 h-4" />;
+      case 'hybrid': return <Phone className="w-4 h-4" />;
       default: return <MapPin className="w-4 h-4" />;
     }
   };
 
   const isUpcoming = (meetingDate: string, startTime: string) => {
     const meetingDateTime = new Date(`${meetingDate}T${startTime}`);
-    return meetingDateTime > new Date();
+    const now = new Date();
+    return meetingDateTime > now;
   };
 
   const upcomingMeetings = meetings.filter((meeting: Meeting) => 
-    isUpcoming(meeting.meetingDate, meeting.startTime) && meeting.status === "scheduled"
+    isUpcoming(meeting.meeting_date, meeting.start_time) && meeting.status === "scheduled"
   );
 
   const pastMeetings = meetings.filter((meeting: Meeting) => 
-    !isUpcoming(meeting.meetingDate, meeting.startTime) || meeting.status === "completed"
+    !isUpcoming(meeting.meeting_date, meeting.start_time) || meeting.status === "completed"
   );
 
   if (isLoading) {
@@ -290,7 +365,7 @@ export default function MeetingCalendar() {
                     <Input
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      placeholder={formData.meetingType === "virtual" ? "https://zoom.us/j/..." : "Conference Room A"}
+                      placeholder={formData.meetingType === 'virtual' ? "https://zoom.us/j/..." : "Conference Room A"}
                       required
                     />
                   </div>
@@ -313,8 +388,8 @@ export default function MeetingCalendar() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button type="submit" disabled={createMutation.isPending}>
-                      {createMutation.isPending ? "Scheduling..." : "Schedule Meeting"}
+                    <Button type="submit" disabled={createMeetingMutation.isPending}>
+                      {createMeetingMutation.isPending ? "Scheduling..." : "Schedule Meeting"}
                     </Button>
                     <Button type="button" variant="outline" onClick={() => setIsCreating(false)}>
                       Cancel
@@ -344,19 +419,19 @@ export default function MeetingCalendar() {
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {new Date(meeting.meetingDate).toLocaleDateString()}
+                              {new Date(meeting.meeting_date).toLocaleDateString()}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {meeting.startTime} - {meeting.endTime}
+                              {meeting.start_time} - {meeting.end_time}
                             </span>
                             <span className="flex items-center gap-1">
-                              {getMeetingTypeIcon(meeting.meetingType)}
+                              {getMeetingTypeIcon(meeting.meeting_type)}
                               {meeting.location}
                             </span>
                             <span className="flex items-center gap-1">
                               <Users className="w-4 h-4" />
-                              Max {meeting.maxAttendees}
+                              Max {meeting.max_attendees}
                             </span>
                           </div>
                           {meeting.description && (
@@ -401,14 +476,14 @@ export default function MeetingCalendar() {
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                             <span className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {new Date(meeting.meetingDate).toLocaleDateString()}
+                              {new Date(meeting.meeting_date).toLocaleDateString()}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {meeting.startTime} - {meeting.endTime}
+                              {meeting.start_time} - {meeting.end_time}
                             </span>
                             <span className="flex items-center gap-1">
-                              {getMeetingTypeIcon(meeting.meetingType)}
+                              {getMeetingTypeIcon(meeting.meeting_type)}
                               {meeting.location}
                             </span>
                           </div>

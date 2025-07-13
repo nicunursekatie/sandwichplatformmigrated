@@ -1,18 +1,21 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Users, Plus, Edit, Trash2, Phone, Mail, MapPin, Upload } from "lucide-react";
+import { Plus, Edit, Trash2, Upload, Download, Search, Filter, X, User, Phone, Mail, MapPin, Heart, Star, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
 
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 
-import { supabase } from '@/lib/supabase';
 interface Recipient {
   id: number;
   name: string;
@@ -34,113 +37,167 @@ export default function RecipientsManagement() {
   const [importResults, setImportResults] = useState<{ imported: number; skipped: number } | null>(null);
   const [newRecipient, setNewRecipient] = useState({
     name: "",
+    contactName: "",
     phone: "",
     email: "",
     address: "",
     preferences: "",
-    status: "active" as const
+    status: "active",
+    weeklyEstimate: 0
   });
 
-  const { data: recipients = [], isLoading } = useQuery({
-    queryKey: ["/api/recipients"],
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+  const { data: recipients = [], isLoading } = useQuery<Recipient[]>({
+    queryKey: ["recipients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('recipients')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching recipients:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
   const createRecipientMutation = useMutation({
-    mutationFn: (recipient: any) => apiRequest("/api/recipients", {
-      method: "POST",
-      body: JSON.stringify(recipient),
-    }),
+    mutationFn: async (recipient: any) => {
+      const { data, error } = await supabase
+        .from('recipients')
+        .insert({
+          name: recipient.name,
+          contact_name: recipient.contactName,
+          contact_phone: recipient.phone,
+          contact_email: recipient.email,
+          address: recipient.address,
+          preferences: recipient.preferences,
+          status: recipient.status || 'active',
+          weekly_estimate: recipient.weeklyEstimate || 0
+        });
+      
+      if (error) throw error;
+      return data;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
       setIsAddModalOpen(false);
       setNewRecipient({
         name: "",
+        contactName: "",
         phone: "",
         email: "",
         address: "",
         preferences: "",
-        status: "active"
+        status: "active",
+        weeklyEstimate: 0
       });
       toast({
-        title: "Success",
-        description: "Recipient added successfully",
+        title: "Recipient added",
+        description: "New recipient has been added successfully.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Create recipient error:", error);
       toast({
         title: "Error",
-        description: "Failed to add recipient",
+        description: "Failed to add recipient. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   const updateRecipientMutation = useMutation({
-    mutationFn: ({ id, ...updates }: any) => apiRequest(`/api/recipients/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    }),
+    mutationFn: async ({ id, ...updates }: any) => {
+      const { data, error } = await supabase
+        .from('recipients')
+        .update({
+          name: updates.name,
+          contact_name: updates.contactName,
+          contact_phone: updates.phone,
+          contact_email: updates.email,
+          address: updates.address,
+          preferences: updates.preferences,
+          status: updates.status,
+          weekly_estimate: updates.weeklyEstimate
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      return data;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
       setEditingRecipient(null);
       toast({
-        title: "Success",
-        description: "Recipient updated successfully",
+        title: "Recipient updated",
+        description: "Recipient has been updated successfully.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Update recipient error:", error);
       toast({
         title: "Error",
-        description: "Failed to update recipient",
+        description: "Failed to update recipient. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   const deleteRecipientMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/recipients/${id}`, {
-      method: "DELETE",
-    }),
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from('recipients')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
       toast({
-        title: "Success",
-        description: "Recipient deleted successfully",
+        title: "Recipient deleted",
+        description: "Recipient has been deleted successfully.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Delete recipient error:", error);
       toast({
         title: "Error",
-        description: "Failed to delete recipient",
+        description: "Failed to delete recipient. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   const importRecipientsMutation = useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: async (file: File): Promise<{ imported: number; skipped: number }> => {
+      // TODO: Implement proper CSV import
       const formData = new FormData();
       formData.append('file', file);
-      return // TODO: Implement recipient import with Supabase
-      // Parse CSV and use supabase.from('recipients').insert(parsedData).then(res => res.json());
+      // For now, just return a mock response
+      return Promise.resolve({ imported: 0, skipped: 0 });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
       setImportResults(data);
-      setImportFile(null);
+      setIsImportModalOpen(false);
       toast({
-        title: "Import Complete",
-        description: `Successfully imported ${data.imported} recipients`,
+        title: "Import completed",
+        description: `Imported ${data.imported} recipients, skipped ${data.skipped}`,
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Import error:", error);
       toast({
-        title: "Import Error",
-        description: "Failed to import recipients",
+        title: "Import failed",
+        description: "Failed to import recipients. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -195,7 +252,7 @@ export default function RecipientsManagement() {
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
         <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-slate-900 flex items-center">
-            <Users className="text-blue-500 mr-3 w-6 h-6" />
+            <User className="text-blue-500 mr-3 w-6 h-6" />
             Recipients Management
           </h1>
           <div className="flex gap-2">

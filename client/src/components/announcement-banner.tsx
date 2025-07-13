@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Calendar, Users, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 interface Announcement {
   id: number;
@@ -9,11 +10,11 @@ interface Announcement {
   message: string;
   type: 'event' | 'position' | 'alert' | 'general';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
   link?: string;
-  linkText?: string;
+  link_text?: string;
 }
 
 export default function AnnouncementBanner() {
@@ -22,17 +23,30 @@ export default function AnnouncementBanner() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Fetch active announcements
+  // Fetch active announcements from Supabase
   const { data: announcements = [] } = useQuery<Announcement[]>({
-    queryKey: ["/api/announcements"],
+    queryKey: ["announcements"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (error) {
+        console.error('Error fetching announcements:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
 
   // Filter active announcements that haven't been dismissed
   const activeAnnouncements = announcements.filter(announcement => {
     const now = new Date();
-    const startDate = new Date(announcement.startDate);
-    const endDate = new Date(announcement.endDate);
+    const startDate = new Date(announcement.start_date);
+    const endDate = new Date(announcement.end_date);
     
     return announcement.is_active && 
            now >= startDate && 
@@ -114,7 +128,7 @@ export default function AnnouncementBanner() {
                 rel="noopener noreferrer"
                 className="inline-block mt-2 text-sm font-medium underline hover:no-underline"
               >
-                {currentAnnouncement.linkText || 'Learn More'}
+                {currentAnnouncement.link_text || 'Learn More'}
               </a>
             )}
           </div>

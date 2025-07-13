@@ -30,16 +30,10 @@ interface MessageNotificationsProps {
   user: any; // User object passed from parent Dashboard
 }
 
-// Wrapper component to ensure stable rendering
-function MessageNotificationsWrapper({ user }: MessageNotificationsProps) {
-  // Always render the component, but handle the authentication state inside
-  return <MessageNotifications user={user} />;
-}
-
 function MessageNotifications({ user }: MessageNotificationsProps) {
   console.log('🔔 MessageNotifications component mounting...');
 
-  // Always call hooks with stable values to prevent hook order changes
+  // ALL HOOKS MUST BE CALLED FIRST, BEFORE ANY CONDITIONAL LOGIC
   const [lastCheck, setLastCheck] = useState(Date.now());
 
   // Memoize user ID to prevent unnecessary re-renders
@@ -103,27 +97,6 @@ function MessageNotifications({ user }: MessageNotificationsProps) {
   console.log('🔔 MessageNotifications: Query state - isLoading:', isLoading, 'error:', error, 'data:', unreadCounts);
   console.log('🔔 MessageNotifications: Rendering with final unread counts:', finalUnreadCounts);
 
-  // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
-  // Now we can safely return early after all hooks have been called
-
-  // Early return if user is not authenticated - this is now safe after all hooks
-  if (!userId) {
-    console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
-    return null;
-  }
-
-  // Show loading state
-  if (isLoading) {
-    console.log('🔔 MessageNotifications: Loading unread counts...');
-    return null; // Could show a loading spinner here
-  }
-
-  // Show error state
-  if (error) {
-    console.error('🔔 MessageNotifications: Error loading unread counts:', error);
-    return null; // Could show error state here
-  }
-
   const handleMarkAllRead = async () => {
     try {
       await supabase.from('message_reads').insert({ user_id: userId, read_at: new Date().toISOString() });
@@ -153,6 +126,24 @@ function MessageNotifications({ user }: MessageNotificationsProps) {
   };
 
   console.log('🔔 MessageNotifications rendering with totalUnread:', totalUnread);
+
+  // NOW we can safely return early after all hooks have been called
+  if (!userId) {
+    console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
+    return null;
+  }
+
+  // Show loading state
+  if (isLoading) {
+    console.log('🔔 MessageNotifications: Loading unread counts...');
+    return null; // Could show a loading spinner here
+  }
+
+  // Show error state
+  if (error) {
+    console.error('🔔 MessageNotifications: Error loading unread counts:', error);
+    return null; // Could show error state here
+  }
 
   return (
     <DropdownMenu>
@@ -218,4 +209,4 @@ function MessageNotifications({ user }: MessageNotificationsProps) {
   );
 }
 
-export default MessageNotificationsWrapper;
+export default MessageNotifications;

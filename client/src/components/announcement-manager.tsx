@@ -1,20 +1,36 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Plus, Edit, Trash2, Calendar, AlertCircle, ExternalLink, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Trash2, Calendar, Users, AlertCircle, Eye, EyeOff } from "lucide-react";
-
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
 
 interface Announcement {
   id: number;
+  title: string;
+  message: string;
+  type: 'event' | 'position' | 'alert' | 'general';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  link?: string;
+  link_text?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AnnouncementFormData {
+  id?: number; // Added for editing
   title: string;
   message: string;
   type: 'event' | 'position' | 'alert' | 'general';
@@ -24,14 +40,12 @@ interface Announcement {
   isActive: boolean;
   link?: string;
   linkText?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export default function AnnouncementManager() {
   const { toast } = useToast();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementFormData | null>(null);
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: '',
     message: '',
@@ -46,92 +60,130 @@ export default function AnnouncementManager() {
 
   // Fetch announcements
   const { data: announcements = [], isLoading } = useQuery<Announcement[]>({
-    queryKey: ["/api/announcements"],
+    queryKey: ["announcements"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching announcements:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
   // Create announcement mutation
   const createAnnouncementMutation = useMutation({
-    mutationFn: (data: typeof newAnnouncement) => {
+    mutationFn: async (formData: AnnouncementFormData) => {
       const formattedData = {
-        ...data,
-        startDate: new Date(data.startDate).toISOString(),
-        endDate: new Date(data.endDate).toISOString(),
-        link: data.link?.trim() || undefined,
-        linkText: data.linkText?.trim() || undefined
+        title: formData.title,
+        message: formData.message,
+        type: formData.type,
+        priority: formData.priority,
+        start_date: formData.startDate,
+        end_date: formData.endDate,
+        is_active: formData.isActive,
+        link: formData.link || null,
+        link_text: formData.linkText || null
       };
-      return apiRequest("POST", "/api/announcements", formattedData);
+
+      const { data, error } = await supabase
+        .from('announcements')
+        .insert(formattedData);
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
       setShowCreateDialog(false);
       resetForm();
       toast({
-        title: "Announcement created!",
-        description: "The announcement has been added successfully.",
+        title: "Announcement created",
+        description: "New announcement has been created successfully.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Create announcement error:", error);
       toast({
         title: "Error",
         description: "Failed to create announcement. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   // Update announcement mutation
   const updateAnnouncementMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Announcement> }) => {
-      const formattedData = { ...data };
-      if (data.startDate) {
-        formattedData.startDate = new Date(data.startDate).toISOString();
-      }
-      if (data.endDate) {
-        formattedData.endDate = new Date(data.endDate).toISOString();
-      }
-      if ('link' in data) {
-        formattedData.link = data.link?.trim() || undefined;
-      }
-      if ('linkText' in data) {
-        formattedData.linkText = data.linkText?.trim() || undefined;
-      }
-      return apiRequest("PATCH", `/api/announcements/${id}`, formattedData);
+    mutationFn: async ({ id, formData }: { id: number; formData: AnnouncementFormData }) => {
+      const formattedData = {
+        title: formData.title,
+        message: formData.message,
+        type: formData.type,
+        priority: formData.priority,
+        start_date: formData.startDate,
+        end_date: formData.endDate,
+        is_active: formData.isActive,
+        link: formData.link || null,
+        link_text: formData.linkText || null
+      };
+
+      const { data, error } = await supabase
+        .from('announcements')
+        .update(formattedData)
+        .eq('id', id);
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
       setEditingAnnouncement(null);
       toast({
-        title: "Announcement updated!",
-        description: "The announcement has been updated successfully.",
+        title: "Announcement updated",
+        description: "Announcement has been updated successfully.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Update announcement error:", error);
       toast({
         title: "Error",
         description: "Failed to update announcement. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   // Delete announcement mutation
   const deleteAnnouncementMutation = useMutation({
-    mutationFn: (id: number) =>
-      apiRequest("DELETE", `/api/announcements/${id}`),
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from('announcements')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { success: true };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/announcements"] });
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
       toast({
-        title: "Announcement deleted!",
-        description: "The announcement has been removed successfully.",
+        title: "Announcement deleted",
+        description: "Announcement has been deleted successfully.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Delete announcement error:", error);
       toast({
         title: "Error",
         description: "Failed to delete announcement. Please try again.",
         variant: "destructive",
       });
-    },
+    }
   });
 
   const resetForm = () => {
@@ -163,9 +215,16 @@ export default function AnnouncementManager() {
 
   const handleEdit = (announcement: Announcement) => {
     setEditingAnnouncement({
-      ...announcement,
-      startDate: announcement.startDate.split('T')[0],
-      endDate: announcement.endDate.split('T')[0]
+      id: announcement.id,
+      title: announcement.title,
+      message: announcement.message,
+      type: announcement.type,
+      priority: announcement.priority,
+      startDate: announcement.start_date.split('T')[0],
+      endDate: announcement.end_date.split('T')[0],
+      isActive: announcement.is_active,
+      link: announcement.link || '',
+      linkText: announcement.link_text || ''
     });
   };
 
@@ -174,22 +233,32 @@ export default function AnnouncementManager() {
     if (!editingAnnouncement) return;
     
     updateAnnouncementMutation.mutate({
-      id: editingAnnouncement.id,
-      data: editingAnnouncement
+      id: editingAnnouncement.id || 0,
+      formData: editingAnnouncement
     });
   };
 
-  const toggleActive = (id: number, isActive: boolean) => {
+  const handleToggleActive = (id: number, isActive: boolean) => {
     updateAnnouncementMutation.mutate({
       id,
-      data: { isActive }
+      formData: {
+        title: '',
+        message: '',
+        type: 'general',
+        priority: 'medium',
+        startDate: '',
+        endDate: '',
+        isActive: isActive,
+        link: '',
+        linkText: ''
+      }
     });
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'event': return <Calendar className="w-4 h-4" />;
-      case 'position': return <Users className="w-4 h-4" />;
+      case 'position': return <ExternalLink className="w-4 h-4" />;
       case 'alert': return <AlertCircle className="w-4 h-4" />;
       default: return <AlertCircle className="w-4 h-4" />;
     }
@@ -208,8 +277,8 @@ export default function AnnouncementManager() {
   const isCurrentlyActive = (announcement: Announcement) => {
     if (!announcement.is_active) return false;
     const now = new Date();
-    const start = new Date(announcement.startDate);
-    const end = new Date(announcement.endDate);
+    const start = new Date(announcement.start_date);
+    const end = new Date(announcement.end_date);
     return now >= start && now <= end;
   };
 
@@ -362,7 +431,7 @@ export default function AnnouncementManager() {
                     {getTypeIcon(announcement.type)}
                     <div>
                       <CardTitle className="text-lg">{announcement.title}</CardTitle>
-                      <CardDescription className="mt-1">{announcement.message}</CardDescription>
+                      <p className="text-slate-600 mt-1">{announcement.message}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -382,17 +451,17 @@ export default function AnnouncementManager() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-slate-600">
-                    <div>Start: {new Date(announcement.startDate).toLocaleDateString()}</div>
-                    <div>End: {new Date(announcement.endDate).toLocaleDateString()}</div>
+                    <div>Start: {new Date(announcement.start_date).toLocaleDateString()}</div>
+                    <div>End: {new Date(announcement.end_date).toLocaleDateString()}</div>
                     {announcement.link && (
-                      <div>Link: <a href={announcement.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{announcement.linkText || 'View'}</a></div>
+                      <div>Link: <a href={announcement.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{announcement.link_text || 'View'}</a></div>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center space-x-2">
                       <Switch
                         checked={announcement.is_active}
-                        onCheckedChange={(checked) => toggleActive(announcement.id, checked)}
+                        onCheckedChange={(checked) => handleToggleActive(announcement.id, checked)}
                       />
                       <Label className="text-sm">Active</Label>
                     </div>

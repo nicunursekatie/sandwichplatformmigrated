@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 
 import { useState } from "react";
 import type { DriveLink } from "@shared/schema";
+import { supabase } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
 
 export default function GoogleDriveLinks() {
   const { toast } = useToast();
@@ -25,7 +27,21 @@ export default function GoogleDriveLinks() {
   });
 
   const { data: links = [], isLoading } = useQuery<DriveLink[]>({
-    queryKey: ["/api/drive-links"]
+    queryKey: ["drive-links"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('drive_links')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching drive links:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
   // File type icons and colors
@@ -66,11 +82,22 @@ export default function GoogleDriveLinks() {
   // Mutations for creating new links
   const createLinkMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/drive-links", data);
-      return response.json();
+      const { data: result, error } = await supabase
+        .from('drive_links')
+        .insert({
+          title: data.title,
+          description: data.description,
+          url: data.url,
+          icon: data.icon,
+          icon_color: data.iconColor,
+          is_active: true
+        });
+      
+      if (error) throw error;
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/drive-links"] });
+      queryClient.invalidateQueries({ queryKey: ["drive-links"] });
       setIsAddModalOpen(false);
       setUploadedFile(null);
       setFormData({

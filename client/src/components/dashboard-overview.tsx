@@ -25,25 +25,65 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   });
 
   const { data: driveLinks = [] } = useQuery<DriveLink[]>({
-    queryKey: ["/api/drive-links"]
+    queryKey: ["drive-links"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('drive_links')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching drive links:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
-  const { data: reports = [] } = useQuery<WeeklyReport[]>({
-    queryKey: ["/api/weekly-reports"],
-    enabled: hasPermission(user, PERMISSIONS.VIEW_REPORTS)
+  const { data: weeklyReports = [] } = useQuery({
+    queryKey: ["weekly-reports"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('weekly_reports')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) {
+        console.error('Error fetching weekly reports:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
-  const { data: meetings = [] } = useQuery<Meeting[]>({
-    queryKey: ["/api/meetings"],
-    enabled: hasPermission(user, PERMISSIONS.VIEW_MEETINGS)
+  const { data: meetings = [] } = useQuery({
+    queryKey: ["meetings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .order('meeting_date', { ascending: false })
+        .limit(5);
+      
+      if (error) {
+        console.error('Error fetching meetings:', error);
+        return [];
+      }
+      
+      return data || [];
+    }
   });
 
   const { data: statsData } = useQuery({
-    queryKey: ["/api/sandwich-collections/stats"],
+    queryKey: ["sandwich-collections-stats"],
     queryFn: async () => {
-      const response = await supabase.rpc('get_collection_stats');
-      if (!response.ok) throw new Error('Failed to fetch stats');
-      return response.json();
+      const { data, error } = await supabase.rpc('get_collection_stats');
+      if (error) throw error;
+      return data;
     },
     staleTime: 0, // Always fetch fresh data to show corrected totals
     refetchOnWindowFocus: true
@@ -67,7 +107,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   };
 
   const statusCounts = getProjectStatusCounts();
-  const totalSandwiches = reports.reduce((sum, report) => sum + report.sandwich_count, 0);
+  const totalWeeklySandwiches = weeklyReports.reduce((sum: number, report: any) => sum + (report.totalSandwiches || 0), 0);
   const totalCollectedSandwiches = statsData?.completeTotalSandwiches || 0;
   const activeProjects = projects.filter(p => p.status === "in_progress" || p.status === "available" || p.status === "planning");
   const recentMessages = messages.slice(0, 3);
@@ -216,7 +256,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
                   <div className="flex justify-between items-start mb-1">
                     <span className="text-sm font-medium text-slate-900">{message.sender}</span>
                     <span className="text-xs text-slate-500">
-                      {new Date(message.timestamp).toLocaleDateString()}
+                      {new Date(message.createdAt || message.updatedAt || '').toLocaleDateString()}
                     </span>
                   </div>
                   <p className="text-xs text-slate-600">
