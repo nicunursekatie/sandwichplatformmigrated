@@ -29,7 +29,8 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
     queryFn: async () => {
       const { data, error } = await supabase
         .from('drive_links')
-        .select('*');
+        .select('*')
+        .order('id', { ascending: false });
       
       if (error) {
         console.error('Error fetching drive links:', error);
@@ -46,6 +47,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
       const { data, error } = await supabase
         .from('weekly_reports')
         .select('*')
+        .order('submitted_at', { ascending: false })
         .limit(5);
       
       if (error) {
@@ -126,7 +128,7 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   };
 
   const statusCounts = getProjectStatusCounts();
-  const totalWeeklySandwiches = weeklyReports.reduce((sum: number, report: any) => sum + (report.totalSandwiches || 0), 0);
+  const totalWeeklySandwiches = weeklyReports.reduce((sum: number, report: any) => sum + (report.sandwich_count || 0), 0);
   const totalCollectedSandwiches = statsData?.completeTotalSandwiches || 0;
   const activeProjects = projects.filter(p => p.status === "in_progress" || p.status === "available" || p.status === "planning");
   const recentMessages = messages.slice(0, 3);

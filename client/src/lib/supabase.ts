@@ -67,17 +67,13 @@ export type Database = {
         Row: {
           id: number;
           name: string;
-          contact_name: string | null;
-          contact_phone: string | null;
-          contact_email: string | null;
+          email: string | null;
+          phone: string | null;
           address: string | null;
-          city: string | null;
-          state: string | null;
-          zip: string | null;
+          status: string;
           notes: string | null;
-          is_active: boolean;
-          created_at: string | null;
-          updated_at: string | null;
+          created_at: string;
+          updated_at: string;
         };
         Insert: Omit<Database['public']['Tables']['hosts']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['hosts']['Insert']>;
@@ -157,15 +153,14 @@ export type Database = {
         Row: {
           id: number;
           title: string;
-          description: string | null;
           date: string;
           time: string;
-          location: string | null;
-          attendees: string[];
-          agenda: string | null;
-          minutes: string | null;
-          created_by: string;
+          final_agenda: string | null;
+          status: string;
           created_at: string;
+          type: string;
+          location: string | null;
+          description: string | null;
         };
         Insert: Omit<Database['public']['Tables']['meetings']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['meetings']['Insert']>;
@@ -173,13 +168,11 @@ export type Database = {
       weekly_reports: {
         Row: {
           id: number;
-          week_start: string;
-          week_end: string;
+          week_ending: string;
           sandwich_count: number;
-          volunteer_hours: number;
           notes: string | null;
-          created_by: string;
-          created_at: string;
+          submitted_by: string;
+          submitted_at: string;
         };
         Insert: Omit<Database['public']['Tables']['weekly_reports']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['weekly_reports']['Insert']>;
@@ -190,9 +183,8 @@ export type Database = {
           title: string;
           url: string;
           description: string | null;
-          category: string;
-          created_by: string;
-          created_at: string;
+          icon: string | null;
+          icon_color: string | null;
         };
         Insert: Omit<Database['public']['Tables']['drive_links']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['drive_links']['Insert']>;

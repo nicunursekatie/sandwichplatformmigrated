@@ -216,6 +216,7 @@ export const hostService = {
     const { data, error } = await supabase
       .from('hosts')
       .select('*')
+      .eq('status', 'active')
       .order('name', { ascending: true });
     
     if (error) handleError(error, 'get active hosts');

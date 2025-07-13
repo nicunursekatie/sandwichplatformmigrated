@@ -31,7 +31,8 @@ export default function GoogleDriveLinks() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('drive_links')
-        .select('*');
+        .select('*')
+        .order('id', { ascending: false });
       
       if (error) {
         console.error('Error fetching drive links:', error);
