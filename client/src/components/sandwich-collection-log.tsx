@@ -297,6 +297,23 @@ export default function SandwichCollectionLog() {
     }
   });
 
+  // Get all unique host names from the database
+  const { data: allUniqueHosts = [] } = useQuery<string[]>({
+    queryKey: ["unique-host-names"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sandwich_collections')
+        .select('host_name')
+        .order('host_name');
+      
+      if (error) throw error;
+      
+      // Get unique host names
+      const uniqueHosts = Array.from(new Set(data?.map(item => item.host_name).filter(Boolean)));
+      return uniqueHosts.sort();
+    }
+  });
+
   // Query for complete database totals including both individual and group collections
   const { data: totalStats } = useQuery({
     queryKey: ["sandwich-collections-stats"],
@@ -1469,11 +1486,9 @@ export default function SandwichCollectionLog() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Locations</SelectItem>
-                  <SelectItem value="Groups">Groups</SelectItem>
-                  {/* Get unique host names from collections */}
-                  {Array.from(new Set(collections.map(c => c.host_name)))
-                    .sort()
-                    .filter(host => host && host !== "Groups")
+                  {/* Show all unique hosts from the database */}
+                  {allUniqueHosts
+                    .filter(host => host && host.trim() !== "")
                     .map(host => (
                       <SelectItem key={host} value={host}>{host}</SelectItem>
                     ))
