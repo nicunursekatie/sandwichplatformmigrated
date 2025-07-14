@@ -102,96 +102,131 @@ export default function SandwichCollectionLog() {
     [showFilters, searchFilters, sortConfig]
   );
 
-  // Always fetch all data to get accurate pagination
-  const shouldFetchAllData = true;
+  // Only fetch all data when filters are applied, otherwise use proper pagination
+  const hasActiveFilters = useMemo(() => 
+    Object.values(searchFilters).some(v => v) || 
+    sortConfig.field !== "collection_date" || 
+    sortConfig.direction !== "desc",
+    [searchFilters, sortConfig]
+  );
 
   const queryKey = useMemo(() => [
     "/api/sandwich-collections", 
-    shouldFetchAllData ? "all" : currentPage, 
-    shouldFetchAllData ? "all" : itemsPerPage, 
+    currentPage, 
+    itemsPerPage, 
     searchFilters, 
-    sortConfig
-  ], [shouldFetchAllData, currentPage, itemsPerPage, searchFilters, sortConfig]);
+    sortConfig,
+    hasActiveFilters
+  ], [currentPage, itemsPerPage, searchFilters, sortConfig, hasActiveFilters]);
 
     const { data: collectionsResponse, isLoading } = useQuery({
     queryKey,
     queryFn: useCallback(async () => {
-      console.log('Query function called with:', { currentPage, itemsPerPage, searchFilters, sortConfig });
-      // Always fetch all collections to get accurate pagination
-      const collections = await supabaseService.sandwichCollection.getAllCollections();
+      console.log('Query function called with:', { currentPage, itemsPerPage, searchFilters, sortConfig, hasActiveFilters });
       
-      let filteredCollections = collections || [];
-      
-      // Apply filters
-      if (searchFilters.host_name) {
-        const searchTerm = searchFilters.host_name.toLowerCase();
-        filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-          c.host_name?.toLowerCase().includes(searchTerm)
-        );
-      }
-      
-      if (searchFilters.collection_date_from) {
-        filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-          c.collection_date >= searchFilters.collection_date_from
-        );
-      }
-      
-      if (searchFilters.collection_date_to) {
-        filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-          c.collection_date <= searchFilters.collection_date_to
-        );
-      }
-      
-      if (searchFilters.created_at_from) {
-        filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
-          const submittedAtDate = typeof c.submitted_at === "string" ? new Date(c.submitted_at) : c.submitted_at;
-          const filterDate = typeof searchFilters.created_at_from === "string" ? new Date(searchFilters.created_at_from) : searchFilters.created_at_from;
-          return submittedAtDate >= filterDate;
-        });
-      }
-      
-      if (searchFilters.created_at_to) {
-        filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-          new Date(c.submitted_at) <= new Date(searchFilters.created_at_to)
-        );
-      }
-      
-      // Apply sorting
-      filteredCollections.sort((a: any, b: any) => {
-        const aVal = a[sortConfig.field];
-        const bVal = b[sortConfig.field];
+      if (hasActiveFilters) {
+        // When filters are active, fetch all collections for accurate client-side filtering
+        const collections = await supabaseService.sandwichCollection.getAllCollections();
         
-        if (aVal === bVal) return 0;
-        if (aVal === null || aVal === undefined) return 1;
-        if (bVal === null || bVal === undefined) return -1;
+        let filteredCollections = collections || [];
         
-        const comparison = aVal < bVal ? -1 : 1;
-        return sortConfig.direction === "asc" ? comparison : -comparison;
-      });
-      
-      // Apply pagination
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const paginatedResults = filteredCollections.slice(startIndex, startIndex + itemsPerPage);
-      
-      console.log('Pagination debug:', {
-        totalCollections: filteredCollections.length,
-        startIndex,
-        endIndex: startIndex + itemsPerPage,
-        paginatedResultsLength: paginatedResults.length,
-        currentPage,
-        itemsPerPage
-      });
-      
-      return {
-        collections: paginatedResults,
-        pagination: {
-          currentPage,
-          totalPages: Math.ceil(filteredCollections.length / itemsPerPage),
-          totalItems: filteredCollections.length,
-          itemsPerPage
+        // Apply filters
+        if (searchFilters.host_name) {
+          const searchTerm = searchFilters.host_name.toLowerCase();
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
+            c.host_name?.toLowerCase().includes(searchTerm)
+          );
         }
-      };
-    }, [currentPage, itemsPerPage, searchFilters, sortConfig])
+        
+        if (searchFilters.collection_date_from) {
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
+            c.collection_date >= searchFilters.collection_date_from
+          );
+        }
+        
+        if (searchFilters.collection_date_to) {
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
+            c.collection_date <= searchFilters.collection_date_to
+          );
+        }
+        
+        if (searchFilters.created_at_from) {
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            const submittedAtDate = typeof c.submitted_at === "string" ? new Date(c.submitted_at) : c.submitted_at;
+            const filterDate = typeof searchFilters.created_at_from === "string" ? new Date(searchFilters.created_at_from) : searchFilters.created_at_from;
+            return submittedAtDate >= filterDate;
+          });
+        }
+        
+        if (searchFilters.created_at_to) {
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
+            new Date(c.submitted_at) <= new Date(searchFilters.created_at_to)
+          );
+        }
+        
+        // Apply sorting
+        filteredCollections.sort((a: any, b: any) => {
+          const aVal = a[sortConfig.field];
+          const bVal = b[sortConfig.field];
+          
+          if (aVal === bVal) return 0;
+          if (aVal === null || aVal === undefined) return 1;
+          if (bVal === null || bVal === undefined) return -1;
+          
+          const comparison = aVal < bVal ? -1 : 1;
+          return sortConfig.direction === "asc" ? comparison : -comparison;
+        });
+        
+        // Apply pagination
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedResults = filteredCollections.slice(startIndex, startIndex + itemsPerPage);
+        
+        console.log('Filtered pagination debug:', {
+          totalAfterFiltering: filteredCollections.length,
+          startIndex,
+          endIndex: startIndex + itemsPerPage,
+          paginatedResultsLength: paginatedResults.length,
+          currentPage,
+          itemsPerPage
+        });
+        
+        return {
+          collections: paginatedResults,
+          pagination: {
+            currentPage,
+            totalPages: Math.ceil(filteredCollections.length / itemsPerPage),
+            totalItems: filteredCollections.length,
+            itemsPerPage
+          }
+        };
+      } else {
+        // No filters active - use efficient server-side pagination
+        const { data: collections, error, count } = await supabaseService.supabase
+          .from('sandwich_collections')
+          .select('*', { count: 'exact' })
+          .order('collection_date', { ascending: false })
+          .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+        
+        if (error) throw error;
+        
+        console.log('Server-side pagination debug:', {
+          totalFromCount: count,
+          fetchedRecords: collections?.length || 0,
+          currentPage,
+          itemsPerPage
+        });
+        
+        return {
+          collections: collections || [],
+          pagination: {
+            currentPage,
+            totalPages: Math.ceil((count || 0) / itemsPerPage),
+            totalItems: count || 0,
+            itemsPerPage
+          }
+        };
+      }
+    }, [currentPage, itemsPerPage, searchFilters, sortConfig, hasActiveFilters])
   });
 
   const collections = collectionsResponse?.collections || [];
@@ -991,7 +1026,8 @@ export default function SandwichCollectionLog() {
             
             {/* Debug info */}
             <div className="text-xs text-gray-500 mt-2">
-              Debug: Collections loaded: {collections.length} | Total items: {totalItems} | Pages: {totalPages} | Current page: {currentPage} | Items per page: {itemsPerPage}
+              Debug: Showing {collections.length} records | Total: {totalItems} | Page {currentPage} of {totalPages} | 
+              {hasActiveFilters ? ' (Filtered)' : ' (Server-side paginated)'}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
