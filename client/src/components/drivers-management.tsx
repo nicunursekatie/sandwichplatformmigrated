@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -533,7 +533,7 @@ export default function DriversManagement() {
     .filter((driver) => driver.isActive)
     .sort((a, b) => a.name.localeCompare(b.name));
   const allInactiveDrivers = drivers
-    .filter((driver) => !driver.is_active)
+    .filter((driver) => !driver.isActive)
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const activeDrivers = applyFilters(allActiveDrivers);
@@ -662,7 +662,7 @@ export default function DriversManagement() {
                     <Label htmlFor="volunteer-name">Full Name *</Label>
                     <Input
                       id="volunteer-name"
-                      value={volunteerForm.submitted_by}
+                      value={volunteerForm.submittedBy}
                       onChange={(e) =>
                         setVolunteerForm({
                           ...volunteerForm,
@@ -1503,7 +1503,7 @@ export default function DriversManagement() {
                 <div>
                   <Label htmlFor="edit-status">Status</Label>
                   <Select
-                    value={editingDriver.is_active ? "active" : "inactive"}
+                    value={editingDriver.isActive ? "active" : "inactive"}
                     onValueChange={(value) =>
                       setEditingDriver({
                         ...editingDriver,
@@ -1699,7 +1699,7 @@ export default function DriversManagement() {
                 />
               </div>
 
-              {!editingDriver.is_active && (
+              {!editingDriver.isActive && (
                 <div>
                   <Label htmlFor="edit-inactive-reason">Inactive Reason</Label>
                   <Input
