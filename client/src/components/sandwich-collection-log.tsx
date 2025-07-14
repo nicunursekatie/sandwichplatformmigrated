@@ -875,7 +875,7 @@ export default function SandwichCollectionLog() {
     // Convert editGroupCollections back to JSON format with consistent property names
     const validGroups = editGroupCollections.filter(g => g.groupName.trim() && g.sandwichCount > 0);
     const groupCollectionsString = validGroups.length > 0 
-      ? JSON.stringify(validGroups.map(g => ({ name: g.groupName.trim(), count: g.sandwichCount })))
+      ? JSON.stringify(validGroups.map(g => ({ name: g.groupName.trim(), sandwichCount: g.sandwichCount })))
       : '[]';
 
     updateMutation.mutate({
@@ -956,7 +956,7 @@ export default function SandwichCollectionLog() {
     const formattedGroupCollections = validGroupCollections.length > 0 
       ? JSON.stringify(validGroupCollections.map(g => ({ 
           name: g.groupName.trim() || "Unnamed Group", 
-          count: g.sandwichCount 
+          sandwichCount: g.sandwichCount 
         })))
       : '[]';
 
