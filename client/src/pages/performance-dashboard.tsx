@@ -19,6 +19,7 @@ import {
   LogOut
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 import SimpleNav from "@/components/simple-nav";
 import { supabase } from "@/lib/supabase";
@@ -40,6 +41,40 @@ interface UserStats {
   total_sessions: number;
   avg_session_duration: number;
   created_at: string;
+}
+
+interface PerformanceMetrics {
+  database: {
+    connectionPool: {
+      total_connections: number;
+      active_connections: number;
+      idle_connections: number;
+    };
+    slowQueries: Array<{
+      query: string;
+      duration: number;
+      timestamp: string;
+      calls: number;
+      mean_exec_time: number;
+      total_exec_time: number;
+    }>;
+    optimizationSuggestions: Array<{
+      suggestion: string;
+      impact: string;
+      priority: string;
+      message: string;
+      recommendation: string;
+      tables: string[];
+      indexes: string[];
+    }>;
+  };
+  cache: Record<string, {
+    hitRate: number;
+    size: number;
+    maxSize: number;
+    missCount: number;
+  }>;
+  timestamp: string;
 }
 
 export default function PerformanceDashboard() {
@@ -82,18 +117,45 @@ export default function PerformanceDashboard() {
     }
   });
 
+  // Fetch performance metrics
+  const { data: metrics, isLoading: metricsLoading } = useQuery<PerformanceMetrics>({
+    queryKey: ["performance-metrics"],
+    queryFn: async () => {
+      // TODO: Implement actual metrics fetching with Supabase
+      // For now, return placeholder data
+      return {
+        database: {
+          connectionPool: {
+            total_connections: 10,
+            active_connections: 3,
+            idle_connections: 7
+          },
+          slowQueries: [],
+          optimizationSuggestions: []
+        },
+        cache: {},
+        timestamp: new Date().toISOString()
+      };
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   const optimizeMutation = useMutation({
-    mutationFn: (action: string) => apiRequest(`/api/performance/optimize`, {
-      method: 'POST',
-      body: JSON.stringify({ action }),
-      headers: { 'Content-Type': 'application/json' }
-    }),
+    mutationFn: async (action: string) => {
+      // TODO: Implement performance optimization with Supabase
+      toast({
+        title: "Optimization not implemented",
+        description: "Performance optimization is being migrated to Supabase.",
+        variant: "destructive",
+      });
+      return { message: "Not implemented" };
+    },
     onSuccess: (data) => {
       toast({
         title: "Optimization Complete",
         description: data.message,
       });
-      refetch();
+      // TODO: Add refetch when implemented
     },
     onError: (error) => {
       toast({
@@ -105,21 +167,21 @@ export default function PerformanceDashboard() {
   });
 
   const cacheMutation = useMutation({
-    mutationFn: (action: 'clear' | 'warm' | 'maintenance') => {
-      const endpoints = {
-        clear: '/api/performance/cache',
-        warm: '/api/performance/cache/warm',
-        maintenance: '/api/performance/cache/maintenance'
-      };
-      const method = action === 'clear' ? 'DELETE' : 'POST';
-      return apiRequest(endpoints[action], { method });
+    mutationFn: async (action: 'clear' | 'warm' | 'maintenance') => {
+      // TODO: Implement cache operations with Supabase
+      toast({
+        title: "Cache operation not implemented",
+        description: "Cache operations are being migrated to Supabase.",
+        variant: "destructive",
+      });
+      return { message: "Not implemented" };
     },
     onSuccess: (data) => {
       toast({
         title: "Cache Operation Complete",
         description: data.message,
       });
-      refetch();
+      // TODO: Add refetch when implemented
     },
     onError: (error) => {
       toast({
@@ -131,21 +193,13 @@ export default function PerformanceDashboard() {
   });
 
   const getConnectionStatus = () => {
-    if (!metrics?.database.connectionPool) return "unknown";
-    const { active_connections, total_connections } = metrics.database.connectionPool;
-    const usage = (active_connections / total_connections) * 100;
-    if (usage > 80) return "high";
-    if (usage > 50) return "medium";
-    return "low";
+    // TODO: Implement metrics fetching from Supabase
+    return "unknown";
   };
 
   const getCacheHealth = () => {
-    if (!metrics?.cache) return "unknown";
-    const avgHitRate = Object.values(metrics.cache).reduce((sum, cache) => sum + cache.hitRate, 0) / Object.values(metrics.cache).length;
-    if (avgHitRate > 0.8) return "excellent";
-    if (avgHitRate > 0.6) return "good";
-    if (avgHitRate > 0.4) return "fair";
-    return "poor";
+    // TODO: Implement cache metrics fetching from Supabase
+    return "unknown";
   };
 
   const handleRefreshMetrics = async () => {
@@ -276,7 +330,14 @@ export default function PerformanceDashboard() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => refetch()}
+            onClick={() => {
+              // TODO: Implement metrics refresh with Supabase
+              toast({
+                title: "Refresh not implemented",
+                description: "Metrics refresh is being migrated to Supabase.",
+                variant: "destructive",
+              });
+            }}
             disabled={isLoading}
           >
             <RefreshCw className="h-4 w-4 mr-2" />

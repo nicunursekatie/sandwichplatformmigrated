@@ -104,9 +104,9 @@ export default function UserProfile() {
       const { error } = await supabase
         .from('users')
         .update({
-          first_name: data.first_name,
-          last_name: data.last_name,
-          display_name: data.display_name,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          display_name: data.displayName,
           email: data.email,
           updated_at: new Date().toISOString()
         })

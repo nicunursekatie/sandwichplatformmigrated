@@ -45,7 +45,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
     queryKey: ["users"],
     enabled: canEdit,
     staleTime: 0,
-    cacheTime: 30000,
+    gcTime: 30000,
     refetchOnWindowFocus: true,
   });
 
@@ -54,7 +54,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
     queryKey: ["/api/projects", project.id, "assignments"],
     queryFn: () => fetch(`/api/projects/${project.id}/assignments`).then(res => res.json()),
     staleTime: 0,
-    cacheTime: 30000,
+    gcTime: 30000,
     refetchOnWindowFocus: true,
   });
 
@@ -80,7 +80,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Remove user from project mutation
   const removeUserMutation = useMutation({
     mutationFn: async (data: { userId: string; sendNotification: boolean }) => {
-      return await supabase.from('project_assignments').delete().eq('user_id', data.user_id).eq('project_id', project.id);
+      return await supabase.from('project_assignments').delete().eq('user_id', data.userId).eq('project_id', project.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
@@ -98,7 +98,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
     mutationFn: async (data: { userId: string; role: string }) => {
       return await supabase.from('project_assignments').update({
         role: data.role
-      }).eq('user_id', data.user_id).eq('project_id', project.id);
+      }).eq('user_id', data.userId).eq('project_id', project.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
@@ -138,7 +138,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   };
 
   const availableUsers = allUsers.filter(u => 
-    !assignments.some(a => a.user_id === u.id) && u.is_active
+    !assignments.some(a => a.userId === u.id) && u.isActive
   );
 
   if (isLoading) {
@@ -197,7 +197,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                           <SelectContent>
                             {availableUsers.map((user) => (
                               <SelectItem key={user.id} value={user.id}>
-                                {user.first_name} {user.last_name} ({user.email})
+                                {user.firstName} {user.lastName} ({user.email})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -252,7 +252,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                         </div>
                       ) : (
                         assignments.map((assignment) => {
-                          const assignedUser = allUsers.find(u => u.id === assignment.user_id);
+                          const assignedUser = allUsers.find(u => u.id === assignment.userId);
                           if (!assignedUser) return null;
                           
                           return (
@@ -260,12 +260,12 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                   <span className="text-sm font-medium text-blue-600">
-                                    {assignedUser.first_name?.[0]}{assignedUser.last_name?.[0]}
+                                    {assignedUser.firstName?.[0]}{assignedUser.lastName?.[0]}
                                   </span>
                                 </div>
                                 <div>
                                   <div className="font-medium">
-                                    {assignedUser.first_name} {assignedUser.last_name}
+                                    {assignedUser.firstName} {assignedUser.lastName}
                                   </div>
                                   <div className="text-sm text-slate-500">{assignedUser.email}</div>
                                 </div>
@@ -275,7 +275,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                                 <Select 
                                   value={assignment.role} 
                                   onValueChange={(newRole) => updateRoleMutation.mutate({
-                                    userId: assignment.user_id,
+                                    userId: assignment.userId,
                                     role: newRole
                                   })}
                                 >
@@ -294,7 +294,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleRemoveUser(assignment.user_id)}
+                                  onClick={() => handleRemoveUser(assignment.userId)}
                                   disabled={removeUserMutation.isPending}
                                 >
                                   <UserMinus className="w-4 h-4" />
@@ -325,7 +325,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
             </div>
           ) : (
             assignments.map((assignment) => {
-              const assignedUser = allUsers.find(u => u.id === assignment.user_id);
+              const assignedUser = allUsers.find(u => u.id === assignment.userId);
               if (!assignedUser) return null;
               
               return (
@@ -333,12 +333,12 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium text-blue-600">
-                        {assignedUser.first_name?.[0]}{assignedUser.last_name?.[0]}
+                        {assignedUser.firstName?.[0]}{assignedUser.lastName?.[0]}
                       </span>
                     </div>
                     <div>
                       <div className="font-medium">
-                        {assignedUser.first_name} {assignedUser.last_name}
+                        {assignedUser.firstName} {assignedUser.lastName}
                       </div>
                       <div className="text-sm text-slate-500">{assignedUser.email}</div>
                     </div>

@@ -220,7 +220,7 @@ export default function InboxPage() {
   
   // Debug threadMessages too
   const validThreadMessages = (threadMessages || [])
-    .filter(msg => msg && typeof msg === 'object' && msg.senderName) || [];
+    .filter((msg: any) => msg && typeof msg === 'object' && msg.senderName) || [];
   
   // Filter messages based on search
   const filteredMessages = validMessages.filter((message: Message) => {
@@ -476,7 +476,7 @@ export default function InboxPage() {
 
                 {/* Thread Replies */}
                 {((threadMessages || [])
-                  .filter(m => m && typeof m === 'object' && m.senderName && m.content && m.id !== selectedMessage?.id)
+                  .filter((m: any) => m && typeof m === 'object' && m.senderName && m.content && m.id !== selectedMessage?.id)
                 ).map((message: Message) => (
                   <div 
                     key={message.id} 

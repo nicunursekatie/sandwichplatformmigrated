@@ -97,7 +97,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (data: MessageFormData) => {
+    mutationFn: async (data: { content: string; conversation_id: string; sender_id: string; metadata: any }) => {
       console.log('=== FRONTEND: Sending message ===');
       console.log('Message data being sent:', data);
       console.log('API endpoint: POST /api/messages');
@@ -193,8 +193,9 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
 
     const messageData = {
       content: data.content,
-      sender: userName || data.sender || "Anonymous",
-      userId: user.id, // Add userId to payload
+      conversation_id: 'default', // Use a default conversation ID
+      sender_id: user.id,
+      metadata: { sender: userName || data.sender || "Anonymous" }
     };
 
     if (replyingTo) {
@@ -427,86 +428,7 @@ export default function MessageLog({ chatType }: MessageLogProps = {}) {
                     </Button>
                   </div>
 
-                  {/* Thread replies preview */}
-                  {hasReplies && (
-                    <div className="mt-2 border-l-2 border-slate-200 pl-3 ml-1">
-                      <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                        <MessageSquare className="w-3 h-3" />
-                        <span className="font-medium">
-                          {threadReplies.length} {threadReplies.length === 1 ? 'reply' : 'replies'}
-                        </span>
-                        {latestReply && (
-                          <span>Last reply {formatMessageTime(latestReply.timestamp)}</span>
-                        )}
-                      </div>
-                      
-                      {/* Show latest reply preview */}
-                      {latestReply && (
-                        <div className="group/reply flex items-start gap-2 text-sm hover:bg-slate-100 -mx-2 px-2 py-1 rounded">
-                          <Avatar className={`w-6 h-6 ${getAvatarColor(latestReply.sender)}`}>
-                            <AvatarFallback className="text-white text-xs">
-                              {getInitials(latestReply.sender)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium text-slate-900 text-xs mr-1">
-                              {latestReply.sender}
-                            </span>
-                            <span className="text-slate-700 text-xs">
-                              {latestReply.content.length > 100 
-                                ? latestReply.content.substring(0, 100) + "..." 
-                                : latestReply.content}
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0 text-slate-400 hover:text-red-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
-                            onClick={() => deleteMessageMutation.mutate(latestReply.id)}
-                            disabled={deleteMessageMutation.isPending}
-                            title="Delete reply"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {/* Show all replies if there are more than one */}
-                      {threadReplies.length > 1 && (
-                        <div className="mt-2 space-y-1">
-                          {threadReplies.slice(0, -1).map((reply) => (
-                            <div key={reply.id} className="group/reply flex items-start gap-2 text-sm hover:bg-slate-100 -mx-2 px-2 py-1 rounded">
-                              <Avatar className={`w-6 h-6 ${getAvatarColor(reply.sender)}`}>
-                                <AvatarFallback className="text-white text-xs">
-                                  {getInitials(reply.sender)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <span className="font-medium text-slate-900 text-xs mr-1">
-                                  {reply.sender}
-                                </span>
-                                <span className="text-slate-700 text-xs">
-                                  {reply.content.length > 100 
-                                    ? reply.content.substring(0, 100) + "..." 
-                                    : reply.content}
-                                </span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-5 w-5 p-0 text-slate-400 hover:text-red-600 opacity-0 group-hover/reply:opacity-100 transition-opacity"
-                                onClick={() => deleteMessageMutation.mutate(reply.id)}
-                                disabled={deleteMessageMutation.isPending}
-                                title="Delete reply"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+
                 </div>
               </div>
             </div>

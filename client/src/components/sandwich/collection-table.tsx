@@ -58,7 +58,7 @@ function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating 
             <Label htmlFor="hostName">Host Name</Label>
             <Input
               id="hostName"
-              value={formData.host_name}
+              value={formData.hostName}
               onChange={(e) => setFormData({ ...formData, hostName: e.target.value })}
             />
           </div>
@@ -69,7 +69,7 @@ function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating 
               id="individualSandwiches"
               type="number"
               min="0"
-              value={formData.individual_sandwiches}
+              value={formData.individualSandwiches}
               onChange={(e) => setFormData({ ...formData, individualSandwiches: parseInt(e.target.value) || 0 })}
             />
           </div>
@@ -78,7 +78,7 @@ function EditCollectionDialog({ collection, isOpen, onClose, onSave, isUpdating 
             <Label htmlFor="groupCollections">Group Collections</Label>
             <Textarea
               id="groupCollections"
-              value={formData.group_collections}
+              value={formData.groupCollections}
               onChange={(e) => setFormData({ ...formData, groupCollections: e.target.value })}
               placeholder="JSON format or text description"
               rows={3}
@@ -124,11 +124,11 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
   };
 
   const calculateTotal = (collection: SandwichCollection) => {
-    const groupCollections = parseGroupCollections(collection.group_collections);
+    const groupCollections = parseGroupCollections(collection.groupCollections);
     const groupTotal = groupCollections.reduce((sum: number, group: any) => 
       sum + (group.sandwichCount || group.sandwich_count || 0), 0
     );
-    return collection.individual_sandwiches + groupTotal;
+    return collection.individualSandwiches + groupTotal;
   };
 
   const handleEditClick = (collection: SandwichCollection) => {
@@ -163,7 +163,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
           </thead>
           <tbody>
             {collections.map((collection) => {
-              const groupCollections = parseGroupCollections(collection.group_collections);
+              const groupCollections = parseGroupCollections(collection.groupCollections);
               const total = calculateTotal(collection);
               
               return (
@@ -172,7 +172,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <span className="font-medium">
-                        {new Date(collection.collection_date).toLocaleDateString()}
+                        {new Date(collection.collectionDate).toLocaleDateString()}
                       </span>
                     </div>
                   </td>
@@ -180,13 +180,13 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-400" />
-                      <span>{collection.host_name}</span>
+                      <span>{collection.hostName}</span>
                     </div>
                   </td>
                   
                   <td className="p-3">
                     <Badge variant="secondary">
-                      {collection.individual_sandwiches}
+                      {collection.individualSandwiches}
                     </Badge>
                   </td>
                   
@@ -211,7 +211,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
                   </td>
                   
                   <td className="p-3 text-sm text-gray-600 dark:text-gray-400">
-                    {new Date(collection.submitted_at).toLocaleDateString()}
+                    {new Date(collection.submittedAt).toLocaleDateString()}
                   </td>
                   
                   <td className="p-3">

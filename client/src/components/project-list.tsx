@@ -94,13 +94,12 @@ export default function ProjectList() {
         successCriteria: projectData.successCriteria || null
       };
       console.log("Sending project data:", transformedData);
-      const response = await supabase.from('projects').insert(transformedData);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-        throw new Error(`API Error: ${response.status} ${errorText}`);
+      const { data, error } = await supabase.from('projects').insert(transformedData);
+      if (error) {
+        console.error("Supabase Error:", error);
+        throw new Error(`Database Error: ${error.message}`);
       }
-      return response.json();
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -883,71 +882,7 @@ export default function ProjectList() {
                   />
                 </div>
 
-                {/* Quick document attachment */}
-                <div>
-                  <Label className="text-sm font-medium text-slate-700 mb-2 block">
-                    Add Document Link
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="quick-doc-name"
-                      type="text"
-                      placeholder="Document name"
-                      className="flex-1"
-                    />
-                    <Input
-                      id="quick-doc-url"
-                      type="url"
-                      placeholder="URL"
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const nameInput = document.getElementById('quick-doc-name') as HTMLInputElement;
-                        const urlInput = document.getElementById('quick-doc-url') as HTMLInputElement;
-                        const name = nameInput?.value || '';
-                        const url = urlInput?.value || '';
-                        
-                        if (name.trim()) {
-                          const attachments = JSON.parse(editingProject.attachments || "[]");
-                          attachments.push({ name: name.trim(), url: url.trim() });
-                          setEditingProject({ ...editingProject, attachments: JSON.stringify(attachments) });
-                          if (nameInput) nameInput.value = '';
-                          if (urlInput) urlInput.value = '';
-                        }
-                      }}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  
-                  {/* Show current attachments */}
-                  {editingProject.attachments && JSON.parse(editingProject.attachments).length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {JSON.parse(editingProject.attachments).map((attachment: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between text-sm p-1">
-                          <span className="text-slate-600">{attachment.name}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const attachments = JSON.parse(editingProject.attachments || "[]");
-                              attachments.splice(index, 1);
-                              setEditingProject({ ...editingProject, attachments: JSON.stringify(attachments) });
-                            }}
-                            className="h-5 w-5 p-0 text-red-500"
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+
                 
                 <div className="flex justify-end gap-2 pt-2">
                   <Button

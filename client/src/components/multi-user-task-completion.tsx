@@ -69,7 +69,8 @@ export function MultiUserTaskCompletion({
         notes: completionNotes
       });
     },
-    onSuccess: async (data) => {
+    onSuccess: async (response) => {
+      const data = await response.json();
       // Force comprehensive cache invalidation and refresh
       await queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId, 'completions'] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -139,7 +140,7 @@ export function MultiUserTaskCompletion({
   }
 
   const currentUserCompletion = completions.find(
-    (c: TaskCompletion) => c.user_id === currentUserId
+    (c: TaskCompletion) => c.userId === currentUserId
   );
   const isCurrentUserCompleted = !!currentUserCompletion;
   const completedCount = completions.length;
@@ -155,7 +156,7 @@ export function MultiUserTaskCompletion({
     
     // Match completion by user ID (assigneeId is actually a user ID from the assigneeIds array)
     const completion = completions.find((c: TaskCompletion) => {
-      return c.user_id === assigneeId;
+      return c.userId === assigneeId;
     });
     const isCompleted = !!completion;
 
