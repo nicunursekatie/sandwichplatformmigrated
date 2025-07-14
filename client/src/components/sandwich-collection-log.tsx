@@ -253,15 +253,19 @@ export default function SandwichCollectionLog() {
   const { data: totalStats } = useQuery({
     queryKey: ["sandwich-collections-stats"],
     queryFn: async () => {
+      console.log('Starting stats calculation...');
       try {
         // Try to get stats from RPC function first
         const stats = await supabaseService.sandwichCollection.getCollectionStats();
+        console.log('RPC stats response:', stats);
         if (stats && stats[0]) {
-          return {
+          const result = {
             completeTotalSandwiches: stats[0].complete_total_sandwiches || 0,
             individual_sandwiches: stats[0].individual_sandwiches || 0,
             groupSandwiches: stats[0].group_sandwiches || 0
           };
+          console.log('RPC stats processed:', result);
+          return result;
         }
       } catch (error) {
         console.warn('RPC function failed, calculating stats from collections:', error);
@@ -269,12 +273,19 @@ export default function SandwichCollectionLog() {
       
       // Fallback: calculate stats from all collections
       const allCollections = await supabaseService.sandwichCollection.getAllCollections();
+      console.log('Fallback calculation - fetched collections:', allCollections.length);
       
       let individualTotal = 0;
       let groupTotal = 0;
       
+      // Log first few collections to debug
+      if (allCollections.length > 0) {
+        console.log('Sample collection data:', allCollections.slice(0, 3));
+      }
+      
       allCollections.forEach((collection: SandwichCollection) => {
-        individualTotal += collection.individual_sandwiches || 0;
+        const individualCount = collection.individual_sandwiches || 0;
+        individualTotal += individualCount;
         
         // Calculate group collections total
         try {
@@ -295,6 +306,12 @@ export default function SandwichCollectionLog() {
             }
           }
         }
+      });
+      
+      console.log('Fallback calculation totals:', {
+        individualTotal,
+        groupTotal,
+        completeTotalSandwiches: individualTotal + groupTotal
       });
       
       return {
@@ -463,7 +480,14 @@ export default function SandwichCollectionLog() {
       return await supabaseService.sandwichCollection.updateCollection(data.id, data.updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
+      // Invalidate the correct query key pattern
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/sandwich-collections"] 
+      });
+      // Also invalidate stats query
+      queryClient.invalidateQueries({ 
+        queryKey: ["sandwich-collections-stats"] 
+      });
       setEditingCollection(null);
       toast({
         title: "Collection updated",
@@ -485,7 +509,14 @@ export default function SandwichCollectionLog() {
       return;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
+      // Invalidate the correct query key pattern
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/sandwich-collections"] 
+      });
+      // Also invalidate stats query
+      queryClient.invalidateQueries({ 
+        queryKey: ["sandwich-collections-stats"] 
+      });
       toast({
         title: "Collection deleted",
         description: "Sandwich collection has been deleted successfully.",
@@ -505,7 +536,14 @@ export default function SandwichCollectionLog() {
       return await supabaseService.sandwichCollection.createCollection(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
+      // Invalidate the correct query key pattern
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/sandwich-collections"] 
+      });
+      // Also invalidate stats query
+      queryClient.invalidateQueries({ 
+        queryKey: ["sandwich-collections-stats"] 
+      });
       setShowAddForm(false);
       setNewCollectionData({
         collection_date: "",
@@ -626,7 +664,14 @@ export default function SandwichCollectionLog() {
       return result;
     },
     onSuccess: (result: any) => {
-      queryClient.invalidateQueries({ queryKey: ["sandwich-collections"] });
+      // Invalidate the correct query key pattern
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/sandwich-collections"] 
+      });
+      // Also invalidate stats query
+      queryClient.invalidateQueries({ 
+        queryKey: ["sandwich-collections-stats"] 
+      });
       setSelectedCollections(new Set());
       setShowBatchEdit(false);
       setBatchEditData({ host_name: "", collection_date: "" });

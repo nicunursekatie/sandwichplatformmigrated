@@ -11,7 +11,7 @@ BEGIN
   WITH stats AS (
     SELECT 
       COUNT(*) as entry_count,
-      COALESCE(SUM(sc.individual_sandwiches), 0) as individual_total,
+      COALESCE(SUM(sc.individual_sandwiches), 0)::bigint as individual_total,
       COALESCE(SUM(
         CASE 
           WHEN sc.group_collections IS NOT NULL AND sc.group_collections != '[]' AND sc.group_collections != '' THEN
@@ -28,14 +28,14 @@ BEGIN
             FROM jsonb_array_elements(sc.group_collections::jsonb))
           ELSE 0
         END
-      ), 0) as group_total
+      ), 0)::bigint as group_total
     FROM sandwich_collections sc
   )
   SELECT 
-    entry_count as total_entries,
-    individual_total as individual_sandwiches,
-    group_total as group_sandwiches,
-    individual_total + group_total as complete_total_sandwiches
+    entry_count::bigint as total_entries,
+    individual_total::bigint as individual_sandwiches,
+    group_total::bigint as group_sandwiches,
+    (individual_total + group_total)::bigint as complete_total_sandwiches
   FROM stats;
 END;
 $$ LANGUAGE plpgsql;
