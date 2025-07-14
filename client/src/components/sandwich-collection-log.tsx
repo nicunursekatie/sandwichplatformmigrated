@@ -73,7 +73,7 @@ export default function SandwichCollectionLog() {
   });
 
   const [sortConfig, setSortConfig] = useState({
-    field: "collection_date" as keyof SandwichCollection,
+    field: "collection_date" as keyof SandwichCollection | "total_sandwiches",
     direction: "desc" as "asc" | "desc"
   });
   const [showFilters, setShowFilters] = useState(false);
@@ -213,8 +213,9 @@ export default function SandwichCollectionLog() {
             aVal = (a.individual_sandwiches || 0) + calculateGroupTotal(a.group_collections);
             bVal = (b.individual_sandwiches || 0) + calculateGroupTotal(b.group_collections);
           } else {
-            aVal = a[sortConfig.field];
-            bVal = b[sortConfig.field];
+            const field: keyof SandwichCollection = sortConfig.field;
+            aVal = a[field];
+            bVal = b[field];
           }
           
           if (aVal === bVal) return 0;
@@ -908,8 +909,8 @@ export default function SandwichCollectionLog() {
     if (parsedGroups.length > 0) {
       setEditGroupCollections(parsedGroups.map((group: any, index: number) => ({
         id: `edit-${index}`,
-        groupName: group.groupName,
-        sandwichCount: group.sandwichCount
+        groupName: group.groupName ?? group.name ?? "",
+        sandwichCount: group.sandwichCount ?? group.count ?? 0
       })));
     } else {
       setEditGroupCollections([{ id: "edit-1", groupName: "", sandwichCount: 0 }]);
@@ -920,9 +921,9 @@ export default function SandwichCollectionLog() {
     if (!editingCollection) return;
 
     // Convert editGroupCollections back to JSON format with consistent property names
-    const validGroups = editGroupCollections.filter(g => g.groupName.trim() && g.sandwichCount > 0);
+    const validGroups = editGroupCollections.filter(g => (g.groupName ?? "").trim() && g.sandwichCount > 0);
     const groupCollectionsString = validGroups.length > 0 
-      ? JSON.stringify(validGroups.map(g => ({ name: g.groupName.trim(), sandwichCount: g.sandwichCount })))
+      ? JSON.stringify(validGroups.map(g => ({ name: (g.groupName ?? "").trim(), sandwichCount: g.sandwichCount })))
       : '[]';
 
     updateMutation.mutate({
