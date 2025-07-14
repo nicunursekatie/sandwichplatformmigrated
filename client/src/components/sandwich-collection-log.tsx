@@ -66,7 +66,10 @@ export default function SandwichCollectionLog() {
     collection_date_from: "",
     collection_date_to: "",
     created_at_from: "",
-    created_at_to: ""
+    created_at_to: "",
+    sandwich_count_min: "",
+    sandwich_count_max: "",
+    collection_type: "all" as "all" | "individual" | "group" | "both"
   });
 
   const [sortConfig, setSortConfig] = useState({
@@ -165,10 +168,54 @@ export default function SandwichCollectionLog() {
           );
         }
         
+        // Sandwich count filters
+        if (searchFilters.sandwich_count_min) {
+          const minCount = parseInt(searchFilters.sandwich_count_min);
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            const total = (c.individual_sandwiches || 0) + calculateGroupTotal(c.group_collections);
+            return total >= minCount;
+          });
+        }
+        
+        if (searchFilters.sandwich_count_max) {
+          const maxCount = parseInt(searchFilters.sandwich_count_max);
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            const total = (c.individual_sandwiches || 0) + calculateGroupTotal(c.group_collections);
+            return total <= maxCount;
+          });
+        }
+        
+        // Collection type filter
+        if (searchFilters.collection_type !== 'all') {
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            const hasIndividual = (c.individual_sandwiches || 0) > 0;
+            const hasGroup = c.group_collections && c.group_collections !== '[]' && c.group_collections !== '';
+            
+            switch (searchFilters.collection_type) {
+              case 'individual':
+                return hasIndividual && !hasGroup;
+              case 'group':
+                return !hasIndividual && hasGroup;
+              case 'both':
+                return hasIndividual && hasGroup;
+              default:
+                return true;
+            }
+          });
+        }
+        
         // Apply sorting
         filteredCollections.sort((a: any, b: any) => {
-          const aVal = a[sortConfig.field];
-          const bVal = b[sortConfig.field];
+          let aVal, bVal;
+          
+          // Handle special case for total sandwiches
+          if (sortConfig.field === 'total_sandwiches') {
+            aVal = (a.individual_sandwiches || 0) + calculateGroupTotal(a.group_collections);
+            bVal = (b.individual_sandwiches || 0) + calculateGroupTotal(b.group_collections);
+          } else {
+            aVal = a[sortConfig.field];
+            bVal = b[sortConfig.field];
+          }
           
           if (aVal === bVal) return 0;
           if (aVal === null || aVal === undefined) return 1;
@@ -1006,13 +1053,54 @@ export default function SandwichCollectionLog() {
     setCurrentPage(1);
   };
 
+  const handleHostFilterSelect = (hostName: string) => {
+    handleFilterChange({ host_name: hostName });
+  };
+
+  const getActiveFilterCount = () => {
+    return Object.entries(searchFilters).filter(([key, value]) => {
+      if (key === 'collection_type' && value === 'all') return false;
+      return value !== '';
+    }).length;
+  };
+
+  // Helper function to calculate group total
+  const calculateGroupTotal = (groupCollections: string): number => {
+    if (!groupCollections || groupCollections === '[]' || groupCollections === '') return 0;
+    
+    try {
+      const groups = JSON.parse(groupCollections);
+      if (Array.isArray(groups)) {
+        return groups.reduce((sum, group) => {
+          const count = group.sandwichCount || group.sandwich_count || group.count || 0;
+          return sum + (typeof count === 'number' ? count : parseInt(count) || 0);
+        }, 0);
+      }
+    } catch (e) {
+      // Handle text format fallback
+      const matches = groupCollections.match(/(\d+)/g);
+      if (matches) {
+        return matches.reduce((sum, num) => sum + parseInt(num), 0);
+      }
+    }
+    
+    return 0;
+  };
+
   const handleClearFilters = () => {
     setSearchFilters({
       host_name: "",
       collection_date_from: "",
       collection_date_to: "",
       created_at_from: "",
-      created_at_to: ""
+      created_at_to: "",
+      sandwich_count_min: "",
+      sandwich_count_max: "",
+      collection_type: "all"
+    });
+    setSortConfig({
+      field: "collection_date",
+      direction: "desc"
     });
     setCurrentPage(1);
   };
@@ -1255,10 +1343,15 @@ export default function SandwichCollectionLog() {
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-1 w-full sm:w-auto"
+              className="flex items-center space-x-1 w-full sm:w-auto relative"
             >
               <Filter className="w-4 h-4" />
               <span>Filter</span>
+              {getActiveFilterCount() > 0 && (
+                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {getActiveFilterCount()}
+                </span>
+              )}
             </Button>
             {selectedCollections.size > 0 && canEditData && (
               <>
@@ -1291,30 +1384,101 @@ export default function SandwichCollectionLog() {
       {/* Filter Panel */}
       {showFilters && (
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Quick Filter Presets */}
+          <div className="mb-4 pb-4 border-b border-slate-200">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleFilterChange({ host_name: "Groups" })}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilters.host_name === "Groups" 
+                    ? "bg-blue-600 text-white" 
+                    : "bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200"
+                }`}
+              >
+                👥 Groups Only
+              </button>
+              <button
+                onClick={() => handleFilterChange({ collection_type: "group" })}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilters.collection_type === "group" 
+                    ? "bg-purple-600 text-white" 
+                    : "bg-purple-100 text-purple-800 border border-purple-300 hover:bg-purple-200"
+                }`}
+              >
+                📦 Group Collections
+              </button>
+              <button
+                onClick={() => handleFilterChange({ collection_type: "individual" })}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilters.collection_type === "individual" 
+                    ? "bg-green-600 text-white" 
+                    : "bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
+                }`}
+              >
+                🥪 Individual Only
+              </button>
+              <button
+                onClick={() => handleFilterChange({ collection_type: "both" })}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilters.collection_type === "both" 
+                    ? "bg-orange-600 text-white" 
+                    : "bg-orange-100 text-orange-800 border border-orange-300 hover:bg-orange-200"
+                }`}
+              >
+                🎯 Mixed Collections
+              </button>
+              <button
+                onClick={() => {
+                  const lastWeek = new Date();
+                  lastWeek.setDate(lastWeek.getDate() - 7);
+                  handleFilterChange({ 
+                    collection_date_from: lastWeek.toISOString().split('T')[0],
+                    collection_date_to: new Date().toISOString().split('T')[0]
+                  });
+                }}
+                className="px-3 py-1 text-xs bg-slate-100 text-slate-700 border border-slate-300 rounded-full hover:bg-slate-200 transition-colors"
+              >
+                📅 Last 7 Days
+              </button>
+              <button
+                onClick={() => {
+                  const lastMonth = new Date();
+                  lastMonth.setMonth(lastMonth.getMonth() - 1);
+                  handleFilterChange({ 
+                    collection_date_from: lastMonth.toISOString().split('T')[0],
+                    collection_date_to: new Date().toISOString().split('T')[0]
+                  });
+                }}
+                className="px-3 py-1 text-xs bg-slate-100 text-slate-700 border border-slate-300 rounded-full hover:bg-slate-200 transition-colors"
+              >
+                📅 Last 30 Days
+              </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="hostFilter" className="text-sm font-medium text-slate-700">Host/Location Name</Label>
-              <Input
-                id="hostFilter"
-                placeholder="Search by host name..."
+              <Select
                 value={searchFilters.host_name}
-                onChange={(e) => handleFilterChange({ host_name: e.target.value })}
-                className="mt-1"
-              />
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  onClick={() => handleFilterChange({ host_name: "OG Sandwich Project" })}
-                  className="px-3 py-1 text-xs bg-amber-100 text-amber-800 border border-amber-300 rounded-full hover:bg-amber-200 transition-colors"
-                >
-                  👑 Historical OG Project
-                </button>
-                <button
-                  onClick={() => handleFilterChange({ host_name: "" })}
-                  className="px-3 py-1 text-xs bg-slate-100 text-slate-700 border border-slate-300 rounded-full hover:bg-slate-200 transition-colors"
-                >
-                  All Locations
-                </button>
-              </div>
+                onValueChange={(value) => handleHostFilterSelect(value)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select a host..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="Groups">Groups</SelectItem>
+                  {/* Get unique host names from collections */}
+                  {Array.from(new Set(collections.map(c => c.host_name)))
+                    .sort()
+                    .filter(host => host !== "Groups")
+                    .map(host => (
+                      <SelectItem key={host} value={host}>{host}</SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="collectionFromDate" className="text-sm font-medium text-slate-700">Collection Date From</Label>
@@ -1356,6 +1520,45 @@ export default function SandwichCollectionLog() {
                 className="mt-1"
               />
             </div>
+            <div>
+              <Label htmlFor="sandwichCountMin" className="text-sm font-medium text-slate-700">Min Sandwiches</Label>
+              <Input
+                id="sandwichCountMin"
+                type="number"
+                placeholder="0"
+                value={searchFilters.sandwich_count_min}
+                onChange={(e) => handleFilterChange({ sandwich_count_min: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="sandwichCountMax" className="text-sm font-medium text-slate-700">Max Sandwiches</Label>
+              <Input
+                id="sandwichCountMax"
+                type="number"
+                placeholder="Any"
+                value={searchFilters.sandwich_count_max}
+                onChange={(e) => handleFilterChange({ sandwich_count_max: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="collectionType" className="text-sm font-medium text-slate-700">Collection Type</Label>
+              <Select
+                value={searchFilters.collection_type}
+                onValueChange={(value) => handleFilterChange({ collection_type: value as any })}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="individual">Individual Only</SelectItem>
+                  <SelectItem value="group">Group Only</SelectItem>
+                  <SelectItem value="both">Mixed (Both)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-4 gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
@@ -1375,8 +1578,9 @@ export default function SandwichCollectionLog() {
                     <SelectContent>
                       <SelectItem value="collection_date">Collection Date</SelectItem>
                       <SelectItem value="host_name">Host Name</SelectItem>
-                      <SelectItem value="individual_sandwiches">Sandwich Count</SelectItem>
-                      <SelectItem value="submitted_at">Created Date</SelectItem>
+                      <SelectItem value="individual_sandwiches">Individual Count</SelectItem>
+                      <SelectItem value="total_sandwiches">Total Sandwiches</SelectItem>
+                      <SelectItem value="submitted_at">Submitted Date</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button
@@ -1396,9 +1600,10 @@ export default function SandwichCollectionLog() {
               size="sm"
               onClick={handleClearFilters}
               className="flex items-center space-x-1 w-full sm:w-auto"
+              disabled={getActiveFilterCount() === 0}
             >
               <X className="w-4 h-4" />
-              <span>Clear Filters</span>
+              <span>Clear Filters {getActiveFilterCount() > 0 && `(${getActiveFilterCount()})`}</span>
             </Button>
           </div>
         </div>
