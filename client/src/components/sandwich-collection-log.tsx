@@ -108,10 +108,11 @@ export default function SandwichCollectionLog() {
 
   // Only fetch all data when filters are applied, otherwise use proper pagination
   const hasActiveFilters = useMemo(() => 
-    Object.values(searchFilters).some(v => v) || 
-    sortConfig.field !== "collection_date" || 
-    sortConfig.direction !== "desc",
-    [searchFilters, sortConfig]
+    Object.entries(searchFilters).some(([key, value]) => {
+      if (key === 'collection_type' && value === 'all') return false;
+      return value !== '';
+    }),
+    [searchFilters]
   );
 
   const queryKey = useMemo(() => [
@@ -142,30 +143,34 @@ export default function SandwichCollectionLog() {
           );
         }
         
-        if (searchFilters.collection_date_from) {
-          filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.collection_date >= searchFilters.collection_date_from
-          );
-        }
-        
-        if (searchFilters.collection_date_to) {
-          filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            c.collection_date <= searchFilters.collection_date_to
-          );
-        }
-        
-        if (searchFilters.created_at_from) {
+        if (searchFilters.collection_date_from && searchFilters.collection_date_from.trim() !== '') {
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            if (!c.collection_date || c.collection_date.trim() === '') return false;
+            return c.collection_date >= searchFilters.collection_date_from;
+          });
+        }
+        
+        if (searchFilters.collection_date_to && searchFilters.collection_date_to.trim() !== '') {
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            if (!c.collection_date || c.collection_date.trim() === '') return false;
+            return c.collection_date <= searchFilters.collection_date_to;
+          });
+        }
+        
+        if (searchFilters.created_at_from && searchFilters.created_at_from.trim() !== '') {
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            if (!c.submitted_at) return false;
             const submittedAtDate = typeof c.submitted_at === "string" ? new Date(c.submitted_at) : c.submitted_at;
             const filterDate = typeof searchFilters.created_at_from === "string" ? new Date(searchFilters.created_at_from) : searchFilters.created_at_from;
             return submittedAtDate >= filterDate;
           });
         }
         
-        if (searchFilters.created_at_to) {
-          filteredCollections = filteredCollections.filter((c: SandwichCollection) => 
-            new Date(c.submitted_at) <= new Date(searchFilters.created_at_to)
-          );
+        if (searchFilters.created_at_to && searchFilters.created_at_to.trim() !== '') {
+          filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
+            if (!c.submitted_at) return false;
+            return new Date(c.submitted_at) <= new Date(searchFilters.created_at_to);
+          });
         }
         
         // Sandwich count filters
@@ -249,11 +254,21 @@ export default function SandwichCollectionLog() {
           }
         };
       } else {
-        // No filters active - use efficient server-side pagination
-        const { data: collections, error, count } = await supabase
+        // No filters active - use efficient server-side pagination with dynamic sorting
+        let query = supabase
           .from('sandwich_collections')
-          .select('*', { count: 'exact' })
-          .order('collection_date', { ascending: false })
+          .select('*', { count: 'exact' });
+        
+        // Apply server-side sorting
+        if (sortConfig.field === 'total_sandwiches') {
+          // For total sandwiches, we need to sort by individual_sandwiches as a proxy
+          // since we can't calculate group totals in the database query
+          query = query.order('individual_sandwiches', { ascending: sortConfig.direction === 'asc' });
+        } else {
+          query = query.order(sortConfig.field as string, { ascending: sortConfig.direction === 'asc' });
+        }
+        
+        const { data: collections, error, count } = await query
           .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
         
         if (error) {

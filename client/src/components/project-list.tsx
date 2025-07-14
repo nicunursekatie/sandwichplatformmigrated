@@ -318,13 +318,19 @@ export default function ProjectList() {
           <div className="p-6">
             <div className="grid gap-4">
               {availableProjects.map((project) => (
-                <div key={project.id} className="bg-white p-4 rounded-lg border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                <div
+                  key={project.id}
+                  className="bg-white p-4 rounded-lg border border-green-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer focus:ring-2 focus:ring-blue-400"
+                  onClick={() => handleProjectClick(project.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleProjectClick(project.id); }}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 
-                          className="text-base font-semibold text-slate-900 cursor-pointer hover:text-blue-600 transition-colors"
-                          onClick={() => handleProjectClick(project.id)}
+                          className="text-base font-semibold text-slate-900 hover:text-blue-600 transition-colors"
                         >
                           {project.title}
                         </h3>
@@ -686,13 +692,19 @@ export default function ProjectList() {
 
         <div className="space-y-4">
           {otherProjects.map((project) => (
-            <div key={project.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div
+              key={project.id}
+              className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer focus:ring-2 focus:ring-blue-400"
+              onClick={() => handleProjectClick(project.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleProjectClick(project.id); }}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 
-                      className="text-base font-semibold text-slate-900 cursor-pointer hover:text-blue-600 transition-colors"
-                      onClick={() => handleProjectClick(project.id)}
+                      className="text-base font-semibold text-slate-900 hover:text-blue-600 transition-colors"
                     >
                       {project.title}
                     </h3>
@@ -909,13 +921,19 @@ export default function ProjectList() {
         {/* Projects List */}
         <div className="space-y-4">
           {otherProjects.map((project) => (
-            <div key={project.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div
+              key={project.id}
+              className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer focus:ring-2 focus:ring-blue-400"
+              onClick={() => handleProjectClick(project.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') handleProjectClick(project.id); }}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 
-                      className="text-base font-semibold text-slate-900 cursor-pointer hover:text-blue-600 transition-colors"
-                      onClick={() => handleProjectClick(project.id)}
+                      className="text-base font-semibold text-slate-900 hover:text-blue-600 transition-colors"
                     >
                       {project.title}
                     </h3>
