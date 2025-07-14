@@ -12,6 +12,7 @@ import BulkDataManager from "@/components/bulk-data-manager";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { supabaseService } from "@/lib/supabase-service";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { SandwichCollection, Host } from "@/lib/supabase";
@@ -201,13 +202,22 @@ export default function SandwichCollectionLog() {
         };
       } else {
         // No filters active - use efficient server-side pagination
-        const { data: collections, error, count } = await supabaseService.supabase
+        const { data: collections, error, count } = await supabase
           .from('sandwich_collections')
           .select('*', { count: 'exact' })
           .order('collection_date', { ascending: false })
           .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Server-side pagination error:', error);
+          console.error('Error details:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          throw error;
+        }
         
         console.log('Server-side pagination debug:', {
           totalFromCount: count,
