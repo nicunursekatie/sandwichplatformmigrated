@@ -1461,19 +1461,19 @@ export default function SandwichCollectionLog() {
             <div>
               <Label htmlFor="hostFilter" className="text-sm font-medium text-slate-700">Host/Location Name</Label>
               <Select
-                value={searchFilters.host_name}
-                onValueChange={(value) => handleHostFilterSelect(value)}
+                value={searchFilters.host_name || "all"}
+                onValueChange={(value) => handleHostFilterSelect(value === "all" ? "" : value)}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select a host..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="all">All Locations</SelectItem>
                   <SelectItem value="Groups">Groups</SelectItem>
                   {/* Get unique host names from collections */}
                   {Array.from(new Set(collections.map(c => c.host_name)))
                     .sort()
-                    .filter(host => host !== "Groups")
+                    .filter(host => host && host !== "Groups")
                     .map(host => (
                       <SelectItem key={host} value={host}>{host}</SelectItem>
                     ))
