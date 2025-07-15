@@ -356,13 +356,16 @@ export default function ProjectList() {
                       {claimingProjectId === project.id ? (
                         <div className="text-sm text-green-600 font-medium">Setting up claim...</div>
                       ) : (
-                        <Button
-                          onClick={() => startClaimingProject(project.id)}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white font-medium"
-                        >
-                          Claim This Project
-                        </Button>
+                                              <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startClaimingProject(project.id);
+                        }}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white font-medium"
+                      >
+                        Claim This Project
+                      </Button>
                       )}
                     </div>
                   </div>
@@ -734,7 +737,10 @@ export default function ProjectList() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => startClaimingProject(project.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startClaimingProject(project.id);
+                        }}
                         className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
                       >
                         Claim
@@ -746,7 +752,10 @@ export default function ProjectList() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => startEditingProject(project)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditingProject(project);
+                    }}
                     className="text-slate-500 hover:text-slate-700"
                   >
                     <Edit className="w-4 h-4" />
@@ -754,7 +763,10 @@ export default function ProjectList() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteProject(project.id, project.title)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteProject(project.id, project.title);
+                    }}
                     className="text-red-500 hover:text-red-700"
                   >
                     <Trash2 className="w-4 h-4" />

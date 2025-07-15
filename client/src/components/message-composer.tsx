@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useMessaging } from "@/hooks/useMessaging";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Send,
   Lightbulb,
@@ -66,6 +67,7 @@ export function MessageComposer({
 }: MessageComposerProps) {
   const { sendMessage, isSending } = useMessaging();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [content, setContent] = useState("");
   const [selectedRecipients, setSelectedRecipients] =
     useState<Array<{ id: string; name: string }>>(defaultRecipients);
@@ -91,16 +93,19 @@ export function MessageComposer({
     retry: false, // Don't retry if there's a permission error
   });
 
-  // Filter users based on search query
-  const users = allUsers.filter((user: any) => {
+  // Filter users based on search query and exclude current user
+  const users = allUsers.filter((userItem: any) => {
+    // Exclude the current logged-in user
+    if (userItem.id === user?.id) return false;
+    
     // Show all users when search is empty or show filtered results
     if (!recipientSearch) return true;
     const searchLower = recipientSearch.toLowerCase();
-    const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    const name = `${userItem.first_name || ''} ${userItem.last_name || ''}`.trim();
     return (
       name.toLowerCase().includes(searchLower) ||
-      user.email?.toLowerCase().includes(searchLower) ||
-      user.display_name?.toLowerCase().includes(searchLower)
+      userItem.email?.toLowerCase().includes(searchLower) ||
+      userItem.display_name?.toLowerCase().includes(searchLower)
     );
   }).slice(0, 10); // Limit to 10 results to avoid overwhelming the UI
 
