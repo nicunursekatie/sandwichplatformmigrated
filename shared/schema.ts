@@ -141,6 +141,22 @@ export const taskCompletions = pgTable("task_completions", {
   uniqueTaskUser: unique().on(table.taskId, table.userId),
 }));
 
+// Task assignments for multi-user task assignment tracking
+export const taskAssignments = pgTable("task_assignments", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").notNull(),
+  userId: text("user_id").notNull(), // References users.id
+  status: text("status").notNull().default("assigned"), // 'assigned', 'in_progress', 'completed', 'cancelled'
+  assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
+}, (table) => ({
+  uniqueTaskUser: unique().on(table.taskId, table.userId),
+}));
+
 // User-project assignments for visibility control
 export const projectAssignments = pgTable("project_assignments", {
   id: serial("id").primaryKey(),
