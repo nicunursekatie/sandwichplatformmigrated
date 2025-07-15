@@ -20,6 +20,7 @@ export default function ProjectList() {
   const [claimingProjectId, setClaimingProjectId] = useState<number | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [assigneeName, setAssigneeName] = useState("");
+  const [activeFilter, setActiveFilter] = useState<string>("all");
   const [newProject, setNewProject] = useState({
     title: "",
     description: "",
@@ -326,6 +327,21 @@ export default function ProjectList() {
 
   const statusCounts = getStatusCounts();
 
+  const getFilteredProjects = () => {
+    switch (activeFilter) {
+      case "active":
+        return projects.filter(p => p.status === "in_progress" || p.status === "planning");
+      case "available":
+        return projects.filter(p => p.status === "available");
+      case "waiting":
+        return projects.filter(p => p.status !== "in_progress" && p.status !== "planning" && p.status !== "available" && p.status !== "completed");
+      case "done":
+        return projects.filter(p => p.status === "completed");
+      default:
+        return projects;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
@@ -342,7 +358,7 @@ export default function ProjectList() {
   }
 
   const availableProjects = projects.filter(p => p.status === "available");
-  const otherProjects = projects.filter(p => p.status !== "available");
+  const filteredProjects = getFilteredProjects();
 
   return (
     <div className="space-y-6">
@@ -366,49 +382,77 @@ export default function ProjectList() {
 
       {/* Status Filter Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-blue-600 text-white p-4 rounded-lg shadow-sm">
+        <button
+          onClick={() => setActiveFilter(activeFilter === "active" ? "all" : "active")}
+          className={`p-4 rounded-lg shadow-sm transition-all duration-200 ${
+            activeFilter === "active" 
+              ? "bg-blue-600 text-white transform scale-105" 
+              : "bg-white border border-gray-200 hover:bg-blue-50 hover:border-blue-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Active</p>
-              <p className="text-2xl font-bold">{statusCounts.active}</p>
+              <p className={`text-sm font-medium ${activeFilter === "active" ? "text-white" : "text-gray-600"}`}>Active</p>
+              <p className={`text-2xl font-bold ${activeFilter === "active" ? "text-white" : "text-gray-900"}`}>{statusCounts.active}</p>
             </div>
-            <Play className="h-8 w-8 opacity-80" />
+            <Play className={`h-8 w-8 ${activeFilter === "active" ? "opacity-80" : "text-gray-400"}`} />
           </div>
-        </div>
+        </button>
         
-        <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+        <button
+          onClick={() => setActiveFilter(activeFilter === "available" ? "all" : "available")}
+          className={`p-4 rounded-lg shadow-sm transition-all duration-200 ${
+            activeFilter === "available" 
+              ? "bg-green-600 text-white transform scale-105" 
+              : "bg-white border border-gray-200 hover:bg-green-50 hover:border-green-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Available</p>
-              <p className="text-2xl font-bold text-gray-900">{statusCounts.available}</p>
+              <p className={`text-sm font-medium ${activeFilter === "available" ? "text-white" : "text-gray-600"}`}>Available</p>
+              <p className={`text-2xl font-bold ${activeFilter === "available" ? "text-white" : "text-gray-900"}`}>{statusCounts.available}</p>
             </div>
-            <Circle className="h-8 w-8 text-gray-400" />
+            <Circle className={`h-8 w-8 ${activeFilter === "available" ? "opacity-80" : "text-gray-400"}`} />
           </div>
-        </div>
+        </button>
         
-        <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+        <button
+          onClick={() => setActiveFilter(activeFilter === "waiting" ? "all" : "waiting")}
+          className={`p-4 rounded-lg shadow-sm transition-all duration-200 ${
+            activeFilter === "waiting" 
+              ? "bg-yellow-600 text-white transform scale-105" 
+              : "bg-white border border-gray-200 hover:bg-yellow-50 hover:border-yellow-200"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Waiting</p>
-              <p className="text-2xl font-bold text-gray-900">{statusCounts.waiting}</p>
+              <p className={`text-sm font-medium ${activeFilter === "waiting" ? "text-white" : "text-gray-600"}`}>Waiting</p>
+              <p className={`text-2xl font-bold ${activeFilter === "waiting" ? "text-white" : "text-gray-900"}`}>{statusCounts.waiting}</p>
             </div>
-            <Pause className="h-8 w-8 text-gray-400" />
+            <Pause className={`h-8 w-8 ${activeFilter === "waiting" ? "opacity-80" : "text-gray-400"}`} />
           </div>
-        </div>
+        </button>
         
-        <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+        <button
+          onClick={() => setActiveFilter(activeFilter === "done" ? "all" : "done")}
+          className={`p-4 rounded-lg shadow-sm transition-all duration-200 ${
+            activeFilter === "done" 
+              ? "bg-gray-600 text-white transform scale-105" 
+              : "bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Done</p>
-              <p className="text-2xl font-bold text-gray-900">{statusCounts.done}</p>
+              <p className={`text-sm font-medium ${activeFilter === "done" ? "text-white" : "text-gray-600"}`}>Done</p>
+              <p className={`text-2xl font-bold ${activeFilter === "done" ? "text-white" : "text-gray-900"}`}>{statusCounts.done}</p>
             </div>
-            <CheckCircle2 className="h-8 w-8 text-gray-400" />
+            <CheckCircle2 className={`h-8 w-8 ${activeFilter === "done" ? "opacity-80" : "text-gray-400"}`} />
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Available Projects Section */}
-      {availableProjects.length > 0 && (
+      {availableProjects.length > 0 && activeFilter === "all" && (
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-200 shadow-sm">
           <div className="px-6 py-4 border-b border-green-200 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-green-900 flex items-center">
@@ -519,10 +563,10 @@ export default function ProjectList() {
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900 flex items-center">
             <ListTodo className="text-blue-500 mr-2 w-5 h-5" />
-            All Projects
+            {activeFilter === "all" ? "All Projects" : `${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} Projects`}
           </h2>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">{projects.length} total</span>
+            <span className="text-sm text-slate-500">{filteredProjects.length} {activeFilter === "all" ? "total" : activeFilter}</span>
           </div>
         </div>
         <div className="p-6">
@@ -783,7 +827,7 @@ export default function ProjectList() {
         )}
 
         <div className="space-y-4">
-          {otherProjects.map((project) => (
+          {filteredProjects.map((project) => (
             <div key={project.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleProjectClick(project.id)}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
