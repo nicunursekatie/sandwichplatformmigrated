@@ -97,12 +97,51 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
 
   const updateProjectMutation = useMutation({
     mutationFn: async (data: Partial<Project>) => {
+      // Transform camelCase to snake_case for database
+      const transformedData: any = {};
+      Object.entries(data).forEach(([key, value]) => {
+        switch (key) {
+          case 'actualHours':
+            transformedData.actual_hours = value;
+            break;
+          case 'estimatedHours':
+            transformedData.estimated_hours = value;
+            break;
+          case 'progressPercentage':
+            transformedData.progress_percentage = value;
+            break;
+          case 'assigneeName':
+            transformedData.assignee_name = value;
+            break;
+          case 'dueDate':
+            transformedData.due_date = value;
+            break;
+          case 'startDate':
+            transformedData.start_date = value;
+            break;
+          case 'completionDate':
+            transformedData.completion_date = value;
+            break;
+          case 'createdAt':
+            transformedData.created_at = value;
+            break;
+          case 'updatedAt':
+            transformedData.updated_at = value;
+            break;
+          default:
+            transformedData[key] = value;
+        }
+      });
+
       const { data: result, error } = await supabase
         .from('projects')
-        .update(data)
+        .update(transformedData)
         .eq('id', projectId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Update project error:', error);
+        throw error;
+      }
       return result;
     },
     onSuccess: () => {

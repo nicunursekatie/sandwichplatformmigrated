@@ -78,24 +78,26 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
 
   const createProjectMutation = useMutation({
     mutationFn: async (projectData: typeof newProject) => {
-      // Transform the data to match backend schema
+      // Transform the data to match backend schema with snake_case
       const transformedData = {
-        ...projectData,
-        estimatedHours: projectData.estimatedHours ? parseInt(projectData.estimatedHours) || null : null,
-        actualHours: projectData.actualHours ? parseInt(projectData.actualHours) || null : null,
-        progress: parseInt(projectData.progress.toString()) || 0,
-        // Remove empty strings to let backend handle defaults
-        assigneeName: projectData.assigneeName || null,
-        dueDate: projectData.dueDate || null,
-        startDate: projectData.startDate || null,
+        title: projectData.title,
         description: projectData.description || null,
+        status: projectData.status,
+        priority: projectData.priority,
+        category: projectData.category,
+        assignee_name: projectData.assigneeName || null,
+        due_date: projectData.dueDate || null,
+        start_date: projectData.startDate || null,
+        estimated_hours: projectData.estimatedHours ? parseInt(projectData.estimatedHours) || null : null,
+        actual_hours: projectData.actualHours ? parseInt(projectData.actualHours) || null : null,
+        progress_percentage: parseInt(projectData.progress.toString()) || 0,
         notes: projectData.notes || null,
         tags: projectData.tags || null,
         dependencies: projectData.dependencies || null,
         resources: projectData.resources || null,
         milestones: projectData.milestones || null,
-        riskAssessment: projectData.riskAssessment || null,
-        successCriteria: projectData.successCriteria || null
+        risk_assessment: projectData.riskAssessment || null,
+        success_criteria: projectData.successCriteria || null
       };
       console.log("Sending project data:", transformedData);
       const { data, error } = await supabase.from('projects').insert(transformedData);
@@ -146,7 +148,54 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
 
   const updateProjectMutation = useMutation({
     mutationFn: async ({ id, ...updates }: { id: number } & Partial<Project>) => {
-      return supabase.from('projects').update(updates).eq('id', id);
+      // Transform camelCase to snake_case for database
+      const transformedUpdates: any = {};
+      Object.entries(updates).forEach(([key, value]) => {
+        switch (key) {
+          case 'actualHours':
+            transformedUpdates.actual_hours = value;
+            break;
+          case 'estimatedHours':
+            transformedUpdates.estimated_hours = value;
+            break;
+          case 'progressPercentage':
+            transformedUpdates.progress_percentage = value;
+            break;
+          case 'assigneeName':
+            transformedUpdates.assignee_name = value;
+            break;
+          case 'dueDate':
+            transformedUpdates.due_date = value;
+            break;
+          case 'startDate':
+            transformedUpdates.start_date = value;
+            break;
+          case 'completionDate':
+            transformedUpdates.completion_date = value;
+            break;
+          case 'riskAssessment':
+            transformedUpdates.risk_assessment = value;
+            break;
+          case 'successCriteria':
+            transformedUpdates.success_criteria = value;
+            break;
+          case 'createdAt':
+            transformedUpdates.created_at = value;
+            break;
+          case 'updatedAt':
+            transformedUpdates.updated_at = value;
+            break;
+          default:
+            transformedUpdates[key] = value;
+        }
+      });
+      
+      const { data, error } = await supabase.from('projects').update(transformedUpdates).eq('id', id);
+      if (error) {
+        console.error('Update project error:', error);
+        throw error;
+      }
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
