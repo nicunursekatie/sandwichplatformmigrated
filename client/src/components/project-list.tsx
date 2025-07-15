@@ -51,6 +51,45 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
     queryKey: ["projects"]
   });
 
+  // Fetch project assignments for all projects
+  const { data: allProjectAssignments = [] } = useQuery({
+    queryKey: ["all-project-assignments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_assignments')
+        .select(`
+          project_id,
+          user:users(id, email, first_name, last_name)
+        `);
+      
+      if (error) {
+        console.error('Error fetching project assignments:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    enabled: projects.length > 0
+  });
+
+  // Helper function to get assignments for a specific project
+  const getProjectAssignments = (projectId: number) => {
+    return allProjectAssignments.filter((assignment: any) => assignment.project_id === projectId);
+  };
+
+  // Helper function to format assignee names
+  const formatAssigneeNames = (projectId: number) => {
+    const assignments = getProjectAssignments(projectId);
+    if (assignments.length === 0) return null;
+    
+    return assignments.map((assignment: any) => {
+      if (assignment.user?.first_name && assignment.user?.last_name) {
+        return `${assignment.user.first_name} ${assignment.user.last_name}`;
+      }
+      return assignment.user?.email || assignment.user_id;
+    }).join(', ');
+  };
+
   const claimProjectMutation = useMutation({
     mutationFn: async ({ projectId, assigneeName }: { projectId: number; assigneeName: string }) => {
       const response = await apiRequest("POST", `/api/projects/${projectId}/claim`, {
@@ -60,6 +99,7 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["all-project-assignments"] });
       setClaimingProjectId(null);
       setAssigneeName("");
       toast({
@@ -208,6 +248,7 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["all-project-assignments"] });
       setEditingProject(null);
       toast({
         title: "Project updated successfully",
@@ -829,8 +870,8 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
                         Claim
                       </Button>
                     )
-                  ) : project.assigneeName ? (
-                    <span className="text-sm text-slate-500">Assigned to {project.assigneeName}</span>
+                  ) : formatAssigneeNames(project.id) ? (
+                    <span className="text-sm text-slate-500">Assigned to {formatAssigneeNames(project.id)}</span>
                   ) : null}
                   <Button
                     variant="ghost"
@@ -1064,8 +1105,8 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
                         Claim
                       </Button>
                     )
-                  ) : project.assigneeName ? (
-                    <span className="text-sm text-slate-500">Assigned to {project.assigneeName}</span>
+                  ) : formatAssigneeNames(project.id) ? (
+                    <span className="text-sm text-slate-500">Assigned to {formatAssigneeNames(project.id)}</span>
                   ) : null}
                   <Button
                     variant="ghost"
