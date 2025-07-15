@@ -14,7 +14,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Project } from "@shared/schema";
 
 import { supabase } from '@/lib/supabase';
-export default function ProjectList() {
+interface ProjectListProps {
+  onProjectSelect?: (projectId: number) => void;
+}
+
+export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -249,7 +253,11 @@ export default function ProjectList() {
 
   const handleProjectClick = (projectId: number) => {
     console.log('Project clicked:', projectId);
-    setLocation(`/projects/${projectId}`);
+    if (onProjectSelect) {
+      onProjectSelect(projectId);
+    } else {
+      setLocation(`/projects/${projectId}`);
+    }
   };
 
   const getStatusColor = (status: string) => {

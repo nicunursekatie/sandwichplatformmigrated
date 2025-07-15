@@ -45,8 +45,9 @@ import GoogleSheetsPage from "@/pages/google-sheets";
 import InboxPage from "@/pages/inbox";
 import AblyDemo from "@/components/ably-demo";
 
-export default function Dashboard({ initialSection = "dashboard", projectId }: { initialSection?: string; projectId?: number }) {
+export default function Dashboard({ initialSection = "dashboard", projectId: initialProjectId }: { initialSection?: string; projectId?: number }) {
   const [activeSection, setActiveSection] = useState(initialSection);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(initialProjectId);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -119,9 +120,15 @@ export default function Dashboard({ initialSection = "dashboard", projectId }: {
       case "dashboard":
         return <DashboardOverview onSectionChange={setActiveSection} />;
       case "projects":
-        return <ProjectsClean />;
+        return <ProjectsClean onProjectSelect={(projectId) => {
+          setSelectedProjectId(projectId);
+          setActiveSection("project-detail");
+        }} />;
       case "project-detail":
-        return projectId ? <ProjectDetailClean projectId={projectId} onBack={() => setActiveSection("projects")} /> : null;
+        return selectedProjectId ? <ProjectDetailClean projectId={selectedProjectId} onBack={() => {
+          setActiveSection("projects");
+          setSelectedProjectId(undefined);
+        }} /> : null;
       case "messages":
         return <ChatHub />;
       case "inbox":

@@ -340,20 +340,15 @@ CREATE POLICY "Users can manage their own work logs" ON work_logs
   );
 
 -- Notifications table policies
-CREATE POLICY "Users can view their own notifications" ON notifications
+CREATE POLICY "Users can view non-deleted notifications" ON notifications
   FOR SELECT
-  USING (
-    deleted_at IS NULL AND
-    user_id = get_current_user_id()
-  );
+  USING (deleted_at IS NULL);
 
-CREATE POLICY "Users can manage their own notifications" ON notifications
+CREATE POLICY "Users can manage notifications" ON notifications
   FOR ALL
   USING (
-    deleted_at IS NULL AND (
-      user_id = get_current_user_id() OR
-      is_admin()
-    )
+    deleted_at IS NULL AND
+    (recipient_id = get_current_user_id() OR is_admin() OR is_super_admin())
   );
 
 -- Committees table policies
@@ -426,10 +421,6 @@ CREATE POLICY "Users can view non-deleted agenda items" ON agenda_items
   USING (deleted_at IS NULL);
 
 CREATE POLICY "Users can view non-deleted hosted files" ON hosted_files
-  FOR SELECT
-  USING (deleted_at IS NULL AND is_public = true);
-
-CREATE POLICY "Users can view non-deleted google sheets" ON google_sheets
   FOR SELECT
   USING (deleted_at IS NULL AND is_public = true);
 
