@@ -24,7 +24,8 @@ import {
   Edit,
   Users,
   FileText,
-  MoreVertical
+  MoreVertical,
+  RefreshCw
 } from "lucide-react";
 
 import { useToast } from "@/hooks/use-toast";
@@ -119,10 +120,12 @@ export default function ProjectsClean() {
   });
 
   // Fetch projects with assignments and tasks
-  const { data: projects = [], isLoading, error } = useQuery<Project[]>({
+  const { data: projects = [], isLoading, error, refetch } = useQuery<Project[]>({
     queryKey: ["projects"],
     queryFn: async () => {
       console.log('Fetching projects...');
+      console.log('User permissions - canView:', canView);
+      console.log('User:', user);
       
       const { data, error } = await supabase
         .from('projects')
@@ -135,10 +138,12 @@ export default function ProjectsClean() {
       }
       
       console.log('Projects fetched successfully:', data?.length || 0, 'projects');
+      console.log('Raw project data:', data);
       return data || [];
     },
     enabled: canView,
     retry: 2,
+    staleTime: 0, // Always fetch fresh data for projects
   });
 
   // Fetch project assignments
@@ -387,12 +392,26 @@ export default function ProjectsClean() {
           <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
           <p className="text-gray-600">Manage and track project progress</p>
         </div>
-        {canEdit && (
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              refetch();
+              queryClient.invalidateQueries({ queryKey: ["projects"] });
+              toast({ title: "Refreshing projects..." });
+            }}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
-        )}
+          {canEdit && (
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Project
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
