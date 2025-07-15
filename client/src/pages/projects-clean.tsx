@@ -100,6 +100,7 @@ export default function ProjectsClean() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { celebration, hideCelebration } = useCelebration();
+  const [, setLocation] = useLocation();
   const canEdit = hasPermission(user, PERMISSIONS.MANAGE_PROJECTS);
   const canView = hasPermission(user, PERMISSIONS.VIEW_PROJECTS);
   
@@ -304,6 +305,11 @@ export default function ProjectsClean() {
     return userAssignment?.status || 'not_assigned';
   };
 
+  const handleProjectClick = (projectId: number) => {
+    console.log('Project clicked:', projectId);
+    setLocation(`/projects/${projectId}`);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800';
@@ -408,7 +414,11 @@ export default function ProjectsClean() {
             }).length;
 
             return (
-              <Card key={project.id} className="hover:shadow-md transition-shadow">
+              <Card 
+                key={project.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleProjectClick(project.id)}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="space-y-2">
@@ -451,22 +461,28 @@ export default function ProjectsClean() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelectedProject(project)}>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleProjectClick(project.id);
+                        }}>
                           <FileText className="h-4 w-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
                         {canEdit && (
                           <>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Project
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              onClick={() => updateProjectMutation.mutate({ 
-                                id: project.id, 
-                                updates: { status: project.status === 'completed' ? 'in_progress' : 'completed' }
-                              })}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateProjectMutation.mutate({ 
+                                  id: project.id, 
+                                  updates: { status: project.status === 'completed' ? 'in_progress' : 'completed' }
+                                });
+                              }}
                             >
                               <CheckCircle2 className="h-4 w-4 mr-2" />
                               Mark as {project.status === 'completed' ? 'In Progress' : 'Completed'}

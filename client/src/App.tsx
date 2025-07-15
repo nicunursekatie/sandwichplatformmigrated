@@ -15,6 +15,20 @@ import Landing from "@/pages/landing";
 import SignupPage from "@/pages/signup";
 import NotFound from "@/pages/not-found";
 import DataDiagnostics from "@/components/data-diagnostics";
+import ProjectDetailClean from "@/pages/project-detail-clean";
+import ProjectsClean from "@/pages/projects-clean";
+import { useLocation } from "wouter";
+
+function ProjectDetailWrapper({ params }: { params: { id: string } }) {
+  const [, setLocation] = useLocation();
+  const projectId = parseInt(params.id, 10);
+  
+  const handleBack = () => {
+    setLocation('/projects');
+  };
+  
+  return <ProjectDetailClean projectId={projectId} onBack={handleBack} />;
+}
 
 function Router() {
   const { isAuthenticated, isLoading, error } = useAuth();
@@ -57,6 +71,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/diagnostics" component={DataDiagnostics} />
+      <Route path="/projects" component={ProjectsClean} />
+      <Route path="/projects/:id" component={ProjectDetailWrapper} />
       <Route path="/messages">{() => <Dashboard initialSection="messages" />}</Route>
       <Route path="/inbox">{() => <Dashboard initialSection="inbox" />}</Route>
       <Route path="/suggestions">{() => <Dashboard initialSection="suggestions" />}</Route>

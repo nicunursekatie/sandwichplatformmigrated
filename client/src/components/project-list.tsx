@@ -248,6 +248,7 @@ export default function ProjectList() {
   };
 
   const handleProjectClick = (projectId: number) => {
+    console.log('Project clicked:', projectId);
     setLocation(`/projects/${projectId}`);
   };
 
