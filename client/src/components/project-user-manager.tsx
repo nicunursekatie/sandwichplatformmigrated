@@ -16,6 +16,7 @@ import type { User, Project } from "@shared/schema";
 
 import { supabase } from '@/lib/supabase';
 import { queryClient } from "@/lib/queryClient";
+import { sendNotification as sendSupabaseNotification } from '@/lib/notifications';
 interface ProjectUserManagerProps {
   project: Project;
   onUpdate?: () => void;
@@ -27,7 +28,21 @@ interface ProjectAssignment {
   userId: string;
   role: string;
   assignedAt: string;
-  user?: User;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    displayName?: string;
+    role: string;
+    permissions: any;
+    isActive: boolean;
+    profileImageUrl?: string;
+    metadata?: any;
+    lastLoginAt?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
 }
 
 export default function ProjectUserManager({ project, onUpdate }: ProjectUserManagerProps) {
@@ -79,8 +94,45 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
 
   // Fetch current project assignments with fresh data
   const { data: assignments = [], isLoading } = useQuery<ProjectAssignment[]>({
-    queryKey: ["/api/projects", project.id, "assignments"],
-    queryFn: () => fetch(`/api/projects/${project.id}/assignments`).then(res => res.json()),
+    queryKey: ["project-assignments", project.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_assignments')
+        .select(`
+          *,
+          user:users(*)
+        `)
+        .eq('project_id', project.id);
+      
+      if (error) {
+        console.error('Error fetching project assignments:', error);
+        return [];
+      }
+      
+      // Transform the data to match the expected interface
+      return (data || []).map(assignment => ({
+        id: assignment.id,
+        projectId: assignment.project_id,
+        userId: assignment.user_id,
+        role: assignment.role,
+        assignedAt: assignment.assigned_at || assignment.created_at,
+        user: assignment.user ? {
+          id: assignment.user.id,
+          email: assignment.user.email,
+          firstName: assignment.user.first_name || '',
+          lastName: assignment.user.last_name || '',
+          displayName: assignment.user.display_name || '',
+          role: assignment.user.role,
+          permissions: assignment.user.permissions,
+          isActive: assignment.user.is_active,
+          profileImageUrl: assignment.user.profile_image_url,
+          metadata: assignment.user.metadata,
+          lastLoginAt: assignment.user.last_login_at,
+          createdAt: assignment.user.created_at,
+          updatedAt: assignment.user.updated_at
+        } : undefined
+      })) as ProjectAssignment[];
+    },
     staleTime: 0,
     gcTime: 30000,
     refetchOnWindowFocus: true,
@@ -89,11 +141,51 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Add user to project mutation
   const addUserMutation = useMutation({
     mutationFn: async (data: { userId: string; role: string; sendNotification: boolean }) => {
-      return await supabase.from('project_assignments').insert({ ...data, project_id: project.id });
+      // First, insert the project assignment
+      const { data: assignment, error } = await supabase
+        .from('project_assignments')
+        .insert({
+          project_id: project.id,
+          user_id: data.userId,
+          role: data.role
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Then send notification if requested
+      if (data.sendNotification && assignment) {
+        try {
+          // Get the assigned user's details
+          const assignedUser = allUsers.find(u => u.id === data.userId);
+          
+          if (assignedUser) {
+            // Send notification via Supabase
+            await sendSupabaseNotification({
+              user_id: data.userId,
+              type: 'project_assignment',
+              title: 'New Project Assignment',
+              body: `You have been assigned to the project: ${project.title}`,
+              source_id: user?.id,
+              related_type: 'project',
+              related_id: project.id
+            });
+          }
+        } catch (notificationError) {
+          console.error('Error sending notification:', notificationError);
+          // Don't fail the whole operation if notification fails
+        }
+      }
+      
+      return assignment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-assignments", project.id] });
       setSelectedUserId("");
       setSelectedRole("member");
       setSendNotification(true);
@@ -108,11 +200,44 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Remove user from project mutation
   const removeUserMutation = useMutation({
     mutationFn: async (data: { userId: string; sendNotification: boolean }) => {
-      return await supabase.from('project_assignments').delete().eq('user_id', data.userId).eq('project_id', project.id);
+      // Remove the assignment from database
+      const { error } = await supabase
+        .from('project_assignments')
+        .delete()
+        .eq('user_id', data.userId)
+        .eq('project_id', project.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Send notification if requested
+      if (data.sendNotification) {
+        try {
+          const removedUser = allUsers.find(u => u.id === data.userId);
+          
+          if (removedUser) {
+            await sendSupabaseNotification({
+              user_id: data.userId,
+              type: 'project_removal',
+              title: 'Removed from Project',
+              body: `You have been removed from the project: ${project.title}`,
+              source_id: user?.id,
+              related_type: 'project',
+              related_id: project.id
+            });
+          }
+        } catch (notificationError) {
+          console.error('Error sending notification:', notificationError);
+        }
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-assignments", project.id] });
       toast({ title: "User removed from project" });
       onUpdate?.();
     },
@@ -124,12 +249,21 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Update user role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async (data: { userId: string; role: string }) => {
-      return await supabase.from('project_assignments').update({
-        role: data.role
-      }).eq('user_id', data.userId).eq('project_id', project.id);
+      const { error } = await supabase
+        .from('project_assignments')
+        .update({ role: data.role })
+        .eq('user_id', data.userId)
+        .eq('project_id', project.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", project.id, "assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["project-assignments", project.id] });
       toast({ title: "User role updated" });
       onUpdate?.();
     },
@@ -293,7 +427,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                                 </div>
                                 <div>
                                   <div className="font-medium">
-                                    {assignedUser.firstName} {assignedUser.lastName}
+                                    {assignedUser.firstName || ''} {assignedUser.lastName || ''}
                                   </div>
                                   <div className="text-sm text-slate-500">{assignedUser.email}</div>
                                 </div>
@@ -353,7 +487,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
             </div>
           ) : (
             assignments.map((assignment) => {
-              const assignedUser = allUsers.find(u => u.id === assignment.userId);
+              const assignedUser = assignment.user || allUsers.find(u => u.id === assignment.userId);
               if (!assignedUser) return null;
               
               return (
@@ -366,7 +500,7 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
                     </div>
                     <div>
                       <div className="font-medium">
-                        {assignedUser.firstName} {assignedUser.lastName}
+                        {assignedUser.firstName || ''} {assignedUser.lastName || ''}
                       </div>
                       <div className="text-sm text-slate-500">{assignedUser.email}</div>
                     </div>

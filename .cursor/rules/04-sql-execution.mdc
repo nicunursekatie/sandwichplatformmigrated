@@ -1,0 +1,26 @@
+---
+description: "SQL and DDL execution approach"
+globs:
+  - "**/*.js"
+  - "**/*.ts"
+  - "scripts/**/*"
+alwaysApply: false
+---
+
+# SQL EXECUTION
+
+Supabase client does NOT have exec_sql or raw SQL methods.
+
+## For DDL operations (CREATE, ALTER, DROP)
+
+First try Supabase client methods if possible.
+
+If no client method exists, provide SQL for Dashboard execution.
+
+Do not create workarounds or test scripts for simple DDL.
+
+## Keep it simple
+
+If adding a column fails, just say: "Run this SQL in Dashboard: [SQL]"
+
+Do not overcomplicate with elaborate solutions.

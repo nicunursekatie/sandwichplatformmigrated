@@ -29,6 +29,8 @@ export const users = pgTable("users", {
   metadata: jsonb("metadata").default('{}'), // Additional user data (phone, address, availability, etc.)
   isActive: boolean("is_active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at"), // Track when user last logged in
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -46,6 +48,21 @@ export const auditLogs = pgTable("audit_logs", {
   userAgent: text("user_agent"),
   sessionId: varchar("session_id"),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+// Deletion audit table for tracking soft deletions
+export const deletionAudit = pgTable("deletion_audit", {
+  id: serial("id").primaryKey(),
+  tableName: varchar("table_name").notNull(),
+  recordId: varchar("record_id").notNull(),
+  deletedAt: timestamp("deleted_at").notNull().defaultNow(),
+  deletedBy: varchar("deleted_by").notNull(),
+  deletionReason: text("deletion_reason"),
+  recordData: jsonb("record_data"), // Store the full record data before deletion
+  canRestore: boolean("can_restore").default(true),
+  restoredAt: timestamp("restored_at"),
+  restoredBy: varchar("restored_by"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const projects = pgTable("projects", {
@@ -75,6 +92,8 @@ export const projects = pgTable("projects", {
   color: text("color").notNull().default("blue"), // for status indicator
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const projectTasks = pgTable("project_tasks", {
@@ -94,6 +113,8 @@ export const projectTasks = pgTable("project_tasks", {
   order: integer("order").notNull().default(0), // for task ordering
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const projectComments = pgTable("project_comments", {
@@ -103,6 +124,8 @@ export const projectComments = pgTable("project_comments", {
   content: text("content").notNull(),
   commentType: text("comment_type").notNull().default("general"), // 'general', 'update', 'blocker', 'completion'
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const taskCompletions = pgTable("task_completions", {
@@ -112,6 +135,8 @@ export const taskCompletions = pgTable("task_completions", {
   userName: text("user_name").notNull(),
   completedAt: timestamp("completed_at").notNull().defaultNow(),
   notes: text("notes"),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 }, (table) => ({
   uniqueTaskUser: unique().on(table.taskId, table.userId),
 }));
@@ -123,6 +148,8 @@ export const projectAssignments = pgTable("project_assignments", {
   userId: text("user_id").notNull(), // References users.id
   role: text("role").notNull().default("member"), // 'owner', 'member', 'viewer'
   assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 // Committees table for organizing committee information
@@ -133,6 +160,8 @@ export const committees = pgTable("committees", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 // Committee memberships table for tracking which users belong to which committees
@@ -144,6 +173,8 @@ export const committeeMemberships = pgTable("committee_memberships", {
   permissions: jsonb("permissions").default('[]'), // Specific committee permissions
   joinedAt: timestamp("joined_at").defaultNow(),
   isActive: boolean("is_active").notNull().default(true),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 // Announcements table for website banners
@@ -160,6 +191,8 @@ export const announcements = pgTable("announcements", {
   linkText: text("link_text"), // Text for the link
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 // SIMPLE MESSAGING SYSTEM - 3 tables only
@@ -170,6 +203,8 @@ export const conversations = pgTable("conversations", {
   type: text("type").notNull(), // 'direct', 'group', 'channel'
   name: text("name"), // NULL for direct messages, required for groups/channels
   createdAt: timestamp("created_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 // 2. Conversation participants - who's in each conversation
@@ -178,6 +213,8 @@ export const conversationParticipants = pgTable("conversation_participants", {
   userId: text("user_id").notNull(),
   joinedAt: timestamp("joined_at").defaultNow(),
   lastReadAt: timestamp("last_read_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 }, (table) => ({
   pk: primaryKey({ columns: [table.conversationId, table.userId] }),
 }));
@@ -197,7 +234,7 @@ export const messages = pgTable("messages", {
   deletedAt: timestamp("deleted_at"),
   deletedBy: text("deleted_by"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
 });
 
 // 4. Message Recipients - track read status per recipient
@@ -211,6 +248,8 @@ export const messageRecipients = pgTable("message_recipients", {
   emailSentAt: timestamp("email_sent_at"),
   contextAccessRevoked: boolean("context_access_revoked").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 }, (table) => ({
   uniqueRecipient: unique().on(table.messageId, table.recipientId),
   unreadIdx: index("idx_message_recipients_unread").on(table.recipientId, table.read),
@@ -225,6 +264,8 @@ export const messageThreads = pgTable("message_threads", {
   depth: integer("depth").notNull().default(0),
   path: text("path").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 }, (table) => ({
   uniqueMessage: unique().on(table.messageId),
   pathIdx: index("idx_thread_path").on(table.path),
@@ -239,6 +280,8 @@ export const kudosTracking = pgTable("kudos_tracking", {
   contextId: text("context_id").notNull(),
   messageId: integer("message_id").references(() => messages.id, { onDelete: "cascade" }),
   sentAt: timestamp("sent_at").defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 }, (table) => ({
   // Ensure one kudos per sender-recipient-context combination
   uniqueKudos: unique().on(table.senderId, table.recipientId, table.contextType, table.contextId),
@@ -254,6 +297,8 @@ export const weeklyReports = pgTable("weekly_reports", {
   notes: text("notes"),
   submittedBy: text("submitted_by").notNull(),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const sandwichCollections = pgTable("sandwich_collections", {
@@ -263,6 +308,8 @@ export const sandwichCollections = pgTable("sandwich_collections", {
   individualSandwiches: integer("individual_sandwiches").notNull(),
   groupCollections: text("group_collections").notNull(), // JSON string of group data
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const meetingMinutes = pgTable("meeting_minutes", {
@@ -276,6 +323,8 @@ export const meetingMinutes = pgTable("meeting_minutes", {
   fileType: text("file_type"), // 'pdf', 'docx', 'google_docs', 'text'
   mimeType: text("mime_type"), // file mime type
   committeeType: text("committee_type"), // Committee this minute belongs to - "core_group", "marketing_committee", etc.
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const driveLinks = pgTable("drive_links", {
@@ -285,6 +334,8 @@ export const driveLinks = pgTable("drive_links", {
   url: text("url").notNull(),
   icon: text("icon").notNull(), // icon name
   iconColor: text("icon_color").notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const agendaItems = pgTable("agenda_items", {
@@ -295,6 +346,8 @@ export const agendaItems = pgTable("agenda_items", {
   description: text("description"),
   status: text("status").notNull().default("pending"), // "pending", "approved", "rejected", "postponed"
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const meetings = pgTable("meetings", {
@@ -308,6 +361,8 @@ export const meetings = pgTable("meetings", {
   finalAgenda: text("final_agenda"),
   status: text("status").notNull().default("planning"), // "planning", "agenda_set", "completed"
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const drivers = pgTable("drivers", {
@@ -331,6 +386,8 @@ export const drivers = pgTable("drivers", {
   emailAgreementSent: boolean("email_agreement_sent").notNull().default(false),
   voicemailLeft: boolean("voicemail_left").notNull().default(false),
   inactiveReason: text("inactive_reason"),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const driverAgreements = pgTable("driver_agreements", {
@@ -344,6 +401,8 @@ export const driverAgreements = pgTable("driver_agreements", {
   emergencyPhone: text("emergency_phone").notNull(),
   agreementAccepted: boolean("agreement_accepted").notNull().default(false),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const hosts = pgTable("hosts", {
@@ -354,6 +413,8 @@ export const hosts = pgTable("hosts", {
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const hostContacts = pgTable("host_contacts", {
@@ -367,6 +428,8 @@ export const hostContacts = pgTable("host_contacts", {
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const recipients = pgTable("recipients", {
@@ -381,6 +444,8 @@ export const recipients = pgTable("recipients", {
   status: text("status").notNull().default("active"), // 'active', 'inactive'
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const projectDocuments = pgTable("project_documents", {
@@ -392,6 +457,8 @@ export const projectDocuments = pgTable("project_documents", {
   mimeType: text("mime_type").notNull(),
   uploadedBy: text("uploaded_by").notNull(),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 // Insert schemas
@@ -482,7 +549,9 @@ export const hostedFiles = pgTable("hosted_files", {
   isPublic: boolean("is_public").notNull().default(true),
   downloadCount: integer("download_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const insertHostedFileSchema = createInsertSchema(hostedFiles).omit({
@@ -508,7 +577,9 @@ export const contacts = pgTable("contacts", {
   category: text("category").notNull().default("general"), // volunteer, board, vendor, donor, etc.
   status: text("status").notNull().default("active"), // active, inactive
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const insertContactSchema = createInsertSchema(contacts).omit({
@@ -528,6 +599,16 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+// Deletion audit types
+export const insertDeletionAuditSchema = createInsertSchema(deletionAudit).omit({
+  id: true,
+  deletedAt: true,
+  createdAt: true
+});
+
+export type DeletionAudit = typeof deletionAudit.$inferSelect;
+export type InsertDeletionAudit = z.infer<typeof insertDeletionAuditSchema>;
 
 // Driver types
 export const insertDriverSchema = createInsertSchema(drivers).omit({
@@ -549,6 +630,8 @@ export const notifications = pgTable("notifications", {
   relatedId: integer("related_id"), // ID of related record
   celebrationData: jsonb("celebration_data"), // Extra data for celebrations (emojis, achievements, etc.)
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
@@ -614,6 +697,8 @@ export const googleSheets = pgTable("google_sheets", {
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 export const insertGoogleSheetSchema = createInsertSchema(googleSheets).omit({
@@ -679,6 +764,8 @@ export const suggestions = pgTable("suggestions", {
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 // Communication thread between admins and suggestion submitters
@@ -691,6 +778,8 @@ export const suggestionResponses = pgTable("suggestion_responses", {
   respondentName: text("respondent_name"),
   isInternal: boolean("is_internal").notNull().default(false), // Internal admin notes not visible to submitter
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
+  deletedBy: varchar("deleted_by"), // User who performed the soft delete
 });
 
 // Schema types for suggestions

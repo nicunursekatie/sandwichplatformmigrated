@@ -1,0 +1,28 @@
+---
+description: "Don't work around problems - fix root causes"
+globs:
+  - "**/*.js"
+  - "**/*.ts"
+  - "scripts/**/*"
+alwaysApply: false
+---
+
+# FIX ROOT CAUSES
+
+Never modify scripts to work around missing columns.
+
+If a table is missing columns, recreate it correctly.
+
+If schema cache is stale, wait or force refresh.
+
+Do not create elaborate workarounds for simple problems.
+
+## Direct approach
+
+Missing column? Add it or recreate table.
+Wrong schema? Fix the schema.
+Cache issue? Wait 30-60 seconds.---
+description:
+globs:
+alwaysApply: false
+---
