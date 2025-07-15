@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback } from "react";
+import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sandwich, Calendar, User, Users, Edit, Trash2, Upload, AlertTriangle, Scan, Square, CheckSquare, Filter, X, ArrowUp, ArrowDown, Download, Plus, Database } from "lucide-react";
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
@@ -42,6 +42,17 @@ interface DuplicateAnalysis {
     duplicateOgEntry?: SandwichCollection;
     reason: string;
   }>;
+}
+
+// Add a helper to map UI filters to RPC params
+function mapFiltersToStatsParams(filters: any) {
+  return {
+    host_name: filters.host_name || null,
+    collection_date_from: filters.collection_date_from || null,
+    collection_date_to: filters.collection_date_to || null,
+    individual_min: filters.sandwich_count_min ? parseInt(filters.sandwich_count_min) : undefined,
+    individual_max: filters.sandwich_count_max ? parseInt(filters.sandwich_count_max) : undefined,
+  };
 }
 
 export default function SandwichCollectionLog() {
@@ -98,6 +109,9 @@ export default function SandwichCollectionLog() {
     { id: Math.random().toString(36), groupName: "", sandwichCount: 0 }
   ]);
   const [newCollectionGroupOnlyMode, setNewCollectionGroupOnlyMode] = useState(false);
+  // State for filtered total
+  const [filteredTotal, setFilteredTotal] = useState<number | null>(null);
+  const [filteredTotalLoading, setFilteredTotalLoading] = useState(false);
 
   // Memoize expensive computations
   const needsAllData = useMemo(() => 
@@ -217,7 +231,7 @@ export default function SandwichCollectionLog() {
           if (sortConfig.field === 'total_sandwiches') {
             aVal = (a.individual_sandwiches || 0) + calculateGroupTotal(a.group_collections);
             bVal = (b.individual_sandwiches || 0) + calculateGroupTotal(b.group_collections);
-          } else {
+          } else if (sortConfig.field !== 'total_sandwiches') {
             const field: keyof SandwichCollection = sortConfig.field;
             aVal = a[field];
             bVal = b[field];
@@ -399,6 +413,37 @@ export default function SandwichCollectionLog() {
         individual_sandwiches: individualTotal,
         groupSandwiches: groupTotal
       };
+    }
+  });
+
+  // Query for filtered or all-time total sandwiches
+  const { data: filteredStats, isLoading: isStatsLoading } = useQuery({
+    queryKey: ["sandwich-collections-stats", searchFilters],
+    queryFn: async () => {
+      const hasAnyFilter = Object.values(searchFilters).some(v => v && v !== '' && v !== 'all');
+      if (hasAnyFilter) {
+        const params = mapFiltersToStatsParams(searchFilters);
+        const stats = await supabaseService.sandwichCollection.getFilteredCollectionStats(params);
+        if (stats && stats[0]) {
+          return {
+            completeTotalSandwiches: stats[0].complete_total_sandwiches || 0,
+            individual_sandwiches: stats[0].individual_sandwiches || 0,
+            groupSandwiches: stats[0].group_sandwiches || 0
+          };
+        }
+        return { completeTotalSandwiches: 0, individual_sandwiches: 0, groupSandwiches: 0 };
+      } else {
+        // No filters: use all-time stats
+        const stats = await supabaseService.sandwichCollection.getCollectionStats();
+        if (stats && stats[0]) {
+          return {
+            completeTotalSandwiches: stats[0].complete_total_sandwiches || 0,
+            individual_sandwiches: stats[0].individual_sandwiches || 0,
+            groupSandwiches: stats[0].group_sandwiches || 0
+          };
+        }
+        return { completeTotalSandwiches: 0, individual_sandwiches: 0, groupSandwiches: 0 };
+      }
     }
   });
 
@@ -1138,6 +1183,28 @@ export default function SandwichCollectionLog() {
     setCurrentPage(1);
   };
 
+  // Fetch filtered total sandwiches whenever filters change
+  useEffect(() => {
+    let isMounted = true;
+    setFilteredTotalLoading(true);
+    supabaseService.sandwichCollection.getFilteredCollectionStats({
+      host_name: searchFilters.host_name || undefined,
+      collection_date_from: searchFilters.collection_date_from || undefined,
+      collection_date_to: searchFilters.collection_date_to || undefined,
+      individual_min: searchFilters.sandwich_count_min ? parseInt(searchFilters.sandwich_count_min) : undefined,
+      individual_max: searchFilters.sandwich_count_max ? parseInt(searchFilters.sandwich_count_max) : undefined,
+    }).then((stats) => {
+      if (isMounted && stats && stats[0]) {
+        setFilteredTotal(stats[0].complete_total_sandwiches || 0);
+      }
+    }).catch(() => {
+      if (isMounted) setFilteredTotal(null);
+    }).finally(() => {
+      if (isMounted) setFilteredTotalLoading(false);
+    });
+    return () => { isMounted = false; };
+  }, [searchFilters]);
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
@@ -1157,9 +1224,26 @@ export default function SandwichCollectionLog() {
     );
   }
 
+  // Render filtered total at the top
+  // Place this near the top of your return JSX, above the table or filters
+  // You can adjust the placement as needed
+  const renderFilteredTotal = () => (
+    <div className="mb-4 flex items-center gap-4">
+      <div className="text-lg font-semibold">
+        Total Sandwiches (Filtered): {filteredTotalLoading ? 'Loading...' : (filteredTotal ?? '—')}
+      </div>
+      {totalStats && (
+        <div className="text-sm text-gray-500">(All-time: {totalStats.completeTotalSandwiches})</div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-      <div className="px-6 py-4 border-b border-slate-200">
+    <div className="max-w-7xl mx-auto p-4">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">
+          {renderFilteredTotal()}
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 flex items-center">

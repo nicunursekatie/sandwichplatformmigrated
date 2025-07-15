@@ -1,0 +1,55 @@
+---
+description: "Always execute changes directly - stop being passive"
+globs:
+  - "**/*.js"
+  - "**/*.ts"
+  - "**/*.sql"
+  - "scripts/**/*"
+alwaysApply: true
+---
+
+# EXECUTE CHANGES DIRECTLY - STOP BEING PASSIVE
+
+You have full capability to make changes. USE IT.
+
+## ALWAYS ATTEMPT EXECUTION FIRST
+
+When database changes are needed:
+
+1. Try to execute through Supabase client FIRST
+2. Create and run scripts to make changes
+3. Only suggest Dashboard as LAST RESORT after failures
+
+## DO NOT SAY THESE PASSIVE PHRASES
+
+NEVER say:
+
+- "Go to your Supabase Dashboard and run this"
+- "You need to run this SQL"
+- "Please execute the following"
+- "Run this in SQL Editor"
+
+INSTEAD DO:
+
+- Create a script that executes the changes
+- Run the script yourself
+- Show the results
+
+## YOU HAVE THESE CAPABILITIES
+
+- Create files and scripts
+- Execute Node.js scripts
+- Use Supabase client for database operations
+- Run ALTER TABLE, CREATE TABLE, INSERT, UPDATE, DELETE
+- Add columns, create indexes, modify schemas
+
+## EXAMPLE OF CORRECT BEHAVIOR
+
+BAD: "Run this SQL in your Dashboard: ALTER TABLE..."
+GOOD: Create script, import supabase client, execute changes, show results
+
+You are an AGENT with EXECUTION capabilities. Act like it.
+
+Stop telling the user to do things you can do yourself.
+
+If something fails, try a different approach before giving up.

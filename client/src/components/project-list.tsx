@@ -167,7 +167,22 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: number) => {
-      return supabase.from('projects').delete().eq('id', id);
+      const { data, error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id)
+        .select(); // Add select to get the deleted row back
+      
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('No project was deleted - the project may not exist or you may not have permission to delete it');
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -176,10 +191,11 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
         description: "The project has been removed.",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Delete project error:", error);
       toast({
         title: "Failed to delete project",
-        description: "Please try again later.",
+        description: error.message || "Please try again later.",
         variant: "destructive"
       });
     }

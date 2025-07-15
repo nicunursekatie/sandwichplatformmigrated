@@ -182,6 +182,24 @@ export const sandwichCollectionService = {
     return data;
   },
 
+  async getFilteredCollectionStats(filters: {
+    host_name?: string;
+    collection_date_from?: string;
+    collection_date_to?: string;
+    individual_min?: number;
+    individual_max?: number;
+  }) {
+    const { data, error } = await supabase.rpc('get_collection_stats_filtered', {
+      host_name: filters.host_name || null,
+      collection_date_from: filters.collection_date_from || null,
+      collection_date_to: filters.collection_date_to || null,
+      individual_min: filters.individual_min ?? null,
+      individual_max: filters.individual_max ?? null,
+    });
+    if (error) handleError(error, 'get filtered collection stats');
+    return data;
+  },
+
   async batchUpdateCollections(ids: number[], updates: UpdateSandwichCollection): Promise<{ updatedCount: number }> {
     const { data, error } = await supabase
       .from('sandwich_collections')
