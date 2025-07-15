@@ -27,12 +27,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE POLICY "Users are viewable by authenticated users" ON users
   FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- Users can update their own profile (match by auth_id or email)
+-- Users can update their own profile (match by id)
 CREATE POLICY "Users can update own profile" ON users
-  FOR UPDATE USING (
-    auth.uid() = auth_id OR 
-    (SELECT email FROM auth.users WHERE id = auth.uid()) = users.email
-  );
+  FOR UPDATE USING (auth.uid()::text = id);
 
 -- Admins can manage all users
 CREATE POLICY "Admins can manage users" ON users

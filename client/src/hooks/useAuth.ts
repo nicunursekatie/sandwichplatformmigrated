@@ -42,14 +42,19 @@ export function useAuth() {
 
   // Always call useQuery, but with a stable query key
   const { data: userData, isLoading: userDataLoading } = useQuery({
-    queryKey: ['user-data', supabaseUser?.email || 'no-user'],
+    queryKey: ['user-data', supabaseUser?.id || 'no-user'],
     queryFn: async () => {
-      if (!supabaseUser?.email) return null;
+      if (!supabaseUser?.id) {
+        console.log("No Supabase user ID available for user data query");
+        return null;
+      }
+      
+      console.log("Fetching user data for Supabase user ID:", supabaseUser.id);
       
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('email', supabaseUser.email)
+        .eq('id', supabaseUser.id)
         .single();
       
       if (error) {
@@ -57,9 +62,10 @@ export function useAuth() {
         return null;
       }
       
+      console.log("Fetched user data from database:", data);
       return data;
     },
-    enabled: !!supabaseUser?.email,
+    enabled: !!supabaseUser?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 

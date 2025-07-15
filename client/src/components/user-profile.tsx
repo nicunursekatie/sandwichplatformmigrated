@@ -63,35 +63,45 @@ export default function UserProfile() {
   const { data: userProfile, isLoading } = useQuery({
     queryKey: ["user-profile", user?.id],
     queryFn: async () => {
-      if (!user?.email) return null;
+      if (!user?.id) {
+        console.log("No user ID available for profile query");
+        return null;
+      }
+      
+      console.log("Fetching profile for user ID:", user.id);
       
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('email', user.email)
+        .eq('id', user.id)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        throw error;
+      }
+      
+      console.log("Fetched user profile data:", data);
       
       return {
-        firstName: data.first_name,
-        lastName: data.last_name,
-        displayName: data.display_name || `${data.first_name} ${data.last_name}`,
-        email: data.email
+        firstName: data.first_name || "",
+        lastName: data.last_name || "",
+        displayName: data.display_name || "",
+        email: data.email || ""
       };
     },
-    enabled: !!user,
+    enabled: !!user?.id,
   });
 
   // Update form when profile data loads
   useEffect(() => {
-    if (userProfile && typeof userProfile === 'object') {
-      const profile = userProfile as any;
+    if (userProfile) {
+      console.log("Resetting form with profile data:", userProfile);
       profileForm.reset({
-        firstName: profile.first_name || "",
-        lastName: profile.last_name || "",
-        displayName: profile.display_name || "",
-        email: profile.email || "",
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        displayName: userProfile.displayName,
+        email: userProfile.email,
       });
     }
   }, [userProfile, profileForm]);
@@ -100,6 +110,8 @@ export default function UserProfile() {
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
       if (!user?.id) throw new Error('No user ID');
+      
+      console.log("Updating profile for user ID:", user.id, "with data:", data);
       
       const { error } = await supabase
         .from('users')
@@ -112,18 +124,28 @@ export default function UserProfile() {
         })
         .eq('id', user.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating profile:", error);
+        throw error;
+      }
+      
+      console.log("Profile updated successfully");
       
       // Update auth email if changed
       if (data.email !== user.email) {
+        console.log("Updating auth email from", user.email, "to", data.email);
         const { error: authError } = await supabase.auth.updateUser({
           email: data.email
         });
-        if (authError) throw authError;
+        if (authError) {
+          console.error("Error updating auth email:", authError);
+          throw authError;
+        }
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      console.log("Profile update mutation succeeded, invalidating queries");
+      queryClient.invalidateQueries({ queryKey: ["user-profile", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["user-data"] });
       toast({
         title: "Profile updated",
@@ -131,6 +153,7 @@ export default function UserProfile() {
       });
     },
     onError: (error) => {
+      console.error("Profile update mutation failed:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to update profile",
