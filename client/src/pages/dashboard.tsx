@@ -45,7 +45,7 @@ import GoogleSheetsPage from "@/pages/google-sheets";
 import InboxPage from "@/pages/inbox";
 import AblyDemo from "@/components/ably-demo";
 
-export default function Dashboard({ initialSection = "dashboard" }: { initialSection?: string }) {
+export default function Dashboard({ initialSection = "dashboard", projectId }: { initialSection?: string; projectId?: number }) {
   const [activeSection, setActiveSection] = useState(initialSection);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -120,6 +120,8 @@ export default function Dashboard({ initialSection = "dashboard" }: { initialSec
         return <DashboardOverview onSectionChange={setActiveSection} />;
       case "projects":
         return <ProjectsClean />;
+      case "project-detail":
+        return projectId ? <ProjectDetailClean projectId={projectId} onBack={() => setActiveSection("projects")} /> : null;
       case "messages":
         return <ChatHub />;
       case "inbox":

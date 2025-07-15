@@ -167,6 +167,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
         return [];
       }
       
+      console.log('Project assignments data:', data);
       return data || [];
     },
     enabled: !!projectId

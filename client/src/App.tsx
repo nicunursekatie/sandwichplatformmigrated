@@ -20,14 +20,8 @@ import ProjectsClean from "@/pages/projects-clean";
 import { useLocation } from "wouter";
 
 function ProjectDetailWrapper({ params }: { params: { id: string } }) {
-  const [, setLocation] = useLocation();
   const projectId = parseInt(params.id, 10);
-  
-  const handleBack = () => {
-    setLocation('/projects');
-  };
-  
-  return <ProjectDetailClean projectId={projectId} onBack={handleBack} />;
+  return <Dashboard initialSection="project-detail" projectId={projectId} />;
 }
 
 function Router() {
