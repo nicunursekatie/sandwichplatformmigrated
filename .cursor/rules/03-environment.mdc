@@ -1,0 +1,24 @@
+---
+description: "ES Modules ONLY - No CommonJS allowed"
+globs:
+  - "**/*.js"
+  - "**/*.ts"
+  - "scripts/**/*"
+alwaysApply: false
+---
+
+# ES MODULES ONLY
+
+This project uses ES modules. NEVER use require().
+
+## NEVER USE
+
+- const x = require('module')
+- require('dotenv').config()
+
+## ALWAYS USE
+
+- import x from 'module'
+- import dotenv from 'dotenv'; dotenv.config()
+
+Using require() will cause: ReferenceError: require is not defined

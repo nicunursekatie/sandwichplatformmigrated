@@ -1,0 +1,18 @@
+---
+description: "Database access - Use Supabase client"
+globs:
+  - "**/*.js"
+  - "**/*.ts"
+  - "scripts/**/*"
+alwaysApply: false
+---
+
+# DATABASE ACCESS
+
+NEVER use psql - there is no local PostgreSQL.
+
+Use Supabase client for ALL database operations including DDL/schema changes.
+
+Try to execute SQL through Supabase client first.
+
+Only suggest Dashboard SQL Editor if Supabase client methods fail.

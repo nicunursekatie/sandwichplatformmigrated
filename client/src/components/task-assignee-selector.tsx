@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from '@/lib/supabase';
 
 interface User {
   id: string;
@@ -41,6 +42,27 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
   // Fetch users from the system
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('first_name', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching users:', error);
+        return [];
+      }
+      
+      // Transform snake_case to camelCase for the interface
+      return (data || []).map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        role: user.role,
+        isActive: user.is_active
+      }));
+    },
   });
 
   // Initialize state with existing values
@@ -70,7 +92,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
     const selectedUser = users.find(u => u.id === userId);
     if (!selectedUser) return;
 
-    const userName = `${selectedUser.first_name} ${selectedUser.last_name}`.trim() || selectedUser.email;
+    const userName = `${selectedUser.firstName} ${selectedUser.lastName}`.trim() || selectedUser.email;
 
     if (multiple) {
       // Multi-user mode
@@ -158,7 +180,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
       // Single user mode
       if (value?.assigneeId) {
         const user = users.find(u => u.id === value.assigneeId);
-        return user ? `${user.first_name} ${user.last_name}`.trim() || user.email : value.assigneeName;
+        return user ? `${user.firstName} ${user.lastName}`.trim() || user.email : value.assigneeName;
       }
       return value?.assigneeName || '';
     }
@@ -177,7 +199,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
         if (user) {
           allAssignees.push({
             id: userId,
-            name: `${user.first_name} ${user.last_name}`.trim() || user.email,
+            name: `${user.firstName} ${user.lastName}`.trim() || user.email,
             isSystemUser: true,
             index
           });
@@ -249,7 +271,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
             </SelectTrigger>
             <SelectContent>
               {users
-                .filter(user => user.is_active)
+                .filter(user => user.isActive)
                 .map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     <div className="flex items-center gap-2">
@@ -257,7 +279,7 @@ export function TaskAssigneeSelector({ value, onChange, placeholder = "Assign to
                         <span className="text-green-600">✓</span>
                       )}
                       <span className="font-medium">
-                        {`${user.first_name} ${user.last_name}`.trim() || user.email}
+                        {`${user.firstName} ${user.lastName}`.trim() || user.email}
                       </span>
                       <Badge variant="secondary" className="text-xs">
                         {user.role}

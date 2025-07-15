@@ -43,6 +43,34 @@ export default function ProjectUserManager({ project, onUpdate }: ProjectUserMan
   // Fetch all users for assignment with fresh data
   const { data: allUsers = [] } = useQuery<User[]>({
     queryKey: ["users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('first_name', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching users:', error);
+        return [];
+      }
+      
+      // Transform snake_case to camelCase for the interface
+      return (data || []).map(user => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        displayName: user.display_name || '',
+        role: user.role,
+        permissions: user.permissions,
+        isActive: user.is_active,
+        profileImageUrl: user.profile_image_url,
+        metadata: user.metadata,
+        lastLoginAt: user.last_login_at,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at
+      })) as User[];
+    },
     enabled: canEdit,
     staleTime: 0,
     gcTime: 30000,

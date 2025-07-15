@@ -1,0 +1,423 @@
+{
+  "timestamp": "2025-07-15T16:23:06.208Z",
+  "totalTasks": 15,
+  "tasksWithOldUserIds": 19,
+  "uniqueOldUserIds": [
+    "user_1751072243271_fc8jaxl6u",
+    "user_1751492211973_0pi1jdl3p",
+    "user_1751493923615_nbcyq3am7",
+    "user_1751071509329_mrkw2z95z",
+    "user_1751920534988_2cgbrae86",
+    "user_1751975120117_tltz2rc1a"
+  ],
+  "userMapping": {
+    "user_1751071509329_mrkw2z95z": {
+      "newUserId": "906911be-7cc5-4fc0-a2f6-a25c561bdc77",
+      "name": "Katie Long",
+      "email": "admin@sandwich.project",
+      "oldName": "Katie Long"
+    },
+    "user_1751493923615_nbcyq3am7": {
+      "newUserId": "af56e0df-f924-445a-8948-fddc234efcaa",
+      "name": "Christine Cooper Nowicki",
+      "email": "christine@thesandwichproject.org",
+      "oldName": "Christine"
+    }
+  },
+  "tasksByProject": {
+    "4": [
+      {
+        "id": 38,
+        "title": "Meeting 6/27",
+        "description": "",
+        "status": "completed",
+        "priority": "medium",
+        "assignee_name": "",
+        "due_date": "2025-06-24",
+        "created_at": "2025-06-28T00:58:37.615Z",
+        "updated_at": "2025-06-30T07:58:29.806Z",
+        "order_num": 0,
+        "project_id": 4,
+        "completed_at": "2025-07-06T14:00:00.000Z",
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": null,
+        "assignee_names": null,
+        "completed_by": "user_1751071509329_mrkw2z95z",
+        "completed_by_name": "Katie Long"
+      }
+    ],
+    "18": [
+      {
+        "id": 39,
+        "title": "Submit request in Catchafire",
+        "description": "describe the project in Catchafire and find someone qualified to complete",
+        "status": "completed",
+        "priority": "medium",
+        "assignee_name": "Christine",
+        "due_date": "2025-06-16",
+        "created_at": "2025-06-28T01:55:57.813Z",
+        "updated_at": "2025-06-28T01:55:57.813Z",
+        "order_num": 0,
+        "project_id": 18,
+        "completed_at": "2025-07-06T14:00:00.000Z",
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": null,
+        "assignee_names": null,
+        "completed_by": "user_1751493923615_nbcyq3am7",
+        "completed_by_name": "Christine"
+      },
+      {
+        "id": 48,
+        "title": "get back first proofs",
+        "description": "",
+        "status": "completed",
+        "priority": "medium",
+        "assignee_name": null,
+        "due_date": "2025-06-17",
+        "created_at": "2025-07-06T21:55:58.658Z",
+        "updated_at": "2025-07-06T21:55:58.658Z",
+        "order_num": 0,
+        "project_id": 18,
+        "completed_at": "2025-07-06T14:00:00.000Z",
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": null,
+        "assignee_names": null,
+        "completed_by": "user_1751493923615_nbcyq3am7",
+        "completed_by_name": "Christine"
+      }
+    ],
+    "19": [
+      {
+        "id": 43,
+        "title": "Convert meeting minutes files to pdfs for web display",
+        "description": "",
+        "status": "completed",
+        "priority": "medium",
+        "assignee_name": "",
+        "due_date": "",
+        "created_at": "2025-06-28T01:57:52.462Z",
+        "updated_at": "2025-06-30T07:57:27.807Z",
+        "order_num": 0,
+        "project_id": 19,
+        "completed_at": "2025-07-06T14:00:00.000Z",
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": null,
+        "assignee_names": null,
+        "completed_by": "user_1751071509329_mrkw2z95z",
+        "completed_by_name": "Katie Long"
+      },
+      {
+        "id": 44,
+        "title": "Create user login functions",
+        "description": "",
+        "status": "completed",
+        "priority": "medium",
+        "assignee_name": "",
+        "due_date": "",
+        "created_at": "2025-06-30T06:54:30.106Z",
+        "updated_at": "2025-06-30T06:54:32.317Z",
+        "order_num": 0,
+        "project_id": 19,
+        "completed_at": "2025-07-06T14:00:00.000Z",
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": null,
+        "assignee_names": null,
+        "completed_by": "user_1751071509329_mrkw2z95z",
+        "completed_by_name": "Katie Long"
+      },
+      {
+        "id": 51,
+        "title": "Build work log function",
+        "description": "",
+        "status": "in_progress",
+        "priority": "medium",
+        "assignee_name": null,
+        "due_date": "2025-07-09",
+        "created_at": "2025-07-09T19:02:34.381Z",
+        "updated_at": "2025-07-09T19:02:34.381Z",
+        "order_num": 0,
+        "project_id": 19,
+        "completed_at": null,
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": [
+          "user_1751071509329_mrkw2z95z"
+        ],
+        "assignee_names": [
+          "Katie Long"
+        ],
+        "completed_by": null,
+        "completed_by_name": null
+      },
+      {
+        "id": 52,
+        "title": "Build suggestion portal",
+        "description": "",
+        "status": "pending",
+        "priority": "urgent",
+        "assignee_name": null,
+        "due_date": "",
+        "created_at": "2025-07-09T19:02:58.919Z",
+        "updated_at": "2025-07-09T19:02:58.919Z",
+        "order_num": 0,
+        "project_id": 19,
+        "completed_at": null,
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": [
+          "user_1751071509329_mrkw2z95z"
+        ],
+        "assignee_names": [
+          "Katie Long"
+        ],
+        "completed_by": null,
+        "completed_by_name": null
+      }
+    ],
+    "20": [
+      {
+        "id": 45,
+        "title": "Test out direct messaging",
+        "description": "Send a message to someone else on the platform and have them reply to it",
+        "status": "waiting",
+        "priority": "medium",
+        "assignee_name": "",
+        "due_date": "2025-06-30T00:00:00.000+00:00",
+        "created_at": "2025-07-01T02:02:18.138Z",
+        "updated_at": "2025-07-09T18:41:54.911Z",
+        "order_num": 0,
+        "project_id": 20,
+        "completed_at": null,
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": [
+          "user_1751072243271_fc8jaxl6u",
+          "user_1751492211973_0pi1jdl3p",
+          "user_1751493923615_nbcyq3am7",
+          "user_1751071509329_mrkw2z95z",
+          "user_1751920534988_2cgbrae86",
+          "user_1751975120117_tltz2rc1a"
+        ],
+        "assignee_names": [
+          "Marcy Louza",
+          "Stephanie Luis",
+          "Christine Cooper Nowicki",
+          "Katie Long",
+          "Vicki Tropauer",
+          "Kimberly Ross"
+        ],
+        "completed_by": null,
+        "completed_by_name": null
+      }
+    ],
+    "25": [
+      {
+        "id": 46,
+        "title": "Create a task within our shared assignment project to make sure this works",
+        "description": "",
+        "status": "pending",
+        "priority": "medium",
+        "assignee_name": null,
+        "due_date": "",
+        "created_at": "2025-07-06T09:02:54.951Z",
+        "updated_at": "2025-07-06T21:16:31.639Z",
+        "order_num": 0,
+        "project_id": 25,
+        "completed_at": null,
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": [
+          "user_1751493923615_nbcyq3am7",
+          "user_1751072243271_fc8jaxl6u",
+          "user_1751492211973_0pi1jdl3p",
+          "user_1751071509329_mrkw2z95z"
+        ],
+        "assignee_names": [
+          "Christine Cooper Nowicki",
+          "Marcy Louza",
+          "Stephanie Luis",
+          "Katie Long"
+        ],
+        "completed_by": null,
+        "completed_by_name": null
+      },
+      {
+        "id": 47,
+        "title": "Christine Test Assignment",
+        "description": "text describing the project - assigned to myself and will complete",
+        "status": "completed",
+        "priority": "medium",
+        "assignee_name": null,
+        "due_date": "2025-07-07",
+        "created_at": "2025-07-06T21:51:34.566Z",
+        "updated_at": "2025-07-09T18:01:47.123Z",
+        "order_num": 0,
+        "project_id": 25,
+        "completed_at": "2025-07-06T14:00:00.000Z",
+        "order": 0,
+        "attachments": null,
+        "assignee_id": null,
+        "assignee_ids": [
+          "user_1751493923615_nbcyq3am7"
+        ],
+        "assignee_names": [
+          "Christine Cooper Nowicki"
+        ],
+        "completed_by": "user_1751493923615_nbcyq3am7",
+        "completed_by_name": "Christine"
+      }
+    ]
+  },
+  "tasksNeedingReassignment": [
+    {
+      "id": 38,
+      "title": "Meeting 6/27",
+      "project_id": 4,
+      "status": "completed",
+      "assignee_ids": null,
+      "assignee_names": null,
+      "completed_by": "user_1751071509329_mrkw2z95z",
+      "completed_by_name": "Katie Long"
+    },
+    {
+      "id": 39,
+      "title": "Submit request in Catchafire",
+      "project_id": 18,
+      "status": "completed",
+      "assignee_ids": null,
+      "assignee_names": null,
+      "completed_by": "user_1751493923615_nbcyq3am7",
+      "completed_by_name": "Christine"
+    },
+    {
+      "id": 43,
+      "title": "Convert meeting minutes files to pdfs for web display",
+      "project_id": 19,
+      "status": "completed",
+      "assignee_ids": null,
+      "assignee_names": null,
+      "completed_by": "user_1751071509329_mrkw2z95z",
+      "completed_by_name": "Katie Long"
+    },
+    {
+      "id": 44,
+      "title": "Create user login functions",
+      "project_id": 19,
+      "status": "completed",
+      "assignee_ids": null,
+      "assignee_names": null,
+      "completed_by": "user_1751071509329_mrkw2z95z",
+      "completed_by_name": "Katie Long"
+    },
+    {
+      "id": 45,
+      "title": "Test out direct messaging",
+      "project_id": 20,
+      "status": "waiting",
+      "assignee_ids": [
+        "user_1751072243271_fc8jaxl6u",
+        "user_1751492211973_0pi1jdl3p",
+        "user_1751493923615_nbcyq3am7",
+        "user_1751071509329_mrkw2z95z",
+        "user_1751920534988_2cgbrae86",
+        "user_1751975120117_tltz2rc1a"
+      ],
+      "assignee_names": [
+        "Marcy Louza",
+        "Stephanie Luis",
+        "Christine Cooper Nowicki",
+        "Katie Long",
+        "Vicki Tropauer",
+        "Kimberly Ross"
+      ],
+      "completed_by": null,
+      "completed_by_name": null
+    },
+    {
+      "id": 46,
+      "title": "Create a task within our shared assignment project to make sure this works",
+      "project_id": 25,
+      "status": "pending",
+      "assignee_ids": [
+        "user_1751493923615_nbcyq3am7",
+        "user_1751072243271_fc8jaxl6u",
+        "user_1751492211973_0pi1jdl3p",
+        "user_1751071509329_mrkw2z95z"
+      ],
+      "assignee_names": [
+        "Christine Cooper Nowicki",
+        "Marcy Louza",
+        "Stephanie Luis",
+        "Katie Long"
+      ],
+      "completed_by": null,
+      "completed_by_name": null
+    },
+    {
+      "id": 47,
+      "title": "Christine Test Assignment",
+      "project_id": 25,
+      "status": "completed",
+      "assignee_ids": [
+        "user_1751493923615_nbcyq3am7"
+      ],
+      "assignee_names": [
+        "Christine Cooper Nowicki"
+      ],
+      "completed_by": "user_1751493923615_nbcyq3am7",
+      "completed_by_name": "Christine"
+    },
+    {
+      "id": 48,
+      "title": "get back first proofs",
+      "project_id": 18,
+      "status": "completed",
+      "assignee_ids": null,
+      "assignee_names": null,
+      "completed_by": "user_1751493923615_nbcyq3am7",
+      "completed_by_name": "Christine"
+    },
+    {
+      "id": 51,
+      "title": "Build work log function",
+      "project_id": 19,
+      "status": "in_progress",
+      "assignee_ids": [
+        "user_1751071509329_mrkw2z95z"
+      ],
+      "assignee_names": [
+        "Katie Long"
+      ],
+      "completed_by": null,
+      "completed_by_name": null
+    },
+    {
+      "id": 52,
+      "title": "Build suggestion portal",
+      "project_id": 19,
+      "status": "pending",
+      "assignee_ids": [
+        "user_1751071509329_mrkw2z95z"
+      ],
+      "assignee_names": [
+        "Katie Long"
+      ],
+      "completed_by": null,
+      "completed_by_name": null
+    }
+  ]
+}
