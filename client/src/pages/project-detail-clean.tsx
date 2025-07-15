@@ -223,7 +223,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
           description: data.description,
           status: data.status || 'todo',
           priority: data.priority || 'medium',
-          dueDate: data.dueDate
+          due_date: data.dueDate
         })
         .select()
         .single();

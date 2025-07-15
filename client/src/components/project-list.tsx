@@ -190,12 +190,21 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
         }
       });
       
-      const { data, error } = await supabase.from('projects').update(transformedUpdates).eq('id', id);
-      if (error) {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transformedUpdates),
+      });
+      
+      if (!response.ok) {
+        const error = await response.text();
         console.error('Update project error:', error);
-        throw error;
+        throw new Error(error);
       }
-      return data;
+      
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
