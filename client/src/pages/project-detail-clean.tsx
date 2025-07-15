@@ -747,7 +747,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
         project={project}
         onUpdate={() => {
           // Refresh project data when assignments change
-          queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
+          queryClient.invalidateQueries({ queryKey: ["project", projectId] });
           queryClient.invalidateQueries({ queryKey: ["projects"] });
         }}
       />
@@ -945,7 +945,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                                 currentUserName={user?.displayName || user?.email}
                                 taskStatus={task.status}
                                 onStatusChange={(isCompleted) => {
-                                  queryClient.invalidateQueries({ queryKey: ['/api/projects', project.id, 'tasks'] });
+                                  queryClient.invalidateQueries({ queryKey: ['project-tasks', project.id] });
                                   queryClient.invalidateQueries({ queryKey: ["projects"] });
                                 }}
                               />

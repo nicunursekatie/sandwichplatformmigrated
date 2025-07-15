@@ -2,7 +2,6 @@ import { Sandwich, LogOut, LayoutDashboard, ListTodo, MessageCircle, ClipboardLi
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
 import { supabase } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProjectList from "@/components/project-list";
 import WeeklySandwichForm from "@/components/weekly-sandwich-form";
 import ChatHub from "@/components/chat-hub";
 import CommitteeChat from "@/components/committee-chat";
