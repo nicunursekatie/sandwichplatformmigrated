@@ -22,6 +22,7 @@ import MeetingAgendaPage from "@/pages/meeting-agenda";
 import MeetingCalendarPage from "@/pages/meeting-calendar";
 import RoleDemo from "@/pages/role-demo";
 import ProjectsSimplified from "./ProjectsSimplified";
+import ProjectDetailPolished from "@/components/projects/ProjectDetailPolished";
 import Analytics from "@/pages/analytics";
 import ImpactDashboard from "@/pages/impact-dashboard";
 import DataManagement from "@/pages/data-management";
@@ -309,13 +310,13 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
       default:
         // Handle project detail pages
         if (projectId) {
-          return <ProjectDetailClean projectId={projectId} onBack={() => setActiveSection("projects")} />;
+          return <ProjectDetailPolished projectId={projectId} onBack={() => setActiveSection("projects")} />;
         }
         // Handle legacy project routes
         if (activeSection.startsWith("project-")) {
           const legacyProjectId = parseInt(activeSection.replace("project-", ""));
           if (!isNaN(legacyProjectId)) {
-            return <ProjectDetailClean projectId={legacyProjectId} onBack={() => setActiveSection("projects")} />;
+            return <ProjectDetailPolished projectId={legacyProjectId} onBack={() => setActiveSection("projects")} />;
           }
         }
         return <DashboardOverview onSectionChange={setActiveSection} />;

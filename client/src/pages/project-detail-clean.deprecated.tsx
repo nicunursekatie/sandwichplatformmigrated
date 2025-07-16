@@ -1,3 +1,10 @@
+/**
+ * @deprecated This component is no longer in use. 
+ * Use ProjectDetailPolished from @/components/projects/ProjectDetailPolished instead.
+ * All references have been updated to use the polished version.
+ * This file can be deleted once confirmed.
+ */
+
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Calendar, User, Clock, Target, CheckCircle2, Circle, Pause, Play, Plus, Trash2, Edit, Check, Award } from "lucide-react";

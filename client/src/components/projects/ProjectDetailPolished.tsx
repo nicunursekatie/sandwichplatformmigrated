@@ -372,32 +372,26 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
       const task = tasks.find(t => t.id === taskId);
       if (!task) throw new Error("Task not found");
 
-      // Find users who completed this task to send kudos to
-      const completedUserIds = task.completions.map(c => c.user_id);
+      // Find users who completed this task (excluding current user)
+      const otherCompletedUserIds = task.completions
+        .filter(c => c.user_id !== user?.id)
+        .map(c => c.user_id);
       
-      // If no one has completed the task, send general kudos
-      if (completedUserIds.length === 0) {
-        const { error } = await supabase.from("kudos_tracking").insert({
-          sender_id: user?.id,
-          recipient_id: null,
-          context_type: "task",
-          context_id: taskId.toString(),
-          message_id: null,
-        });
-        if (error) throw error;
-      } else {
-        // Send kudos to each user who completed the task
-        const kudosInserts = completedUserIds.map(recipientId => ({
-          sender_id: user?.id,
-          recipient_id: recipientId,
-          context_type: "task",
-          context_id: taskId.toString(),
-          message_id: null,
-        }));
-
-        const { error } = await supabase.from("kudos_tracking").insert(kudosInserts);
-        if (error) throw error;
+      if (otherCompletedUserIds.length === 0) {
+        throw new Error("No other users have completed this task");
       }
+
+      // Send kudos to each user who completed the task (excluding self)
+      const kudosInserts = otherCompletedUserIds.map(recipientId => ({
+        sender_id: user?.id,
+        recipient_id: recipientId,
+        context_type: "task",
+        context_id: taskId.toString(),
+        message_id: null,
+      }));
+
+      const { error } = await supabase.from("kudos_tracking").insert(kudosInserts);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
@@ -679,15 +673,20 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                                         <Edit3 className="w-4 h-4 mr-2" />
                                         Edit
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => {
-                                          setSelectedTaskForKudos(task.id);
-                                        }}
-                                      >
-                                        <Heart className="w-4 h-4 mr-2" />
-                                        Send Kudos
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
+                                      {/* Only show kudos if someone else has completed the task */}
+                                      {task.completions.some(c => c.user_id !== user?.id) && (
+                                        <>
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              setSelectedTaskForKudos(task.id);
+                                            }}
+                                          >
+                                            <Heart className="w-4 h-4 mr-2" />
+                                            Send Kudos
+                                          </DropdownMenuItem>
+                                          <DropdownMenuSeparator />
+                                        </>
+                                      )}
                                       <DropdownMenuItem
                                         className="text-destructive"
                                         onClick={() => {
@@ -1133,22 +1132,20 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
               {(() => {
                 const task = tasks.find(t => t.id === selectedTaskForKudos);
                 if (!task) return null;
-                const completedUsers = task.completions.map(c => c.user);
+                const otherCompletedUsers = task.completions
+                  .filter(c => c.user_id !== user?.id)
+                  .map(c => c.user);
                 
-                if (completedUsers.length === 0) {
-                  return "This kudos will be visible to anyone who completes the task.";
-                } else {
-                  return (
-                    <div>
-                      <p>Kudos will be sent to:</p>
-                      <ul className="mt-1">
-                        {completedUsers.map(user => (
-                          <li key={user.id}>• {user.first_name} {user.last_name}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                }
+                return (
+                  <div>
+                    <p>Kudos will be sent to:</p>
+                    <ul className="mt-1">
+                      {otherCompletedUsers.map(u => (
+                        <li key={u.id}>• {u.first_name} {u.last_name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
               })()}
             </div>
             <div className="flex justify-end gap-2">

@@ -1,3 +1,10 @@
+/**
+ * @deprecated This component is no longer in use. 
+ * Use ProjectDetailPolished instead.
+ * Kept for reference only - can be deleted once confirmed all functionality 
+ * has been successfully migrated to ProjectDetailPolished.
+ */
+
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
