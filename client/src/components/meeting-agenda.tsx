@@ -226,7 +226,7 @@ export default function MeetingAgenda() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved":
-        return <Badge variant="default" className="bg-green-100 text-green-800">Approved</Badge>;
+        return <Badge variant="default" className="bg-[color:var(--tsp-teal-light)] text-[color:var(--tsp-teal)]">Approved</Badge>;
       case "rejected":
         return <Badge variant="destructive">Rejected</Badge>;
       default:
@@ -236,12 +236,12 @@ export default function MeetingAgenda() {
 
   const getMeetingTypeColor = (type: string) => {
     switch (type) {
-      case "weekly": return "bg-blue-100 text-blue-800";
-      case "marketing_committee": return "bg-purple-100 text-purple-800";
-      case "grant_committee": return "bg-green-100 text-green-800";
-      case "core_group": return "bg-orange-100 text-orange-800";
-      case "all_team": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "weekly": return "bg-[color:var(--tsp-teal-light)] text-[color:var(--tsp-teal)]";
+      case "marketing_committee": return "bg-[color:var(--tsp-orange)] text-[color:var(--tsp-gray)]";
+      case "grant_committee": return "bg-[color:var(--tsp-gray)] text-[color:var(--tsp-teal)]";
+      case "core_group": return "bg-[color:var(--tsp-orange)] text-[color:var(--tsp-gray)]";
+      case "all_team": return "bg-[color:var(--tsp-orange)] text-[color:var(--tsp-gray)]";
+      default: return "bg-[color:var(--tsp-teal-light)] text-[color:var(--tsp-teal)]";
     }
   };
 

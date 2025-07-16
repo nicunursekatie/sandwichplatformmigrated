@@ -116,33 +116,33 @@ export function DuplicateAnalysisDialog({
                   
                   <div className="space-y-2">
                     {/* Keep this one */}
-                    <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded border-l-4 border-green-500">
+                    <div className="p-3 bg-[color:var(--tsp-teal-light)] rounded border-l-4 border-[color:var(--tsp-teal)]">
                       <div className="flex justify-between items-center">
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                           KEEP
                         </Badge>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {group.keepNewest.collection_date} - {group.keepNewest.host_name}
+                          {group.keepNewest.collectionDate} - {group.keepNewest.hostName}
                         </div>
                       </div>
                       <div className="text-sm mt-1">
-                        Individual: {group.keepNewest.individual_sandwiches} | 
-                        Groups: {group.keepNewest.group_collections}
+                        Individual: {group.keepNewest.individualSandwiches} | 
+                        Groups: {group.keepNewest.groupCollections}
                       </div>
                     </div>
                     
                     {/* Delete these */}
                     {group.toDelete.map((item, itemIndex) => (
-                      <div key={itemIndex} className="p-3 bg-red-50 dark:bg-red-900/20 rounded border-l-4 border-red-500">
+                      <div key={itemIndex} className="p-3 bg-[color:var(--tsp-orange)] rounded border-l-4 border-[color:var(--tsp-orange)]">
                         <div className="flex justify-between items-center">
                           <Badge variant="destructive">DELETE</Badge>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {item.collection_date} - {item.host_name}
+                            {item.collectionDate} - {item.hostName}
                           </div>
                         </div>
                         <div className="text-sm mt-1">
-                          Individual: {item.individual_sandwiches} | 
-                          Groups: {item.group_collections}
+                          Individual: {item.individualSandwiches} | 
+                          Groups: {item.groupCollections}
                         </div>
                       </div>
                     ))}
@@ -167,12 +167,12 @@ export function DuplicateAnalysisDialog({
                         REVIEW
                       </Badge>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {entry.collection_date} - {entry.host_name}
+                        {entry.collectionDate} - {entry.hostName}
                       </div>
                     </div>
                     <div className="text-sm mt-1">
-                      Individual: {entry.individual_sandwiches} | 
-                      Groups: {entry.group_collections}
+                      Individual: {entry.individualSandwiches} | 
+                      Groups: {entry.groupCollections}
                     </div>
                   </div>
                 ))}

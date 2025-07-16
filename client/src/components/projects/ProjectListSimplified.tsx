@@ -306,15 +306,20 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
                         {project.assignments.length === 0 ? (
                           <span className="text-gray-400 italic text-sm">No one assigned</span>
                         ) : (
-                          <div className="flex flex-wrap gap-x-3 gap-y-1">
+                          <div className="flex flex-wrap gap-x-1 gap-y-1">
                             {project.assignments.map((assignment, index) => {
                               const userName = assignment.user?.first_name && assignment.user?.last_name
                                 ? `${assignment.user.first_name} ${assignment.user.last_name}`
                                 : assignment.user?.email || 'Unknown';
                               return (
-                                <span key={assignment.user_id} className="text-sm font-bold text-gray-900">
-                                  {userName}
-                                </span>
+                                <React.Fragment key={assignment.user_id}>
+                                  <span className="text-sm font-bold text-gray-900">
+                                    {userName}
+                                  </span>
+                                  {index < project.assignments.length - 1 && (
+                                    <span className="text-gray-400 mx-1">•</span>
+                                  )}
+                                </React.Fragment>
                               );
                             })}
                           </div>

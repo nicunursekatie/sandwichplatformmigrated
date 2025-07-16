@@ -91,20 +91,19 @@ export default function AnnouncementBanner() {
 
   const getBannerStyles = (priority: string, type: string) => {
     const baseStyles = "border-l-4 shadow-sm";
-    
     if (priority === 'urgent') {
-      return `${baseStyles} bg-red-50 border-red-500 text-red-900`;
+      return `${baseStyles} bg-[color:var(--tsp-orange)] border-[color:var(--tsp-orange)] text-[color:var(--tsp-gray)]`;
     }
     if (priority === 'high') {
-      return `${baseStyles} bg-orange-50 border-orange-500 text-orange-900`;
+      return `${baseStyles} bg-[color:var(--tsp-orange)] border-[color:var(--tsp-orange)] text-[color:var(--tsp-gray)]`;
     }
     if (type === 'event') {
-      return `${baseStyles} bg-blue-50 border-blue-500 text-blue-900`;
+      return `${baseStyles} bg-[color:var(--tsp-teal-light)] border-[color:var(--tsp-teal)] text-[color:var(--tsp-teal)]`;
     }
     if (type === 'position') {
-      return `${baseStyles} bg-green-50 border-green-500 text-green-900`;
+      return `${baseStyles} bg-[color:var(--tsp-gray)] border-[color:var(--tsp-gray)] text-[color:var(--tsp-teal)]`;
     }
-    return `${baseStyles} bg-slate-50 border-slate-500 text-slate-900`;
+    return `${baseStyles} bg-[color:var(--tsp-teal-light)] border-[color:var(--tsp-teal)] text-[color:var(--tsp-teal)]`;
   };
 
   return (

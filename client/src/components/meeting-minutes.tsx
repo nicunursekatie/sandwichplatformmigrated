@@ -14,13 +14,13 @@ export default function MeetingMinutes() {
     queryKey: ["/api/meeting-minutes"]
   });
 
+  // Update getBorderColor to use TSP brand colors
   const getBorderColor = (color: string) => {
     switch (color) {
-      case "blue": return "border-l-blue-500";
-      case "green": return "border-l-green-500";
-      case "amber": return "border-l-amber-500";
-      case "purple": return "border-l-purple-500";
-      default: return "border-l-blue-500";
+      case 'teal': return 'border-[color:var(--tsp-teal)]';
+      case 'orange': return 'border-[color:var(--tsp-orange)]';
+      case 'gray': return 'border-[color:var(--tsp-gray)]';
+      default: return 'border-[color:var(--tsp-teal)]';
     }
   };
 
