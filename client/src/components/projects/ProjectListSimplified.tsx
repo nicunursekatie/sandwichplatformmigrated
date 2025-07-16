@@ -94,7 +94,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
               id,
               status,
               task_assignments(user_id),
-              task_completions(user_id, deleted_at)
+              task_completions!task_completions_task_id_fkey(user_id, deleted_at)
             `)
             .eq("project_id", project.id)
             .is("deleted_at", null);
