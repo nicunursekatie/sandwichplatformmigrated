@@ -576,6 +576,17 @@ export class DatabaseStorage {
 
   // Task completion methods
   async createTaskCompletion(completion: any) {
+    if (!completion.userName) {
+      // Fallback: try to get userName from userId, or throw
+      if (completion.userId) {
+        // Optionally, fetch user from DB to get displayName/email
+        const user = await db.select().from(users).where(eq(users.id, completion.userId)).limit(1);
+        completion.userName = user[0]?.displayName || user[0]?.email || completion.userId;
+      }
+      if (!completion.userName) {
+        throw new Error("userName is required for task completion");
+      }
+    }
     const [newCompletion] = await db.insert(taskCompletions).values(completion).returning();
     return newCompletion;
   }
