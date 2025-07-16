@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Project {
   id: number;
@@ -247,13 +248,6 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
         </Button>
       </div>
 
-      {/* Debug info */}
-      <div className="text-xs text-muted-foreground">
-        Total projects: {projects.length} | 
-        In Progress: {projectsByStatus.in_progress.length} | 
-        On Hold: {projectsByStatus.on_hold.length} | 
-        Completed: {projectsByStatus.completed.length}
-      </div>
 
       {Object.entries(projectsByStatus).map(([status, statusProjects]) => (
         <div key={status} className="space-y-3">
@@ -276,59 +270,88 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
               {statusProjects.map((project) => (
                 <Card
                   key={project.id}
-                  className="cursor-pointer hover:shadow-md transition-all border-l-4"
-                  style={{
-                    borderLeftColor: project.priority === 'high' ? '#ef4444' : 
-                                   project.priority === 'medium' ? '#f97316' : '#22c55e'
-                  }}
+                  className="cursor-pointer hover:shadow-lg transition-all group"
                   onClick={() => onProjectSelect(project.id)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-base line-clamp-1">{project.title}</CardTitle>
-                      {project.priority === 'high' && (
-                        <Badge variant="destructive" className="text-xs">High</Badge>
-                      )}
+                  <CardContent className="p-6">
+                    {/* Header with title and priority */}
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors line-clamp-1 flex-1">
+                        {project.title}
+                      </h3>
+                      <div className="flex items-center gap-2 ml-3">
+                        {project.priority === 'high' && (
+                          <Badge variant="destructive" className="text-xs">High Priority</Badge>
+                        )}
+                        {project.priority === 'medium' && (
+                          <Badge variant="secondary" className="text-xs">Medium</Badge>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Description */}
                     {project.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                         {project.description}
                       </p>
                     )}
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="space-y-2">
-                      {/* Simplified stats row */}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {project.assignments.length}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <CheckSquare className="w-3 h-3" />
-                            {project.task_stats.completed}/{project.task_stats.total}
-                          </span>
-                        </div>
-                        {project.due_date && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(project.due_date).toLocaleDateString()}
+
+                    {/* Assignees */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <Users className="w-4 h-4 text-gray-400" />
+                      <div className="text-sm text-gray-700">
+                        {project.assignments.length === 0 ? (
+                          <span className="text-gray-400 italic">No assignees</span>
+                        ) : project.assignments.length <= 3 ? (
+                          <span>{formatAssignees(project.assignments)}</span>
+                        ) : (
+                          <span>
+                            {project.assignments.slice(0, 2).map(a => 
+                              a.user?.first_name || a.user?.email?.split('@')[0] || 'Unknown'
+                            ).join(', ')} 
+                            <span className="text-gray-500"> +{project.assignments.length - 2} more</span>
                           </span>
                         )}
                       </div>
+                    </div>
 
-                      {/* Progress bar */}
-                      {project.task_stats.total > 0 && (
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div
-                            className="bg-primary h-1.5 rounded-full transition-all"
-                            style={{
-                              width: `${(project.task_stats.completed / project.task_stats.total) * 100}%`
-                            }}
-                          />
-                        </div>
-                      )}
+                    {/* Footer with due date and progress */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {/* Due date */}
+                        {project.due_date && (
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className={cn(
+                              "text-sm font-medium",
+                              new Date(project.due_date) < new Date() ? "text-red-600" : "text-gray-700"
+                            )}>
+                              {new Date(project.due_date).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: new Date(project.due_date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Task progress */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">
+                          {project.task_stats.completed} of {project.task_stats.total} tasks
+                        </span>
+                        {project.task_stats.total > 0 && (
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-primary h-2 rounded-full transition-all"
+                              style={{
+                                width: `${(project.task_stats.completed / project.task_stats.total) * 100}%`
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
