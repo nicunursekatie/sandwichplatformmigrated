@@ -97,6 +97,10 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
   const [showAddUser, setShowAddUser] = useState(false);
   const [showProjectEdit, setShowProjectEdit] = useState(false);
   const [selectedTab, setSelectedTab] = useState("tasks");
+  const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
+  const [editingAssignees, setEditingAssignees] = useState<string[]>([]);
+  const [selectedTaskForKudos, setSelectedTaskForKudos] = useState<number | null>(null);
+  const [kudosMessage, setKudosMessage] = useState("");
 
   const [newTask, setNewTask] = useState({
     title: "",
@@ -106,6 +110,14 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
     due_date: "",
   });
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  
+  const [editTask, setEditTask] = useState({
+    title: "",
+    description: "",
+    status: "todo",
+    priority: "medium",
+    due_date: "",
+  });
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = useQuery({
@@ -283,6 +295,61 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
     },
   });
 
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, updates }: { taskId: number; updates: typeof editTask }) => {
+      // Update task
+      const { error: taskError } = await supabase
+        .from("project_tasks")
+        .update(updates)
+        .eq("id", taskId);
+
+      if (taskError) throw taskError;
+
+      // Update assignments if changed
+      const currentAssignments = tasks.find(t => t.id === taskId)?.assignments.map(a => a.user_id) || [];
+      const toAdd = editingAssignees.filter(id => !currentAssignments.includes(id));
+      const toRemove = currentAssignments.filter(id => !editingAssignees.includes(id));
+
+      // Add new assignments
+      if (toAdd.length > 0) {
+        const { error } = await supabase
+          .from("task_assignments")
+          .insert(toAdd.map(user_id => ({ task_id: taskId, user_id })));
+        if (error) throw error;
+      }
+
+      // Remove old assignments
+      if (toRemove.length > 0) {
+        const { error } = await supabase
+          .from("task_assignments")
+          .delete()
+          .eq("task_id", taskId)
+          .in("user_id", toRemove);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      setEditingTask(null);
+      toast({ title: "Task updated successfully" });
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      const { error } = await supabase
+        .from("project_tasks")
+        .delete()
+        .eq("id", taskId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      toast({ title: "Task deleted successfully" });
+    },
+  });
+
   const addUserToProjectMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase.from("project_assignments").insert({
@@ -297,6 +364,46 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
       setShowAddUser(false);
       toast({ title: "User added to project" });
+    },
+  });
+
+  const sendKudosMutation = useMutation({
+    mutationFn: async ({ taskId, message }: { taskId: number; message: string }) => {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) throw new Error("Task not found");
+
+      // Find users who completed this task to send kudos to
+      const completedUserIds = task.completions.map(c => c.user_id);
+      
+      // If no one has completed the task, send general kudos
+      if (completedUserIds.length === 0) {
+        const { error } = await supabase.from("kudos_tracking").insert({
+          sender_id: user?.id,
+          recipient_id: null,
+          context_type: "task",
+          context_id: taskId.toString(),
+          message_id: null,
+        });
+        if (error) throw error;
+      } else {
+        // Send kudos to each user who completed the task
+        const kudosInserts = completedUserIds.map(recipientId => ({
+          sender_id: user?.id,
+          recipient_id: recipientId,
+          context_type: "task",
+          context_id: taskId.toString(),
+          message_id: null,
+        }));
+
+        const { error } = await supabase.from("kudos_tracking").insert(kudosInserts);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      setSelectedTaskForKudos(null);
+      setKudosMessage("");
+      toast({ title: "Kudos sent!" });
     },
   });
 
@@ -539,34 +646,61 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                             )}
                           >
                             <div className="flex items-start gap-3">
-                              <button
-                                onClick={() =>
-                                  toggleTaskCompletionMutation.mutate({
-                                    taskId: task.id,
-                                    isCompleted,
-                                  })
-                                }
-                                className="mt-0.5 flex-shrink-0"
-                              >
-                                {isCompleted ? (
-                                  <CheckCircle2 className="w-5 h-5 text-primary" />
-                                ) : (
-                                  <Circle className="w-5 h-5 text-muted-foreground hover:text-primary transition-colors" />
-                                )}
-                              </button>
-                              <div className="flex-1 space-y-2">
-                                <div>
-                                  <h4 className={cn(
-                                    "font-medium",
-                                    isCompleted && "line-through text-muted-foreground"
-                                  )}>
-                                    {task.title}
-                                  </h4>
-                                  {task.description && (
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {task.description}
-                                    </p>
-                                  )}
+                              <div className="flex-1 space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-lg">
+                                      {task.title}
+                                    </h4>
+                                    {task.description && (
+                                      <p className="text-base mt-2 p-3 bg-muted/50 rounded-md border border-muted">
+                                        {task.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => {
+                                        setEditingTask(task);
+                                        setEditTask({
+                                          title: task.title,
+                                          description: task.description || "",
+                                          status: task.status,
+                                          priority: task.priority,
+                                          due_date: task.due_date || "",
+                                        });
+                                        setEditingAssignees(task.assignments.map(a => a.user_id));
+                                      }}>
+                                        <Edit3 className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedTaskForKudos(task.id);
+                                        }}
+                                      >
+                                        <Heart className="w-4 h-4 mr-2" />
+                                        Send Kudos
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-destructive"
+                                        onClick={() => {
+                                          if (confirm("Are you sure you want to delete this task?")) {
+                                            deleteTaskMutation.mutate(task.id);
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
 
                                 <div className="flex items-center gap-4 text-sm">
@@ -579,20 +713,62 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                                       {format(new Date(task.due_date), "MMM dd")}
                                     </div>
                                   )}
-                                  {task.assignments.length > 0 && (
-                                    <div className="flex items-center gap-1">
-                                      <Users className="w-3 h-3 text-muted-foreground" />
-                                      <span className="text-muted-foreground">
-                                        {task.assignments.length}
-                                      </span>
-                                    </div>
-                                  )}
                                 </div>
+
+                                {/* Individual assignee checkboxes */}
+                                {task.assignments.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm font-medium">Assigned to:</div>
+                                    <div className="space-y-1">
+                                      {task.assignments.map((assignment) => {
+                                        const isUserCompleted = task.completions.some(
+                                          c => c.user_id === assignment.user_id
+                                        );
+                                        const isCurrentUser = assignment.user_id === user?.id;
+                                        
+                                        return (
+                                          <div key={assignment.user_id} className="flex items-center gap-2">
+                                            <button
+                                              onClick={() => {
+                                                if (isCurrentUser) {
+                                                  toggleTaskCompletionMutation.mutate({
+                                                    taskId: task.id,
+                                                    isCompleted: isUserCompleted,
+                                                  });
+                                                }
+                                              }}
+                                              disabled={!isCurrentUser}
+                                              className="flex items-center gap-2"
+                                            >
+                                              {isUserCompleted ? (
+                                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                                              ) : (
+                                                <Circle className={cn(
+                                                  "w-4 h-4",
+                                                  isCurrentUser
+                                                    ? "text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                                                    : "text-muted-foreground/50 cursor-not-allowed"
+                                                )} />
+                                              )}
+                                              <span className={cn(
+                                                "text-sm",
+                                                isUserCompleted && "line-through text-muted-foreground"
+                                              )}>
+                                                {assignment.user.first_name} {assignment.user.last_name}
+                                                {isCurrentUser && " (You)"}
+                                              </span>
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
 
                                 {completionPercentage > 0 && (
                                   <div className="space-y-1">
                                     <div className="flex items-center justify-between text-xs">
-                                      <span className="text-muted-foreground">Progress</span>
+                                      <span className="text-muted-foreground">Overall Progress</span>
                                       <span className="font-medium">{completionPercentage}%</span>
                                     </div>
                                     <Progress value={completionPercentage} className="h-1" />
@@ -811,6 +987,191 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                   </div>
                 </button>
               ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Update task details for {project.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-task-title">Title</Label>
+              <Input
+                id="edit-task-title"
+                value={editTask.title}
+                onChange={(e) => setEditTask({ ...editTask, title: e.target.value })}
+                placeholder="Task title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-task-description">Description</Label>
+              <Textarea
+                id="edit-task-description"
+                value={editTask.description}
+                onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
+                placeholder="Task description (optional)"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label>Assign to</Label>
+              <div className="space-y-2 mt-2 max-h-32 overflow-y-auto">
+                {project.project_assignments.map((assignment: any) => (
+                  <label key={assignment.user_id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={editingAssignees.includes(assignment.user_id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditingAssignees([...editingAssignees, assignment.user_id]);
+                        } else {
+                          setEditingAssignees(
+                            editingAssignees.filter((id) => id !== assignment.user_id)
+                          );
+                        }
+                      }}
+                    />
+                    <span className="text-sm">{formatUserName(assignment.user)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-task-priority">Priority</Label>
+                <Select
+                  value={editTask.priority}
+                  onValueChange={(value) => setEditTask({ ...editTask, priority: value })}
+                >
+                  <SelectTrigger id="edit-task-priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-task-due">Due Date</Label>
+                <Input
+                  id="edit-task-due"
+                  type="date"
+                  value={editTask.due_date}
+                  onChange={(e) => setEditTask({ ...editTask, due_date: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-task-status">Status</Label>
+              <Select
+                value={editTask.status}
+                onValueChange={(value) => setEditTask({ ...editTask, status: value })}
+              >
+                <SelectTrigger id="edit-task-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">To Do</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingTask(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (editingTask) {
+                    updateTaskMutation.mutate({
+                      taskId: editingTask.id,
+                      updates: editTask,
+                    });
+                  }
+                }}
+                disabled={!editTask.title}
+              >
+                Update Task
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Kudos Dialog */}
+      <Dialog open={selectedTaskForKudos !== null} onOpenChange={(open) => !open && setSelectedTaskForKudos(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Kudos</DialogTitle>
+            <DialogDescription>
+              Show appreciation for work on this task
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="kudos-message">Message (optional)</Label>
+              <Textarea
+                id="kudos-message"
+                value={kudosMessage}
+                onChange={(e) => setKudosMessage(e.target.value)}
+                placeholder="Great work on this task!"
+                rows={4}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {(() => {
+                const task = tasks.find(t => t.id === selectedTaskForKudos);
+                if (!task) return null;
+                const completedUsers = task.completions.map(c => c.user);
+                
+                if (completedUsers.length === 0) {
+                  return "This kudos will be visible to anyone who completes the task.";
+                } else {
+                  return (
+                    <div>
+                      <p>Kudos will be sent to:</p>
+                      <ul className="mt-1">
+                        {completedUsers.map(user => (
+                          <li key={user.id}>• {user.first_name} {user.last_name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                }
+              })()}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setSelectedTaskForKudos(null);
+                setKudosMessage("");
+              }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedTaskForKudos) {
+                    sendKudosMutation.mutate({
+                      taskId: selectedTaskForKudos,
+                      message: kudosMessage,
+                    });
+                  }
+                }}
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                Send Kudos
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

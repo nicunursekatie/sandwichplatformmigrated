@@ -8,16 +8,26 @@ import {
   Circle,
   Trash2,
   Edit,
+  Edit3,
   ThumbsUp,
   Calendar,
   Clock,
   User,
-  X
+  X,
+  MoreVertical,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +37,7 @@ import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
 interface Task {
   id: number;
@@ -82,7 +93,8 @@ export default function ProjectDetailSimplified({ projectId, onBack }: ProjectDe
   const { user } = useAuth();
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
+  const [editingAssignees, setEditingAssignees] = useState<string[]>([]);
   const [kudosMessage, setKudosMessage] = useState("");
   const [selectedTaskForKudos, setSelectedTaskForKudos] = useState<number | null>(null);
 
@@ -94,6 +106,14 @@ export default function ProjectDetailSimplified({ projectId, onBack }: ProjectDe
     due_date: "",
   });
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  
+  const [editTask, setEditTask] = useState({
+    title: "",
+    description: "",
+    status: "todo",
+    priority: "medium",
+    due_date: "",
+  });
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = useQuery({
@@ -293,6 +313,63 @@ export default function ProjectDetailSimplified({ projectId, onBack }: ProjectDe
     },
   });
 
+  // Update task mutation
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ taskId, updates }: { taskId: number; updates: typeof editTask }) => {
+      // Update task
+      const { error: taskError } = await supabase
+        .from("project_tasks")
+        .update(updates)
+        .eq("id", taskId);
+
+      if (taskError) throw taskError;
+
+      // Update assignments if changed
+      const currentAssignments = tasks.find(t => t.id === taskId)?.assignments.map(a => a.user_id) || [];
+      const toAdd = editingAssignees.filter(id => !currentAssignments.includes(id));
+      const toRemove = currentAssignments.filter(id => !editingAssignees.includes(id));
+
+      // Add new assignments
+      if (toAdd.length > 0) {
+        const { error } = await supabase
+          .from("task_assignments")
+          .insert(toAdd.map(user_id => ({ task_id: taskId, user_id })));
+        if (error) throw error;
+      }
+
+      // Remove old assignments
+      if (toRemove.length > 0) {
+        const { error } = await supabase
+          .from("task_assignments")
+          .delete()
+          .eq("task_id", taskId)
+          .in("user_id", toRemove);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      setEditingTask(null);
+      toast({ title: "Task updated successfully" });
+    },
+  });
+
+  // Delete task mutation
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      const { error } = await supabase
+        .from("project_tasks")
+        .delete()
+        .eq("id", taskId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      toast({ title: "Task deleted successfully" });
+    },
+  });
+
   // Send kudos
   const sendKudosMutation = useMutation({
     mutationFn: async ({ taskId, message }: { taskId: number; message: string }) => {
@@ -437,59 +514,113 @@ export default function ProjectDetailSimplified({ projectId, onBack }: ProjectDe
             return (
               <Card key={task.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() =>
-                            toggleTaskCompletionMutation.mutate({
-                              taskId: task.id,
-                              isCompleted,
-                            })
-                          }
-                          className="mt-1"
-                        >
-                          {isCompleted ? (
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                          ) : (
-                            <Circle className="w-5 h-5 text-gray-400" />
-                          )}
-                        </button>
-                        <div className="flex-1">
-                          <h3 className="font-medium">{task.title}</h3>
-                          <p className="text-sm text-muted-foreground">{task.description}</p>
-                        </div>
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{task.title}</h3>
+                        {task.description && (
+                          <p className="text-base mt-2 p-3 bg-muted/50 rounded-md border border-muted">
+                            {task.description}
+                          </p>
+                        )}
                       </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setEditingTask(task);
+                            setEditTask({
+                              title: task.title,
+                              description: task.description || "",
+                              status: task.status,
+                              priority: task.priority,
+                              due_date: task.due_date || "",
+                            });
+                            setEditingAssignees(task.assignments.map(a => a.user_id));
+                          }}>
+                            <Edit3 className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              if (confirm("Are you sure you want to delete this task?")) {
+                                deleteTaskMutation.mutate(task.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
 
                       {/* Task metadata */}
-                      <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-4 text-sm">
                         <Badge variant="outline">{task.priority}</Badge>
                         {task.due_date && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="w-3 h-3" />
                             {formatDistanceToNow(new Date(task.due_date), { addSuffix: true })}
                           </div>
                         )}
-                        <div className="flex items-center gap-1">
-                          <Users className="w-3 h-3" />
-                          {task.assignments.length} assigned
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          {completionPercentage}% complete
-                        </div>
                       </div>
 
-                      {/* Completions */}
-                      {task.completions.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs text-muted-foreground mb-1">Completed by:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {task.completions.map((completion) => (
-                              <Badge key={completion.user_id} variant="secondary" className="text-xs">
-                                {formatUserName(completion.user)}
-                              </Badge>
-                            ))}
+                      {/* Individual assignee checkboxes */}
+                      {task.assignments.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-sm font-medium">Assigned to:</div>
+                          <div className="space-y-1">
+                            {task.assignments.map((assignment) => {
+                              const isUserCompleted = task.completions.some(
+                                c => c.user_id === assignment.user_id
+                              );
+                              const isCurrentUser = assignment.user_id === user?.id;
+                              
+                              return (
+                                <div key={assignment.user_id} className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      if (isCurrentUser) {
+                                        toggleTaskCompletionMutation.mutate({
+                                          taskId: task.id,
+                                          isCompleted: isUserCompleted,
+                                        });
+                                      }
+                                    }}
+                                    disabled={!isCurrentUser}
+                                    className="flex items-center gap-2"
+                                  >
+                                    {isUserCompleted ? (
+                                      <CheckCircle2 className="w-4 h-4 text-primary" />
+                                    ) : (
+                                      <Circle className={cn(
+                                        "w-4 h-4",
+                                        isCurrentUser
+                                          ? "text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                                          : "text-muted-foreground/50 cursor-not-allowed"
+                                      )} />
+                                    )}
+                                    <span className={cn(
+                                      "text-sm",
+                                      isUserCompleted && "line-through text-muted-foreground"
+                                    )}>
+                                      {assignment.user.first_name} {assignment.user.last_name}
+                                      {isCurrentUser && " (You)"}
+                                    </span>
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Progress: {completionPercentage}% complete
                           </div>
                         </div>
                       )}
@@ -680,6 +811,120 @@ export default function ProjectDetailSimplified({ projectId, onBack }: ProjectDe
                 disabled={!kudosMessage}
               >
                 Send Kudos
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-title">Title</Label>
+              <Input
+                id="edit-title"
+                value={editTask.title}
+                onChange={(e) => setEditTask({ ...editTask, title: e.target.value })}
+                placeholder="Task title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editTask.description}
+                onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
+                placeholder="Task description"
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label>Assign To</Label>
+              <div className="space-y-2 mt-2">
+                {projectAssignees.map((assignment: any) => (
+                  <label key={assignment.user_id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editingAssignees.includes(assignment.user_id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditingAssignees([...editingAssignees, assignment.user_id]);
+                        } else {
+                          setEditingAssignees(
+                            editingAssignees.filter((id) => id !== assignment.user_id)
+                          );
+                        }
+                      }}
+                    />
+                    {formatUserName(assignment.user)}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-priority">Priority</Label>
+                <Select
+                  value={editTask.priority}
+                  onValueChange={(value) => setEditTask({ ...editTask, priority: value })}
+                >
+                  <SelectTrigger id="edit-priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-due-date">Due Date</Label>
+                <Input
+                  id="edit-due-date"
+                  type="date"
+                  value={editTask.due_date}
+                  onChange={(e) => setEditTask({ ...editTask, due_date: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-status">Status</Label>
+              <Select
+                value={editTask.status}
+                onValueChange={(value) => setEditTask({ ...editTask, status: value })}
+              >
+                <SelectTrigger id="edit-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">To Do</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingTask(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (editingTask) {
+                    updateTaskMutation.mutate({
+                      taskId: editingTask.id,
+                      updates: editTask,
+                    });
+                  }
+                }}
+                disabled={!editTask.title}
+              >
+                Update Task
               </Button>
             </div>
           </div>
