@@ -125,7 +125,8 @@ export class DatabaseStorage {
 
   // Interface compatibility method
   async getAllProjects(): Promise<Project[]> {
-    return this.getProjects();
+    const result = await this.getProjects();
+    return result as Project[];
   }
 
   async getProjectById(id: number) {
