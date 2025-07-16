@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import ProjectListSimplified from "@/components/projects/ProjectListSimplified";
-import ProjectDetailSimplified from "@/components/projects/ProjectDetailSimplified";
+import ProjectDetailPolished from "@/components/projects/ProjectDetailPolished";
 
 export default function ProjectsSimplified() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   if (selectedProjectId) {
     return (
-      <ProjectDetailSimplified
+      <ProjectDetailPolished
         projectId={selectedProjectId}
         onBack={() => setSelectedProjectId(null)}
       />
