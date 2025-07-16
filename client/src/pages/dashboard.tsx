@@ -21,8 +21,7 @@ import MeetingMinutesPage from "@/pages/meeting-minutes";
 import MeetingAgendaPage from "@/pages/meeting-agenda";
 import MeetingCalendarPage from "@/pages/meeting-calendar";
 import RoleDemo from "@/pages/role-demo";
-import ProjectsClean from "@/pages/projects-clean";
-import ProjectDetailClean from "@/pages/project-detail-clean";
+import ProjectsSimplified from "./ProjectsSimplified";
 import Analytics from "@/pages/analytics";
 import ImpactDashboard from "@/pages/impact-dashboard";
 import DataManagement from "@/pages/data-management";
@@ -47,7 +46,6 @@ import AblyDemo from "@/components/ably-demo";
 
 export default function Dashboard({ initialSection = "dashboard", projectId: initialProjectId }: { initialSection?: string; projectId?: number }) {
   const [activeSection, setActiveSection] = useState(initialSection);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(initialProjectId);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -120,15 +118,7 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
       case "dashboard":
         return <DashboardOverview onSectionChange={setActiveSection} />;
       case "projects":
-        return <ProjectsClean onProjectSelect={(projectId) => {
-          setSelectedProjectId(projectId);
-          setActiveSection("project-detail");
-        }} />;
-      case "project-detail":
-        return selectedProjectId ? <ProjectDetailClean projectId={selectedProjectId} onBack={() => {
-          setActiveSection("projects");
-          setSelectedProjectId(undefined);
-        }} /> : null;
+        return <ProjectsSimplified />;
       case "messages":
         return <ChatHub />;
       case "inbox":
