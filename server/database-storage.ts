@@ -411,17 +411,23 @@ export class DatabaseStorage {
 
   // AUDIT AND RESTORE METHODS
   async getDeletionHistory(tableName?: string, recordId?: string) {
-    let query = db.select().from(deletionAudit);
-    
-    if (tableName) {
+    const baseQuery = db.select().from(deletionAudit);
+    if (tableName && recordId) {
+      return baseQuery
+        .where(
+          and(
+            eq(deletionAudit.tableName, tableName),
+            eq(deletionAudit.recordId, recordId)
+          )
+        )
+        .orderBy(desc(deletionAudit.deletedAt));
+    } else if (tableName) {
       query = query.where(eq(deletionAudit.tableName, tableName));
-    }
-    
-    if (recordId) {
+    } else if (recordId) {
       query = query.where(eq(deletionAudit.recordId, recordId));
     }
-    
-    return query.orderBy(desc(deletionAudit.deletedAt));
+    }
+    return baseQuery.orderBy(desc(deletionAudit.deletedAt));
   }
 
   async restoreRecord(tableName: string, recordId: string): Promise<boolean> {

@@ -16,7 +16,8 @@ import {
   Settings,
   Sheet,
   Lightbulb,
-  Inbox
+  Inbox,
+  Heart
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +47,7 @@ export default function SimpleNav({ onSectionChange }: { onSectionChange: (secti
     
     // COMMUNICATION section
     { id: "inbox", label: "Inbox", icon: Inbox, href: "inbox", group: "communication" },
+    { id: "kudos", label: "Kudos", icon: Heart, href: "kudos", group: "communication" },
     { id: "chat", label: "Chat", icon: MessageCircle, href: "messages", group: "communication" },
     ...(hasPermission(user, PERMISSIONS.VIEW_SUGGESTIONS) ? [{ id: "suggestions", label: "Suggestions", icon: Lightbulb, href: "suggestions", group: "communication" }] : []),
     
