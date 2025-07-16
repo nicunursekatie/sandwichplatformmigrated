@@ -51,7 +51,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   const [newProject, setNewProject] = useState({
     title: "",
     description: "",
-    status: "active",
+    status: "in_progress",
     priority: "medium",
     due_date: "",
   });
@@ -124,7 +124,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
       setNewProject({
         title: "",
         description: "",
-        status: "active",
+        status: "in_progress",
         priority: "medium",
         due_date: "",
       });
@@ -184,38 +184,30 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   // Group projects by status - MUST be before any conditional returns
   const projectsByStatus = useMemo(() => {
     const grouped = {
-      active: [] as ProjectWithDetails[],
+      in_progress: [] as ProjectWithDetails[],
       on_hold: [] as ProjectWithDetails[],
       completed: [] as ProjectWithDetails[],
-      other: [] as ProjectWithDetails[], // For any unrecognized statuses
     };
 
     projects.forEach((project) => {
       if (project.status in grouped) {
         grouped[project.status as keyof typeof grouped].push(project);
+      } else if (project.status === 'active') {
+        // Map 'active' to 'in_progress' for backwards compatibility
+        grouped.in_progress.push(project);
       } else {
-        // If status doesn't match our expected values, put it in "other"
-        grouped.other.push(project);
+        // Default to in_progress for any other status
+        grouped.in_progress.push(project);
       }
     });
-
-    // Also check for null/undefined status
-    if (grouped.other.length > 0) {
-      console.log("Projects with unrecognized status:", grouped.other.map(p => ({
-        id: p.id,
-        title: p.title,
-        status: p.status
-      })));
-    }
 
     return grouped;
   }, [projects]);
 
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
-    active: false,
+    in_progress: false,
     on_hold: false,
     completed: true, // Completed section collapsed by default
-    other: false, // Show other statuses expanded
   });
 
   const toggleSection = (section: string) => {
@@ -226,17 +218,15 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   };
 
   const statusLabels = {
-    active: "Active Projects",
+    in_progress: "In Progress",
     on_hold: "On Hold",
     completed: "Completed",
-    other: "Other Status",
   };
 
   const statusIcons = {
-    active: "🚀",
+    in_progress: "🚀",
     on_hold: "⏸️",
     completed: "✅",
-    other: "❓",
   };
 
   if (isLoading) {
@@ -260,10 +250,9 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
       {/* Debug info */}
       <div className="text-xs text-muted-foreground">
         Total projects: {projects.length} | 
-        Active: {projectsByStatus.active.length} | 
+        In Progress: {projectsByStatus.in_progress.length} | 
         On Hold: {projectsByStatus.on_hold.length} | 
-        Completed: {projectsByStatus.completed.length} | 
-        Other: {projectsByStatus.other.length}
+        Completed: {projectsByStatus.completed.length}
       </div>
 
       {Object.entries(projectsByStatus).map(([status, statusProjects]) => (
@@ -399,7 +388,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="on_hold">On Hold</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
