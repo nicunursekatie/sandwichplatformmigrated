@@ -257,6 +257,15 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
         </Button>
       </div>
 
+      {/* Debug info */}
+      <div className="text-xs text-muted-foreground">
+        Total projects: {projects.length} | 
+        Active: {projectsByStatus.active.length} | 
+        On Hold: {projectsByStatus.on_hold.length} | 
+        Completed: {projectsByStatus.completed.length} | 
+        Other: {projectsByStatus.other.length}
+      </div>
+
       {Object.entries(projectsByStatus).map(([status, statusProjects]) => (
         <div key={status} className="space-y-3">
           <button
