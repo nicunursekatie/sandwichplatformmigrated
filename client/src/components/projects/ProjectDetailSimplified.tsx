@@ -89,22 +89,32 @@ export default function ProjectDetailSimplified({ projectId, onBack }: ProjectDe
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ["project", projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: projectData, error: projectError } = await supabase
         .from("projects")
-        .select(`
-          *,
-          project_assignments!inner(
-            user_id,
-            role,
-            user:users(id, email, first_name, last_name)
-          )
-        `)
+        .select("*")
         .eq("id", projectId)
         .is("deleted_at", null)
         .single();
 
-      if (error) throw error;
-      return data;
+      if (projectError) throw projectError;
+
+      // Fetch assignments separately
+      const { data: assignments, error: assignmentError } = await supabase
+        .from("project_assignments")
+        .select(`
+          user_id,
+          role,
+          user:users(id, email, first_name, last_name)
+        `)
+        .eq("project_id", projectId)
+        .is("deleted_at", null);
+
+      if (assignmentError) throw assignmentError;
+
+      return {
+        ...projectData,
+        project_assignments: assignments || []
+      };
     },
   });
 
