@@ -120,11 +120,17 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
               
               console.log(`Task ${task.id}: ${assignmentCount} assignments, ${uniqueCompletedUsers} completions`);
               
-              totalAssignments += assignmentCount;
+              // For tasks with no assignments but completions, use completions as the assignment count
+              const effectiveAssignments = assignmentCount > 0 ? assignmentCount : uniqueCompletedUsers;
+              
+              totalAssignments += effectiveAssignments;
               completedAssignments += uniqueCompletedUsers;
               
-              // Task is completely done if all assignees have completed it
-              if (assignmentCount > 0 && uniqueCompletedUsers === assignmentCount) {
+              // Task is completely done if:
+              // 1. It has assignments and all are completed, OR
+              // 2. It has no assignments but has completions (self-assigned tasks)
+              if ((assignmentCount > 0 && uniqueCompletedUsers === assignmentCount) ||
+                  (assignmentCount === 0 && uniqueCompletedUsers > 0)) {
                 tasksCompletelyDone++;
               }
             });

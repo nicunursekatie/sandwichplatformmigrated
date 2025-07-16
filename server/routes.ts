@@ -962,19 +962,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
 
           // Verify user is member of this group
-          const membership = await db
+          const participant = await db
             .select()
-            .from(groupMemberships)
+            .from(conversationParticipants)
             .where(
               and(
-                eq(groupMemberships.groupId, groupId),
-                eq(groupMemberships.userId, currentUserId),
-                eq(groupMemberships.isActive, true),
+                eq(conversationParticipants.conversationId, groupId),
+                eq(conversationParticipants.userId, currentUserId),
               ),
             )
             .limit(1);
 
-          if (membership.length === 0) {
+          if (participant.length === 0) {
             console.log(
               `[DEBUG] User ${currentUserId} is not a member of group ${groupId}`,
             );
@@ -5196,44 +5195,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `[DEBUG] Created thread ${thread.id} for group ${group.id} (${name})`,
       );
 
-      // Add creator as admin to group membership
-      await db.insert(groupMemberships).values({
-        groupId: group.id,
-        userId: userId,
-        role: "admin",
-      });
-
       // Add creator as participant to thread
-      await db.insert(groupMessageParticipants).values({
-        threadId: thread.id,
-        userId: userId,
-        status: "active",
-        joinedAt: new Date(),
-      });
+      await db.insert(conversationParticipants).values({ conversationId: group.id, userId });
 
-      // Add other members to both group and thread
+      // Add other members as participants
       if (memberIds && Array.isArray(memberIds)) {
-        const memberships = memberIds
-          .filter((id) => id !== userId) // Don't duplicate creator
-          .map((memberId) => ({
-            groupId: group.id,
-            userId: memberId,
-            role: "member" as const,
-          }));
-
-        const participants = memberIds
-          .filter((id) => id !== userId) // Don't duplicate creator
-          .map((memberId) => ({
-            threadId: thread.id,
-            userId: memberId,
-            status: "active" as const,
-            joinedAt: new Date(),
-          }));
-
-        if (memberships.length > 0) {
-          await db.insert(groupMemberships).values(memberships);
-          await db.insert(groupMessageParticipants).values(participants);
-        }
+        const participants = memberIds.filter((id) => id !== userId).map((id) => ({ conversationId: group.id, userId: id }));
+        if (participants.length > 0) await db.insert(conversationParticipants).values(participants);
       }
 
       // Send welcome message notification
@@ -5271,13 +5239,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Check if user is admin of the group
           const userMembership = await db
             .select()
-            .from(groupMemberships)
+            .from(conversationParticipants)
             .where(
               and(
-                eq(groupMemberships.groupId, parseInt(groupId)),
-                eq(groupMemberships.userId, userId),
-                eq(groupMemberships.role, "admin"),
-                eq(groupMemberships.isActive, true),
+                eq(conversationParticipants.conversationId, parseInt(groupId)),
+                eq(conversationParticipants.userId, userId),
               ),
             )
             .limit(1);
@@ -5295,12 +5261,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get existing members to avoid duplicates
         const existingMembers = await db
-          .select({ userId: groupMemberships.userId })
-          .from(groupMemberships)
+          .select({ userId: conversationParticipants.userId })
+          .from(conversationParticipants)
           .where(
             and(
-              eq(groupMemberships.groupId, parseInt(groupId)),
-              eq(groupMemberships.isActive, true),
+              eq(conversationParticipants.conversationId, parseInt(groupId)),
+              eq(conversationParticipants.isActive, true),
             ),
           );
 
@@ -5317,12 +5283,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Add new members
         const memberships = newMemberIds.map((memberId) => ({
-          groupId: parseInt(groupId),
+          conversationId: parseInt(groupId),
           userId: memberId,
-          role: "member" as const,
         }));
 
-        await db.insert(groupMemberships).values(memberships);
+        await db.insert(conversationParticipants).values(memberships);
 
         res.json({
           message: "Members added successfully",
@@ -5361,12 +5326,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Regular users need to be members of the group
             const membership = await db
               .select()
-              .from(groupMemberships)
+              .from(conversationParticipants)
               .where(
                 and(
-                  eq(groupMemberships.groupId, groupId),
-                  eq(groupMemberships.userId, userId),
-                  eq(groupMemberships.isActive, true),
+                  eq(conversationParticipants.conversationId, groupId),
+                  eq(conversationParticipants.userId, userId),
                 ),
               )
               .limit(1);
@@ -5381,7 +5345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               `[ERROR] Error checking membership:`,
               membershipError,
             );
-            // If groupMemberships table doesn't exist, allow super admins to proceed
+            // If conversationParticipants table doesn't exist, allow super admins to proceed
             if (!canModerateMessages) {
               return res
                 .status(500)
@@ -5394,19 +5358,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all group members with user details
           const members = await db
             .select({
-              userId: groupMemberships.userId,
-              role: groupMemberships.role,
-              joinedAt: groupMemberships.joinedAt,
+              userId: conversationParticipants.userId,
+              role: conversationParticipants.role,
+              joinedAt: conversationParticipants.joinedAt,
               firstName: users.firstName,
               lastName: users.lastName,
               email: users.email,
             })
-            .from(groupMemberships)
-            .leftJoin(users, eq(groupMemberships.userId, users.id))
+            .from(conversationParticipants)
+            .leftJoin(users, eq(conversationParticipants.userId, users.id))
             .where(
               and(
-                eq(groupMemberships.groupId, groupId),
-                eq(groupMemberships.isActive, true),
+                eq(conversationParticipants.conversationId, groupId),
+                eq(conversationParticipants.isActive, true),
               ),
             );
 
@@ -5416,7 +5380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           res.json(members);
         } catch (membersError) {
           console.error(`[ERROR] Error fetching group members:`, membersError);
-          // If groupMemberships table doesn't exist, return empty array for now
+          // If conversationParticipants table doesn't exist, return empty array for now
           res.json([]);
         }
       } catch (error) {
@@ -5469,12 +5433,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const result = await db
-          .update(groupMessageParticipants)
+          .update(conversationParticipants)
           .set(updates)
           .where(
             and(
-              eq(groupMessageParticipants.threadId, threadId),
-              eq(groupMessageParticipants.userId, userId),
+              eq(conversationParticipants.conversationId, threadId),
+              eq(conversationParticipants.userId, userId),
             ),
           );
 
@@ -5500,12 +5464,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = (req as any).user?.id;
 
         const result = await db
-          .update(groupMessageParticipants)
+          .update(conversationParticipants)
           .set({ lastReadAt: new Date() })
           .where(
             and(
-              eq(groupMessageParticipants.threadId, threadId),
-              eq(groupMessageParticipants.userId, userId),
+              eq(conversationParticipants.conversationId, threadId),
+              eq(conversationParticipants.userId, userId),
             ),
           );
 
@@ -5526,15 +5490,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const [participant] = await db
           .select({
-            status: groupMessageParticipants.status,
-            lastReadAt: groupMessageParticipants.lastReadAt,
-            joinedAt: groupMessageParticipants.joinedAt,
+            status: conversationParticipants.status,
+            lastReadAt: conversationParticipants.lastReadAt,
+            joinedAt: conversationParticipants.joinedAt,
           })
-          .from(groupMessageParticipants)
+          .from(conversationParticipants)
           .where(
             and(
-              eq(groupMessageParticipants.threadId, threadId),
-              eq(groupMessageParticipants.userId, userId),
+              eq(conversationParticipants.conversationId, threadId),
+              eq(conversationParticipants.userId, userId),
             ),
           );
 
@@ -5584,12 +5548,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Check if user has access to this thread (not left)
           const participantStatus = await db
-            .select({ status: groupMessageParticipants.status })
-            .from(groupMessageParticipants)
+            .select({ status: conversationParticipants.status })
+            .from(conversationParticipants)
             .where(
               and(
-                eq(groupMessageParticipants.threadId, thread.threadId),
-                eq(groupMessageParticipants.userId, userId),
+                eq(conversationParticipants.conversationId, thread.threadId),
+                eq(conversationParticipants.userId, userId),
               ),
             );
 
@@ -5684,12 +5648,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Check if user has access to this thread
         const participantStatus = await db
-          .select({ status: groupMessageParticipants.status })
-          .from(groupMessageParticipants)
+          .select({ status: conversationParticipants.status })
+          .from(conversationParticipants)
           .where(
             and(
-              eq(groupMessageParticipants.threadId, thread.threadId),
-              eq(groupMessageParticipants.userId, userId),
+              eq(conversationParticipants.conversationId, thread.threadId),
+              eq(conversationParticipants.userId, userId),
             ),
           );
 
@@ -5770,13 +5734,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (!isPlatformSuperAdmin) {
           const membership = await db
-            .select({ role: groupMemberships.role })
-            .from(groupMemberships)
+            .select({ role: conversationParticipants.role })
+            .from(conversationParticipants)
             .where(
               and(
-                eq(groupMemberships.groupId, groupId),
-                eq(groupMemberships.userId, currentUserId),
-                eq(groupMemberships.isActive, true),
+                eq(conversationParticipants.conversationId, groupId),
+                eq(conversationParticipants.userId, currentUserId),
               ),
             );
 
@@ -5790,13 +5753,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Only prevent removing other admins if current user is not a platform super admin
         if (!isPlatformSuperAdmin) {
           const targetMembership = await db
-            .select({ role: groupMemberships.role })
-            .from(groupMemberships)
+            .select({ role: conversationParticipants.role })
+            .from(conversationParticipants)
             .where(
               and(
-                eq(groupMemberships.groupId, groupId),
-                eq(groupMemberships.userId, targetUserId),
-                eq(groupMemberships.isActive, true),
+                eq(conversationParticipants.conversationId, groupId),
+                eq(conversationParticipants.userId, targetUserId),
               ),
             );
 
@@ -5825,24 +5787,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (thread) {
           // Update thread participant status to 'left'
           await db
-            .update(groupMessageParticipants)
+            .update(conversationParticipants)
             .set({ status: "left" })
             .where(
               and(
-                eq(groupMessageParticipants.threadId, thread.threadId),
-                eq(groupMessageParticipants.userId, targetUserId),
+                eq(conversationParticipants.conversationId, thread.threadId),
+                eq(conversationParticipants.userId, targetUserId),
               ),
             );
         }
 
-        // Remove from group membership
+        // Remove from conversationParticipants
         await db
-          .update(groupMemberships)
-          .set({ isActive: false })
+          .delete(conversationParticipants)
           .where(
             and(
-              eq(groupMemberships.groupId, groupId),
-              eq(groupMemberships.userId, targetUserId),
+              eq(conversationParticipants.conversationId, groupId),
+              eq(conversationParticipants.userId, targetUserId),
             ),
           );
 
@@ -5880,13 +5841,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (!isPlatformSuperAdmin) {
           const membership = await db
-            .select({ role: groupMemberships.role })
-            .from(groupMemberships)
+            .select({ role: conversationParticipants.role })
+            .from(conversationParticipants)
             .where(
               and(
-                eq(groupMemberships.groupId, groupId),
-                eq(groupMemberships.userId, currentUserId),
-                eq(groupMemberships.isActive, true),
+                eq(conversationParticipants.conversationId, groupId),
+                eq(conversationParticipants.userId, currentUserId),
               ),
             );
 
@@ -5899,13 +5859,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Update the member's role
         await db
-          .update(groupMemberships)
+          .update(conversationParticipants)
           .set({ role })
           .where(
             and(
-              eq(groupMemberships.groupId, groupId),
-              eq(groupMemberships.userId, targetUserId),
-              eq(groupMemberships.isActive, true),
+              eq(conversationParticipants.conversationId, groupId),
+              eq(conversationParticipants.userId, targetUserId),
             ),
           );
 
@@ -5967,8 +5926,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // 3. Delete all thread participants
           const deletedParticipants = await db
-            .delete(groupMessageParticipants)
-            .where(eq(groupMessageParticipants.threadId, thread.threadId));
+            .delete(conversationParticipants)
+            .where(eq(conversationParticipants.conversationId, thread.threadId));
           console.log(
             `[DEBUG] Deleted participants for thread ${thread.threadId}`,
           );
@@ -5983,8 +5942,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // 5. Delete all group memberships
         const deletedMemberships = await db
-          .delete(groupMemberships)
-          .where(eq(groupMemberships.groupId, groupId));
+          .delete(conversationParticipants)
+          .where(eq(conversationParticipants.conversationId, groupId));
         console.log(`[DEBUG] Deleted memberships for group ${groupId}`);
 
         // 6. Mark the group as inactive
@@ -7235,7 +7194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const participants = await db
           .select({
             userId: conversationParticipants.userId,
-            role: users.role,
+            role: conversationParticipants.role,
             firstName: users.firstName,
             lastName: users.lastName,
             email: users.email,
