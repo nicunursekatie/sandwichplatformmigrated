@@ -24,14 +24,14 @@ export default function PhoneDirectoryPage() {
   ];
 
   return (
-    <div className="bg-slate-50 min-h-screen flex">
+    <div className="bg-background min-h-screen flex">
       {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-slate-200 flex flex-col">
+      <div className="w-64 bg-card border-r border-border flex flex-col">
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-slate-200">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center space-x-3">
             <Sandwich className="text-amber-500 w-6 h-6" />
-            <h1 className="text-lg font-semibold text-slate-900">The Sandwich Project</h1>
+            <h1 className="text-lg font-main-heading text-foreground">The Sandwich Project</h1>
           </div>
         </div>
 

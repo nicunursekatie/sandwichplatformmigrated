@@ -246,12 +246,12 @@ export default function ImpactDashboard() {
   const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1'];
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-6 rounded-lg">
+    <div className="bg-background p-6 rounded-lg">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Impact Dashboard</h1>
-          <p className="text-lg text-gray-600">Visualizing our community impact through sandwich collections</p>
+          <h1 className="text-4xl font-main-heading text-foreground mb-2">Impact Dashboard</h1>
+          <p className="text-lg text-muted-foreground">Visualizing our community impact through sandwich collections</p>
         </div>
 
         {/* Key Impact Metrics */}

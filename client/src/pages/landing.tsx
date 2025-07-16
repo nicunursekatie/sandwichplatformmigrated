@@ -100,7 +100,7 @@ export default function Landing() {
               className="h-24 w-auto"
             />
           </div>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             A 501(c)(3) nonprofit organization serving Georgia communities by collecting and distributing 
             sandwiches to fight food insecurity. Connecting volunteers, hosts, and nonprofit partners 
             to make a lasting impact one sandwich at a time.
@@ -205,10 +205,10 @@ export default function Landing() {
           <CardContent>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">1.08M+</div>
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Verified Sandwiches</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">2023-2025 weekly data confirmed</div>
-                <div className="text-xs text-gray-500 dark:text-gray-500 mt-1 italic">Source: Official weekly breakdown records</div>
+                <div className="text-2xl font-bold text-primary">1.08M+</div>
+                <div className="text-sm font-medium text-muted-foreground">Verified Sandwiches</div>
+                <div className="text-xs text-muted-foreground mt-1">2023-2025 weekly data confirmed</div>
+                <div className="text-xs text-muted-foreground mt-1 italic">Source: Official weekly breakdown records</div>
               </div>
               <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">449K</div>
