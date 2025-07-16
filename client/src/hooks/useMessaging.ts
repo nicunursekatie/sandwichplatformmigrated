@@ -115,14 +115,8 @@ export function useMessaging() {
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: user.id,
-          content: params.content,
-          metadata: {
-            contextType: params.contextType,
-            contextId: params.contextId,
-            recipientIds: params.recipientIds,
-            parentMessageId: params.parentMessageId
-          }
+          user_id: user.id,
+          content: params.content
         })
         .select()
         .single();
