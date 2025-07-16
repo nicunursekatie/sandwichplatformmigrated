@@ -55,6 +55,7 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
   const { data: allProjectAssignments = [] } = useQuery({
     queryKey: ["all-project-assignments"],
     queryFn: async () => {
+      console.log('Fetching all project assignments...');
       const { data, error } = await supabase
         .from('project_assignments')
         .select(`
@@ -67,6 +68,7 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
         return [];
       }
       
+      console.log('Fetched project assignments:', data);
       return data || [];
     },
     enabled: projects.length > 0
@@ -80,6 +82,7 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
   // Helper function to format assignee names
   const formatAssigneeNames = (projectId: number) => {
     const assignments = getProjectAssignments(projectId);
+    console.log(`Project ${projectId} assignments:`, assignments);
     if (assignments.length === 0) return null;
     
     return assignments.map((assignment: any) => {
