@@ -46,8 +46,15 @@ interface DuplicateAnalysis {
 
 // Add a helper to map UI filters to RPC params
 function mapFiltersToStatsParams(filters: any) {
+  // Ensure host_name is always a string or null
+  let hostName = filters.host_name;
+  if (Array.isArray(hostName)) {
+    hostName = hostName[0] || null;
+  } else if (typeof hostName !== 'string') {
+    hostName = null;
+  }
   return {
-    host_name: filters.host_name || null,
+    host_name: hostName || null,
     collection_date_from: filters.collection_date_from || null,
     collection_date_to: filters.collection_date_to || null,
     individual_min: filters.sandwich_count_min ? parseInt(filters.sandwich_count_min) : undefined,
@@ -423,6 +430,7 @@ export default function SandwichCollectionLog() {
       const hasAnyFilter = Object.values(searchFilters).some(v => v && v !== '' && v !== 'all');
       if (hasAnyFilter) {
         const params = mapFiltersToStatsParams(searchFilters);
+        console.log('Calling getFilteredCollectionStats with params:', params);
         const stats = await supabaseService.sandwichCollection.getFilteredCollectionStats(params);
         if (stats && stats[0]) {
           return {
