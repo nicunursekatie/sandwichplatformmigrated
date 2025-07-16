@@ -104,13 +104,18 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
           if (tasks) {
             tasks.forEach(task => {
               const assignmentCount = task.task_assignments?.length || 0;
-              const activeCompletions = task.task_completions?.filter(tc => !tc.deleted_at).length || 0;
+              // Count distinct users who have completed the task
+              const uniqueCompletedUsers = new Set(
+                task.task_completions
+                  ?.filter(tc => !tc.deleted_at)
+                  ?.map(tc => tc.user_id) || []
+              ).size;
               
               totalAssignments += assignmentCount;
-              completedAssignments += activeCompletions;
+              completedAssignments += uniqueCompletedUsers;
               
               // Task is completely done if all assignees have completed it
-              if (assignmentCount > 0 && activeCompletions === assignmentCount) {
+              if (assignmentCount > 0 && uniqueCompletedUsers === assignmentCount) {
                 tasksCompletelyDone++;
               }
             });
