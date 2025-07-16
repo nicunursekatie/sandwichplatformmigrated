@@ -45,6 +45,7 @@ import {
   conversationParticipants,
   messages as messagesTable,
   users,
+  type SandwichCollection,
 } from "@shared/schema";
 
 // Extend Request interface to include file metadata
@@ -1561,7 +1562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duplicateGroups.forEach((group) => {
           if (group.length > 1) {
             const sorted = group.sort(
-              (a, b) =>
+              (a: SandwichCollection, b: SandwichCollection) =>
                 new Date(b.submittedAt).getTime() -
                 new Date(a.submittedAt).getTime(),
             );
@@ -1608,7 +1609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ogMap.forEach((ogGroup) => {
           if (ogGroup.length > 1) {
             const sorted = ogGroup.sort(
-              (a, b) =>
+              (a: SandwichCollection, b: SandwichCollection) =>
                 new Date(b.submittedAt).getTime() -
                 new Date(a.submittedAt).getTime(),
             );
@@ -1770,7 +1771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ogMap.forEach((ogGroup) => {
         if (ogGroup.length > 1) {
           const sorted = ogGroup.sort(
-            (a, b) =>
+            (a: SandwichCollection, b: SandwichCollection) =>
               new Date(b.submittedAt).getTime() -
               new Date(a.submittedAt).getTime(),
           );
@@ -1842,7 +1843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duplicateGroups.forEach((group) => {
           if (group.length > 1) {
             const sorted = group.sort(
-              (a, b) =>
+              (a: SandwichCollection, b: SandwichCollection) =>
                 new Date(b.submittedAt).getTime() -
                 new Date(a.submittedAt).getTime(),
             );

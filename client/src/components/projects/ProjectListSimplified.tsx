@@ -187,13 +187,26 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
       active: [] as ProjectWithDetails[],
       on_hold: [] as ProjectWithDetails[],
       completed: [] as ProjectWithDetails[],
+      other: [] as ProjectWithDetails[], // For any unrecognized statuses
     };
 
     projects.forEach((project) => {
       if (project.status in grouped) {
         grouped[project.status as keyof typeof grouped].push(project);
+      } else {
+        // If status doesn't match our expected values, put it in "other"
+        grouped.other.push(project);
       }
     });
+
+    // Also check for null/undefined status
+    if (grouped.other.length > 0) {
+      console.log("Projects with unrecognized status:", grouped.other.map(p => ({
+        id: p.id,
+        title: p.title,
+        status: p.status
+      })));
+    }
 
     return grouped;
   }, [projects]);
@@ -202,6 +215,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
     active: false,
     on_hold: false,
     completed: true, // Completed section collapsed by default
+    other: false, // Show other statuses expanded
   });
 
   const toggleSection = (section: string) => {
@@ -215,12 +229,14 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
     active: "Active Projects",
     on_hold: "On Hold",
     completed: "Completed",
+    other: "Other Status",
   };
 
   const statusIcons = {
     active: "🚀",
     on_hold: "⏸️",
     completed: "✅",
+    other: "❓",
   };
 
   if (isLoading) {

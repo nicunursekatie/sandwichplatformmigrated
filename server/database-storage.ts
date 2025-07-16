@@ -35,12 +35,13 @@ import {
   announcements,
   googleSheets,
   workLogs,
-  deletionAudit
+  deletionAudit,
+  Project
 } from "../shared/schema";
 import { IStorage } from "./storage";
 import { AuditLogger } from "./audit-logger";
 
-export class DatabaseStorage implements IStorage {
+export class DatabaseStorage {
   private currentUserId: string | null = null;
   
   // Set current user for audit logging
@@ -123,63 +124,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Interface compatibility method
-  async getAllProjects(): Promise<{
-    title: string;
-    id: number;
-    color: string;
-    description: string | null;
-    status: string;
-    priority: string;
-    notes: string | null;
-    category: string;
-    deletedAt: Date | null;
-    deletedBy: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    startDate: Date | null;
-    endDate: Date | null;
-    ownerId: string | null;
-    clientId: number | null;
-    teamId: number | null;
-    progress: number | null;
-    estimatedHours: number | null;
-    actualHours: number | null;
-    parentProjectId: number | null;
-    isTemplate: boolean | null;
-    templateType: string | null;
-    archivedAt: Date | null;
-    archivedBy: string | null;
-    budget: string | null;
-  }[]> {
-    const projectsList = await this.getProjects();
-    return projectsList as {
-      title: string;
-      id: number;
-      color: string;
-      description: string | null;
-      status: string;
-      priority: string;
-      notes: string | null;
-      category: string;
-      deletedAt: Date | null;
-      deletedBy: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      startDate: Date | null;
-      endDate: Date | null;
-      ownerId: string | null;
-      clientId: number | null;
-      teamId: number | null;
-      progress: number | null;
-      estimatedHours: number | null;
-      actualHours: number | null;
-      parentProjectId: number | null;
-      isTemplate: boolean | null;
-      templateType: string | null;
-      archivedAt: Date | null;
-      archivedBy: string | null;
-      budget: string | null;
-    }[];
+  async getAllProjects(): Promise<Project[]> {
+    return this.getProjects();
   }
 
   async getProjectById(id: number) {
@@ -601,7 +547,7 @@ export class DatabaseStorage implements IStorage {
     return this.getProjectTask(id);
   }
 
-  async updateTaskStatus(id: number, status: string) {
+  async updateTaskStatus(id: number, status: string): Promise<boolean> {
     const [updatedTask] = await db.update(projectTasks)
       .set({
         status,
@@ -609,7 +555,7 @@ export class DatabaseStorage implements IStorage {
       })
       .where(and(eq(projectTasks.id, id), isNull(projectTasks.deletedAt)))
       .returning();
-    return updatedTask;
+    return !!updatedTask;
   }
 
   // Project comments methods
