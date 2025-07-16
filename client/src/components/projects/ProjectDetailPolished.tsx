@@ -13,7 +13,10 @@ import {
   Heart,
   Edit3,
   Trash2,
-  MoreVertical
+  MoreVertical,
+  FileText,
+  UserPlus,
+  UserMinus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -223,6 +226,30 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
     },
   });
 
+  // Fetch project activities
+  const { data: activities = [] } = useQuery({
+    queryKey: ["project-activities", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_activities")
+        .select(`
+          *,
+          user:users!user_id(id, first_name, last_name),
+          target_user:users!target_user_id(id, first_name, last_name),
+          task:project_tasks!task_id(id, title)
+        `)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error("Error fetching activities:", error);
+        return [];
+      }
+      return data || [];
+    },
+  });
+
   // Mutations
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: typeof newTask) => {
@@ -401,6 +428,28 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
     },
   });
 
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("projects")
+        .delete()
+        .eq("id", projectId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Project deleted successfully" });
+      onBack();
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete project", 
+        description: error.message,
+        variant: "destructive"
+      });
+    },
+  });
+
   // Helper functions
   const formatUserName = (user: any) => {
     if (!user) return "Unknown";
@@ -544,7 +593,14 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
               Edit project
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => {
+                if (confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+                  deleteProjectMutation.mutate();
+                }
+              }}
+            >
               <Trash2 className="w-4 h-4 mr-2" />
               Delete project
             </DropdownMenuItem>
@@ -840,21 +896,98 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
 
           <Card>
             <CardHeader>
-              <CardTitle>Activity</CardTitle>
+              <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {tasks.slice(0, 5).map((task) => (
-                  <div key={task.id} className="flex items-start gap-2 text-sm">
-                    <div className="w-2 h-2 bg-primary rounded-full mt-1.5"></div>
-                    <div>
-                      <p className="font-medium">{task.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Created {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                {activities.length > 0 ? (
+                  activities.map((activity) => {
+                    const getActivityIcon = () => {
+                      switch (activity.activity_type) {
+                        case 'task_created':
+                        case 'task_updated':
+                          return <FileText className="w-4 h-4 text-primary" />;
+                        case 'task_completed':
+                          return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+                        case 'member_added':
+                        case 'assignee_added':
+                          return <UserPlus className="w-4 h-4 text-blue-600" />;
+                        case 'member_removed':
+                        case 'assignee_removed':
+                          return <UserMinus className="w-4 h-4 text-red-600" />;
+                        case 'due_date_changed':
+                          return <Calendar className="w-4 h-4 text-orange-600" />;
+                        case 'priority_changed':
+                          return <AlertCircle className="w-4 h-4 text-yellow-600" />;
+                        default:
+                          return <div className="w-2 h-2 bg-primary rounded-full mt-0.5" />;
+                      }
+                    };
+
+                    const getActivityDescription = () => {
+                      const userName = activity.user ? `${activity.user.first_name} ${activity.user.last_name}` : 'Someone';
+                      const targetUserName = activity.target_user ? `${activity.target_user.first_name} ${activity.target_user.last_name}` : '';
+                      const taskTitle = activity.task ? activity.task.title : '';
+
+                      switch (activity.activity_type) {
+                        case 'task_created':
+                          return `${userName} created task "${taskTitle}"`;
+                        case 'task_updated':
+                          return `${userName} updated task "${taskTitle}"`;
+                        case 'task_completed':
+                          return `${userName} completed task "${taskTitle}"`;
+                        case 'task_uncompleted':
+                          return `${userName} reopened task "${taskTitle}"`;
+                        case 'member_added':
+                          return `${userName} added ${targetUserName} to the project`;
+                        case 'assignee_added':
+                          return `${userName} assigned ${targetUserName} to "${taskTitle}"`;
+                        case 'assignee_removed':
+                          return `${userName} unassigned ${targetUserName} from "${taskTitle}"`;
+                        case 'due_date_changed':
+                          return `${userName} changed due date for "${taskTitle}"`;
+                        case 'priority_changed':
+                          return `${userName} changed priority for "${taskTitle}" to ${activity.metadata?.new_priority || 'unknown'}`;
+                        case 'status_changed':
+                          return `${userName} changed status for "${taskTitle}" to ${activity.metadata?.new_status || 'unknown'}`;
+                        default:
+                          return activity.description || `${userName} made changes`;
+                      }
+                    };
+
+                    return (
+                      <div key={activity.id} className="flex items-start gap-3 text-sm">
+                        {getActivityIcon()}
+                        <div className="flex-1">
+                          <p className="text-sm">{getActivityDescription()}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  // Fallback to showing recent tasks if no activities yet
+                  tasks
+                    .filter(task => task.status !== 'done')
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .slice(0, 5)
+                    .map((task) => (
+                      <div key={task.id} className="flex items-start gap-3 text-sm">
+                        <FileText className="w-4 h-4 text-primary" />
+                        <div className="flex-1">
+                          <p className="text-sm">Task "{task.title}" created</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                )}
+                {activities.length === 0 && tasks.filter(task => task.status !== 'done').length === 0 && (
+                  <p className="text-sm text-muted-foreground">No recent activity</p>
+                )}
               </div>
             </CardContent>
           </Card>
