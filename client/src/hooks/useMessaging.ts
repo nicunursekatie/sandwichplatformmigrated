@@ -105,16 +105,11 @@ export function useMessaging() {
     mutationFn: async (params: SendMessageParams) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      // Create a conversation if needed
-      const conversationId = params.contextType && params.contextId 
-        ? `${params.contextType}-${params.contextId}`
-        : `direct-${Date.now()}`;
-
-      // Insert the message
+      // For now, we'll create messages without a conversation_id
+      // This allows the messaging to work while we figure out the conversation system
       const { data, error } = await supabase
         .from('messages')
         .insert({
-          conversation_id: conversationId,
           user_id: user.id,
           content: params.content
         })
