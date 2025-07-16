@@ -604,7 +604,7 @@ export class DatabaseStorage {
   async getTaskCompletions(taskId: number) {
     return db.select().from(taskCompletions)
       .where(and(eq(taskCompletions.taskId, taskId), isNull(taskCompletions.deletedAt)))
-      .orderBy(taskCompletions.createdAt);
+      .orderBy(taskCompletions.completedAt);
   }
 
   async removeTaskCompletion(taskId: number, userId: string): Promise<boolean> {

@@ -39,6 +39,8 @@ interface ProjectWithDetails extends Project {
   task_stats: {
     total: number;
     completed: number;
+    total_assignments: number;
+    completed_assignments: number;
   };
 }
 
@@ -83,16 +85,42 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             .eq("project_id", project.id)
             .is("deleted_at", null);
 
-          // Get task stats
+          // Get detailed task stats with assignments and completions
           const { data: tasks } = await supabase
             .from("project_tasks")
-            .select("status")
+            .select(`
+              id,
+              status,
+              task_assignments!inner(user_id),
+              task_completions(user_id, deleted_at)
+            `)
             .eq("project_id", project.id)
             .is("deleted_at", null);
 
+          let totalAssignments = 0;
+          let completedAssignments = 0;
+          let tasksCompletelyDone = 0;
+
+          if (tasks) {
+            tasks.forEach(task => {
+              const assignmentCount = task.task_assignments?.length || 0;
+              const activeCompletions = task.task_completions?.filter(tc => !tc.deleted_at).length || 0;
+              
+              totalAssignments += assignmentCount;
+              completedAssignments += activeCompletions;
+              
+              // Task is completely done if all assignees have completed it
+              if (assignmentCount > 0 && activeCompletions === assignmentCount) {
+                tasksCompletelyDone++;
+              }
+            });
+          }
+
           const taskStats = {
             total: tasks?.length || 0,
-            completed: tasks?.filter((t) => t.status === "done").length || 0,
+            completed: tasksCompletelyDone,
+            total_assignments: totalAssignments,
+            completed_assignments: completedAssignments,
           };
 
           return {
@@ -350,9 +378,16 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
 
                       {/* Task progress */}
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">
-                          {project.task_stats.completed} of {project.task_stats.total} tasks
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm text-gray-700 font-medium">
+                            {project.task_stats.completed}/{project.task_stats.total} tasks
+                          </span>
+                          {project.task_stats.total_assignments > 0 && (
+                            <span className="text-xs text-gray-500">
+                              {project.task_stats.completed_assignments}/{project.task_stats.total_assignments} assignments
+                            </span>
+                          )}
+                        </div>
                         {project.task_stats.total > 0 && (
                           <div className="w-20 bg-gray-200 rounded-full h-2">
                             <div
