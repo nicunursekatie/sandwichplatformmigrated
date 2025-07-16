@@ -40,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MessageComposer } from "@/components/message-composer";
+import { KudosInbox } from "@/components/kudos-inbox";
 
 interface Message {
   id: number;

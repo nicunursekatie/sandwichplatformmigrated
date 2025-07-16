@@ -1,4 +1,4 @@
-import { Sandwich, LogOut, LayoutDashboard, ListTodo, MessageCircle, ClipboardList, FolderOpen, BarChart3, TrendingUp, Users, Car, Building2, FileText, Phone, ChevronDown, ChevronRight, Menu, X, UserCog, Lightbulb } from "lucide-react";
+import { Sandwich, LogOut, LayoutDashboard, ListTodo, MessageCircle, ClipboardList, FolderOpen, BarChart3, TrendingUp, Users, Car, Building2, FileText, Phone, ChevronDown, ChevronRight, Menu, X, UserCog, Lightbulb, Heart } from "lucide-react";
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
 import { supabase } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +43,7 @@ import WorkLogPage from "@/pages/work-log";
 import SuggestionsPortal from "@/pages/suggestions";
 import GoogleSheetsPage from "@/pages/google-sheets";
 import InboxPage from "@/pages/inbox";
+import KudosPage from "@/pages/kudos";
 import AblyDemo from "@/components/ably-demo";
 
 export default function Dashboard({ initialSection = "dashboard", projectId: initialProjectId }: { initialSection?: string; projectId?: number }) {
@@ -81,6 +82,7 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "collections", label: "Collections", icon: Sandwich },
     { id: "messages", label: "Messages", icon: MessageCircle },
+    { id: "kudos", label: "Kudos", icon: Heart },
     
     // Data section (filtered by permissions)
     ...(hasPermission(user, PERMISSIONS.VIEW_HOSTS) ? [{ id: "hosts", label: "Hosts", icon: Building2 }] : []),
@@ -124,6 +126,8 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
         return <ChatHub />;
       case "inbox":
         return <InboxPage />;
+      case "kudos":
+        return <KudosPage />;
       case "profile":
         return <UserProfile />;
       case "meetings":
