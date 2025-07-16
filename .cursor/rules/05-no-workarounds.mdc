@@ -21,8 +21,4 @@ Do not create elaborate workarounds for simple problems.
 
 Missing column? Add it or recreate table.
 Wrong schema? Fix the schema.
-Cache issue? Wait 30-60 seconds.---
-description:
-globs:
-alwaysApply: false
----
+Cache issue? Wait 30-60 seconds.

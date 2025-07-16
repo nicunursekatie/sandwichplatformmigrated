@@ -231,7 +231,7 @@ export default function SandwichCollectionLog() {
           if (sortConfig.field === 'total_sandwiches') {
             aVal = (a.individual_sandwiches || 0) + calculateGroupTotal(a.group_collections);
             bVal = (b.individual_sandwiches || 0) + calculateGroupTotal(b.group_collections);
-          } else if (sortConfig.field !== 'total_sandwiches') {
+          } else {
             const field: keyof SandwichCollection = sortConfig.field;
             aVal = a[field];
             bVal = b[field];

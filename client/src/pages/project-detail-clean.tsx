@@ -39,6 +39,17 @@ interface ProjectDetailCleanProps {
   onBack?: () => void;
 }
 
+// Helper to format assignee names from projectAssignments
+function formatAssigneeNames(assignments: any[]): string {
+  if (!assignments || assignments.length === 0) return 'Unassigned';
+  return assignments.map((assignment: any) => {
+    if (assignment.user?.first_name && assignment.user?.last_name) {
+      return `${assignment.user.first_name} ${assignment.user.last_name}`;
+    }
+    return assignment.user?.email || assignment.user_id;
+  }).join(', ');
+}
+
 export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailCleanProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -537,6 +548,7 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
             )}
             <div className="min-w-0 flex-1">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">{project.title}</h1>
+              <p className="text-slate-500 text-sm mt-1">Owners: {formatAssigneeNames(projectAssignments)}</p>
               <p className="text-slate-600 mt-1 text-sm sm:text-base line-clamp-2">{project.description}</p>
             </div>
           </div>
@@ -1466,15 +1478,10 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
               <div>
                 <div>
                   <Label htmlFor="edit-project-assignees">Assigned To</Label>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {projectAssignments.length > 0 
-                      ? projectAssignments.map((assignment: any) => 
-                          assignment.user?.first_name && assignment.user?.last_name 
-                            ? `${assignment.user.first_name} ${assignment.user.last_name}`
-                            : assignment.user?.email || assignment.user_id
-                        ).join(', ')
-                      : 'No assignments'
-                    }
+                  <div className="mb-2 text-sm text-slate-600">
+                    <strong>Team Assignment:</strong> Use the <b>Manage Team</b> button below to add or remove project owners/team members. This project supports multiple owners.
+                    <br />
+                    <span>Current: {formatAssigneeNames(projectAssignments)}</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
                     Use the Project Team Manager to assign users to this project
