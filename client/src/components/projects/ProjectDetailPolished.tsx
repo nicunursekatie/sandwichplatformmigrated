@@ -49,11 +49,20 @@ interface Task {
   priority: string;
   due_date: string | null;
   created_at: string;
-  assignee_ids: string[];
   project_id: number;
 }
 
 interface TaskWithDetails extends Task {
+  assignments: Array<{
+    user_id: string;
+    assigned_at: string;
+    user: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+    };
+  }>;
   completions: Array<{
     user_id: string;
     completed_at: string;
@@ -94,8 +103,8 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
     status: "todo",
     priority: "medium",
     due_date: "",
-    assignee_ids: [] as string[],
   });
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = useQuery({
@@ -142,6 +151,15 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
 
       const tasksWithDetails = await Promise.all(
         (tasksData || []).map(async (task) => {
+          const { data: assignments } = await supabase
+            .from("task_assignments")
+            .select(`
+              user_id,
+              assigned_at,
+              user:users(id, first_name, last_name, email)
+            `)
+            .eq("task_id", task.id);
+
           const { data: completions } = await supabase
             .from("task_completions")
             .select(`
@@ -165,6 +183,7 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
 
           return {
             ...task,
+            assignments: assignments || [],
             completions: completions || [],
             kudos: kudos || [],
           };
@@ -193,7 +212,7 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
   // Mutations
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: typeof newTask) => {
-      const { data, error } = await supabase
+      const { data: taskResult, error: taskError } = await supabase
         .from("project_tasks")
         .insert({
           ...taskData,
@@ -202,8 +221,23 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (taskError) throw taskError;
+
+      // Create task assignments
+      if (selectedAssignees.length > 0) {
+        const assignments = selectedAssignees.map((userId) => ({
+          task_id: taskResult.id,
+          user_id: userId,
+        }));
+
+        const { error: assignError } = await supabase
+          .from("task_assignments")
+          .insert(assignments);
+
+        if (assignError) throw assignError;
+      }
+
+      return taskResult;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
@@ -214,8 +248,8 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
         status: "todo",
         priority: "medium",
         due_date: "",
-        assignee_ids: [],
       });
+      setSelectedAssignees([]);
       toast({ title: "Task created successfully" });
     },
   });
@@ -286,8 +320,8 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
   };
 
   const getTaskCompletionPercentage = (task: TaskWithDetails) => {
-    if (task.assignee_ids.length === 0) return 0;
-    return Math.round((task.completions.length / task.assignee_ids.length) * 100);
+    if (task.assignments.length === 0) return 0;
+    return Math.round((task.completions.length / task.assignments.length) * 100);
   };
 
   const getStatusColor = (status: string) => {
@@ -543,11 +577,11 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                                       {format(new Date(task.due_date), "MMM dd")}
                                     </div>
                                   )}
-                                  {task.assignee_ids.length > 0 && (
+                                  {task.assignments.length > 0 && (
                                     <div className="flex items-center gap-1">
                                       <Users className="w-3 h-3 text-muted-foreground" />
                                       <span className="text-muted-foreground">
-                                        {task.assignee_ids.length}
+                                        {task.assignments.length}
                                       </span>
                                     </div>
                                   )}
@@ -687,20 +721,14 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                     <input
                       type="checkbox"
                       className="rounded"
-                      checked={newTask.assignee_ids.includes(assignment.user_id)}
+                      checked={selectedAssignees.includes(assignment.user_id)}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setNewTask({
-                            ...newTask,
-                            assignee_ids: [...newTask.assignee_ids, assignment.user_id],
-                          });
+                          setSelectedAssignees([...selectedAssignees, assignment.user_id]);
                         } else {
-                          setNewTask({
-                            ...newTask,
-                            assignee_ids: newTask.assignee_ids.filter(
-                              (id) => id !== assignment.user_id
-                            ),
-                          });
+                          setSelectedAssignees(
+                            selectedAssignees.filter((id) => id !== assignment.user_id)
+                          );
                         }
                       }}
                     />
