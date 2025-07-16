@@ -96,6 +96,17 @@ interface ProjectDetailProps {
 export default function ProjectDetailPolished({ projectId, onBack }: ProjectDetailProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Debug auth
+  useEffect(() => {
+    if (user) {
+      console.log("Current user from useAuth:", {
+        id: user.id,
+        email: user.email,
+      });
+    }
+  }, [user]);
+  
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [showProjectEdit, setShowProjectEdit] = useState(false);
@@ -297,28 +308,64 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
 
   const toggleTaskCompletionMutation = useMutation({
     mutationFn: async ({ taskId, isCompleted }: { taskId: number; isCompleted: boolean }) => {
+      if (!user?.id) {
+        throw new Error("No authenticated user");
+      }
+      
+      console.log("Toggling task completion:", {
+        taskId,
+        isCompleted,
+        userId: user.id,
+      });
+      
       if (isCompleted) {
         const { error } = await supabase
           .from("task_completions")
           .update({ deleted_at: new Date().toISOString() })
           .eq("task_id", taskId)
-          .eq("user_id", user?.id);
+          .eq("user_id", user.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error removing completion:", error);
+          throw error;
+        }
       } else {
-        const { error } = await supabase
+        // First check auth session
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Current auth session:", {
+          userId: session?.user?.id,
+          userEmail: session?.user?.email,
+        });
+        
+        const { data, error } = await supabase
           .from("task_completions")
           .insert({
             task_id: taskId,
-            user_id: user?.id,
+            user_id: user.id,
             completed_at: new Date().toISOString(),
+          })
+          .select();
+          
+        if (error) {
+          console.error("Error creating completion:", {
+            error,
+            attemptedUserId: user.id,
+            sessionUserId: session?.user?.id,
           });
-
-        if (error) throw error;
+          throw error;
+        }
+        console.log("Successfully created completion:", data);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update task completion",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 

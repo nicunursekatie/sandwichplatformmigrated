@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Users, CheckSquare, Calendar, AlertCircle } from "lucide-react";
+import { Plus, Users, CheckSquare, Calendar, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -189,8 +189,50 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
     );
   }
 
+  // Group projects by status
+  const projectsByStatus = useMemo(() => {
+    const grouped = {
+      active: [] as ProjectWithDetails[],
+      on_hold: [] as ProjectWithDetails[],
+      completed: [] as ProjectWithDetails[],
+    };
+
+    projects.forEach((project) => {
+      if (project.status in grouped) {
+        grouped[project.status as keyof typeof grouped].push(project);
+      }
+    });
+
+    return grouped;
+  }, [projects]);
+
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    active: false,
+    on_hold: false,
+    completed: true, // Completed section collapsed by default
+  });
+
+  const toggleSection = (section: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  const statusLabels = {
+    active: "Active Projects",
+    on_hold: "On Hold",
+    completed: "Completed",
+  };
+
+  const statusIcons = {
+    active: "🚀",
+    on_hold: "⏸️",
+    completed: "✅",
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Projects</h2>
         <Button onClick={() => setShowCreateDialog(true)}>
@@ -199,61 +241,94 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => (
-          <Card
-            key={project.id}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => onProjectSelect(project.id)}
+      {Object.entries(projectsByStatus).map(([status, statusProjects]) => (
+        <div key={status} className="space-y-3">
+          <button
+            onClick={() => toggleSection(status)}
+            className="flex items-center gap-2 text-lg font-semibold hover:text-primary transition-colors w-full"
           >
-            <CardHeader>
-              <CardTitle className="line-clamp-1">{project.title}</CardTitle>
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {project.description}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {/* Status and Priority */}
-                <div className="flex gap-2">
-                  <Badge className={getStatusColor(project.status)}>
-                    {project.status}
-                  </Badge>
-                  <Badge className={getPriorityColor(project.priority)}>
-                    {project.priority}
-                  </Badge>
-                </div>
+            {collapsedSections[status] ? (
+              <ChevronRight className="w-5 h-5" />
+            ) : (
+              <ChevronDown className="w-5 h-5" />
+            )}
+            <span>{statusIcons[status as keyof typeof statusIcons]}</span>
+            <span>{statusLabels[status as keyof typeof statusLabels]}</span>
+            <span className="text-sm font-normal text-muted-foreground">({statusProjects.length})</span>
+          </button>
 
-                {/* Assignees */}
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {formatAssignees(project.assignments)}
-                  </span>
-                </div>
+          {!collapsedSections[status] && (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 ml-7">
+              {statusProjects.map((project) => (
+                <Card
+                  key={project.id}
+                  className="cursor-pointer hover:shadow-md transition-all border-l-4"
+                  style={{
+                    borderLeftColor: project.priority === 'high' ? '#ef4444' : 
+                                   project.priority === 'medium' ? '#f97316' : '#22c55e'
+                  }}
+                  onClick={() => onProjectSelect(project.id)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-base line-clamp-1">{project.title}</CardTitle>
+                      {project.priority === 'high' && (
+                        <Badge variant="destructive" className="text-xs">High</Badge>
+                      )}
+                    </div>
+                    {project.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {project.description}
+                      </p>
+                    )}
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-2">
+                      {/* Simplified stats row */}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            {project.assignments.length}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <CheckSquare className="w-3 h-3" />
+                            {project.task_stats.completed}/{project.task_stats.total}
+                          </span>
+                        </div>
+                        {project.due_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(project.due_date).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
 
-                {/* Task Progress */}
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckSquare className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {project.task_stats.completed} / {project.task_stats.total} tasks
-                  </span>
-                </div>
+                      {/* Progress bar */}
+                      {project.task_stats.total > 0 && (
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div
+                            className="bg-primary h-1.5 rounded-full transition-all"
+                            style={{
+                              width: `${(project.task_stats.completed / project.task_stats.total) * 100}%`
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
-                {/* Due Date */}
-                {project.due_date && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      Due {formatDistanceToNow(new Date(project.due_date), { addSuffix: true })}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+          {!collapsedSections[status] && statusProjects.length === 0 && (
+            <div className="text-center py-8 ml-7 text-muted-foreground text-sm">
+              No {statusLabels[status as keyof typeof statusLabels].toLowerCase()} yet
+            </div>
+          )}
+        </div>
+      ))}
 
       {projects.length === 0 && (
         <div className="text-center py-12">

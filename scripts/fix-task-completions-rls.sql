@@ -47,6 +47,12 @@ CREATE POLICY "Users can create task completions" ON task_completions
         SELECT 1 FROM task_assignments ta
         WHERE ta.task_id = task_completions.task_id
         AND ta.user_id = get_current_user_id()
+      ) OR
+      EXISTS (
+        SELECT 1 FROM project_tasks pt
+        JOIN project_assignments pa ON pa.project_id = pt.project_id
+        WHERE pt.id = task_completions.task_id
+        AND pa.user_id = get_current_user_id()
       )
     )
   );

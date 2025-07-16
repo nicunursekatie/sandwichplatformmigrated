@@ -51,7 +51,8 @@ export function SendKudosButton({
           "GET",
           `/api/messaging/kudos/check?recipientId=${recipientId}&contextType=${contextType}&contextId=${contextId}`
         );
-        setKudosSent(response.sent);
+        const data = await response.json?.() ?? response;
+        setKudosSent(!!(data.sent ?? data.kudosSent));
       } catch (error) {
         console.error("Failed to check kudos status:", error);
       }
@@ -94,7 +95,9 @@ export function SendKudosButton({
         content,
       });
 
-      if (response.alreadySent) {
+      const data = await response.json?.() ?? response;
+
+      if (data.alreadySent) {
         toast({
           title: "Kudos already sent",
           description: "You've already sent kudos for this achievement",
