@@ -61,10 +61,11 @@ interface TaskWithDetails extends Task {
     };
   }>;
   kudos: Array<{
-    from_user_id: string;
-    message: string;
-    created_at: string;
-    from_user: {
+    sender_id: string;
+    recipient_id: string;
+    sent_at: string;
+    message_id: number | null;
+    sender: {
       first_name: string;
       last_name: string;
     };
@@ -168,13 +169,14 @@ export default function ProjectDetailSimplified({ projectId, onBack }: ProjectDe
           const { data: kudos } = await supabase
             .from("kudos_tracking")
             .select(`
-              from_user_id,
-              message,
-              created_at,
-              from_user:users!kudos_tracking_from_user_id_fkey(first_name, last_name)
+              sender_id,
+              recipient_id,
+              sent_at,
+              message_id,
+              sender:users!sender_id(first_name, last_name)
             `)
-            .eq("target_type", "task")
-            .eq("target_id", task.id);
+            .eq("context_type", "task")
+            .eq("context_id", task.id.toString());
 
           return {
             ...task,
