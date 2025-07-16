@@ -96,17 +96,6 @@ interface ProjectDetailProps {
 export default function ProjectDetailPolished({ projectId, onBack }: ProjectDetailProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  
-  // Debug auth
-  useEffect(() => {
-    if (user) {
-      console.log("Current user from useAuth:", {
-        id: user.id,
-        email: user.email,
-      });
-    }
-  }, [user]);
-  
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [showProjectEdit, setShowProjectEdit] = useState(false);

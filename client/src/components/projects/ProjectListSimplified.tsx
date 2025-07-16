@@ -181,15 +181,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
       .join(", ");
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-muted-foreground">Loading projects...</div>
-      </div>
-    );
-  }
-
-  // Group projects by status
+  // Group projects by status - MUST be before any conditional returns
   const projectsByStatus = useMemo(() => {
     const grouped = {
       active: [] as ProjectWithDetails[],
@@ -230,6 +222,14 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
     on_hold: "⏸️",
     completed: "✅",
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-muted-foreground">Loading projects...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

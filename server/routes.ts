@@ -1703,8 +1703,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Group by date, host, and sandwich counts to find exact duplicates
       const duplicateGroups = new Map();
-      const suspiciousPatterns = [];
-      const ogDuplicates = [];
+      const suspiciousPatterns: { id: number; collectionDate: string; hostName: string; individualSandwiches: number; groupCollections: string; submittedAt: Date; deletedAt: Date | null; deletedBy: string | null; }[] = [];
+      const ogDuplicates: Array<{
+        ogEntry: any;
+        earlyEntry?: any;
+        duplicateOgEntry?: any;
+        reason: string;
+      }> = [];
 
       collections.forEach((collection) => {
         const key = `${collection.collectionDate}-${collection.hostName}-${collection.individualSandwiches}-${collection.groupCollections}`;
@@ -1818,7 +1823,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { mode = "exact" } = req.body; // 'exact', 'suspicious', or 'og-duplicates'
       const collections = await storage.getAllSandwichCollections();
 
-      let collectionsToDelete = [];
+      let collectionsToDelete: any[] = [];
 
       if (mode === "exact") {
         // Find exact duplicates based on date, host, and counts
@@ -2241,7 +2246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Committee members only see minutes for their committees
         const userCommittees = await storage.getUserCommittees(userId);
         const committeeTypes = userCommittees.map(
-          (membership) => membership.membership.committeeId,
+          (committee) => committee.name,
         );
 
         const filteredMinutes = minutes.filter(

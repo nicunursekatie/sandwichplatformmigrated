@@ -123,8 +123,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Interface compatibility method
-  async getAllProjects() {
-    return this.getProjects();
+  async getAllProjects(): Promise<{
+    title: string;
+    id: number;
+    color: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    notes: string | null;
+    category: string;
+    deletedAt: Date | null;
+    deletedBy: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    startDate: Date | null;
+    endDate: Date | null;
+    ownerId: string | null;
+    clientId: number | null;
+    teamId: number | null;
+    progress: number | null;
+    estimatedHours: number | null;
+    actualHours: number | null;
+    parentProjectId: number | null;
+    isTemplate: boolean | null;
+    templateType: string | null;
+    archivedAt: Date | null;
+    archivedBy: string | null;
+    budget: string | null;
+  }[]> {
+    const projectsList = await this.getProjects();
+    return projectsList as {
+      title: string;
+      id: number;
+      color: string;
+      description: string | null;
+      status: string;
+      priority: string;
+      notes: string | null;
+      category: string;
+      deletedAt: Date | null;
+      deletedBy: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      startDate: Date | null;
+      endDate: Date | null;
+      ownerId: string | null;
+      clientId: number | null;
+      teamId: number | null;
+      progress: number | null;
+      estimatedHours: number | null;
+      actualHours: number | null;
+      parentProjectId: number | null;
+      isTemplate: boolean | null;
+      templateType: string | null;
+      archivedAt: Date | null;
+      archivedBy: string | null;
+      budget: string | null;
+    }[];
   }
 
   async getProjectById(id: number) {
