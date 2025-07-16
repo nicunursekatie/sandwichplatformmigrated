@@ -226,29 +226,8 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
     },
   });
 
-  // Fetch project activities
-  const { data: activities = [] } = useQuery({
-    queryKey: ["project-activities", projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("project_activities")
-        .select(`
-          *,
-          user:users!user_id(id, first_name, last_name),
-          target_user:users!target_user_id(id, first_name, last_name),
-          task:project_tasks!task_id(id, title)
-        `)
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (error) {
-        console.error("Error fetching activities:", error);
-        return [];
-      }
-      return data || [];
-    },
-  });
+  // Temporarily disable activities until table is created
+  const activities: any[] = [];
 
   // Mutations
   const createTaskMutation = useMutation({
@@ -326,11 +305,17 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
           userEmail: session?.user?.email,
         });
         
+        // Construct user name with fallbacks
+        const userName = user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}`.trim()
+          : user.email || 'Unknown User';
+          
         const { data, error } = await supabase
           .from("task_completions")
           .insert({
             task_id: taskId,
             user_id: user.id,
+            user_name: userName,
             completed_at: new Date().toISOString(),
           })
           .select();
@@ -466,18 +451,31 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
 
   const deleteProjectMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      console.log("Attempting to soft delete project:", projectId);
+      
+      // Use soft delete by updating deleted_at and deleted_by
+      const { data, error } = await supabase
         .from("projects")
-        .delete()
-        .eq("id", projectId);
-
+        .update({ 
+          deleted_at: new Date().toISOString(),
+          deleted_by: user?.id
+        })
+        .eq("id", projectId)
+        .select();
+        
+      console.log("Soft delete result:", { data, error });
+      
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Project soft deleted successfully:", data);
       toast({ title: "Project deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["projects-simplified"] });
       onBack();
     },
     onError: (error: any) => {
+      console.error("Failed to delete project:", error);
       toast({ 
         title: "Failed to delete project", 
         description: error.message,
