@@ -43,6 +43,7 @@ export const requireCommitteeAccess = (committeeId?: string): RequestHandler => 
 declare module 'express-session' {
   interface SessionData {
     user?: {
+      displayName: string;
       id: string;
       email: string;
       firstName: string;

@@ -252,14 +252,14 @@ const projectDataUpload = multer({
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only Excel, CSV, and PDF files are allowed for project data uploads'), false);
+      cb(null, false);
     }
   }
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup robust PostgreSQL session store with fallback handling
-  let sessionStore;
+  let sessionStore: any;
   try {
     const pgStore = connectPg(session);
     sessionStore = new pgStore({
@@ -294,7 +294,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     });
   } catch (error) {
-    console.warn("PostgreSQL session store failed, using memory fallback:", error.message);
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn("PostgreSQL session store failed, using memory fallback:", message);
     sessionStore = new session.MemoryStore();
   }
   

@@ -91,7 +91,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             .select(`
               id,
               status,
-              task_assignments!inner(user_id),
+              task_assignments(user_id),
               task_completions(user_id, deleted_at)
             `)
             .eq("project_id", project.id)
@@ -102,6 +102,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
           let tasksCompletelyDone = 0;
 
           if (tasks) {
+            console.log('Project tasks data:', JSON.stringify(tasks, null, 2));
             tasks.forEach(task => {
               const assignmentCount = task.task_assignments?.length || 0;
               // Count distinct users who have completed the task
@@ -110,6 +111,8 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
                   ?.filter(tc => !tc.deleted_at)
                   ?.map(tc => tc.user_id) || []
               ).size;
+              
+              console.log(`Task ${task.id}: ${assignmentCount} assignments, ${uniqueCompletedUsers} completions`);
               
               totalAssignments += assignmentCount;
               completedAssignments += uniqueCompletedUsers;
