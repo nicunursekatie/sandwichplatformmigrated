@@ -400,16 +400,9 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
 
                       {/* Task progress */}
                       <div className="flex items-center gap-2">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-sm text-gray-700 font-medium">
-                            {project.task_stats.completed}/{project.task_stats.total} tasks
-                          </span>
-                          {project.task_stats.total_assignments > 0 && (
-                            <span className="text-xs text-gray-500">
-                              {project.task_stats.completed_assignments}/{project.task_stats.total_assignments} assignments
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-sm text-gray-700 font-medium">
+                          {project.task_stats.completed}/{project.task_stats.total} tasks
+                        </span>
                         {project.task_stats.total > 0 && (
                           <div className="w-20 bg-gray-200 rounded-full h-2">
                             <div
