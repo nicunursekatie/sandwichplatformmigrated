@@ -541,9 +541,19 @@ export default function SandwichCollectionLog() {
   const hostOptions = [...hostsList.map(host => host.name), "Other"];
 
   const formatDate = (dateString: string) => {
+    // Handle null or undefined date strings
+    if (!dateString) return 'No date';
+    
     // Parse date as local date to avoid timezone issues
-    const [year, month, day] = dateString.split('-').map(Number);
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return 'Invalid date';
+    
+    const [year, month, day] = parts.map(Number);
     const localDate = new Date(year, month - 1, day);
+    
+    // Check for invalid date
+    if (isNaN(localDate.getTime())) return 'Invalid date';
+    
     return localDate.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
