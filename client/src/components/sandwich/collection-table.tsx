@@ -106,7 +106,7 @@ export function CollectionTable({ collections, onEdit, onDelete, isUpdating, isD
     try {
       return JSON.parse(groupCollectionsJson || "[]");
     } catch {
-      if (groupCollectionsJson && groupCollectionsJson !== "[]") {
+      if (typeof groupCollectionsJson === 'string' && groupCollectionsJson && groupCollectionsJson !== "[]") {
         const parts = groupCollectionsJson.split(',');
         return parts.map(part => {
           const match = part.match(/([^:]+):\s*(\d+)/);

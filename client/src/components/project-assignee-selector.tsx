@@ -50,21 +50,21 @@ export function ProjectAssigneeSelector({
   // Initialize from existing value
   useEffect(() => {
     if (value && users.length > 0) {
-      if (value.includes(',')) {
+      if (typeof value === 'string' && value.includes(',')) {
         // Multiple names - try to match them to users
         const nameList = value.split(',').map(n => n.trim());
         const matchedUsers: SelectedUser[] = [];
         
         nameList.forEach(name => {
           const matchedUser = users.find(user => {
-            const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
             return fullName === name || user.email === name;
           });
           
           if (matchedUser) {
             matchedUsers.push({
               id: matchedUser.id,
-              name: `${matchedUser.first_name || ''} ${matchedUser.last_name || ''}`.trim() || matchedUser.email
+              name: `${matchedUser.firstName || ''} ${matchedUser.lastName || ''}`.trim() || matchedUser.email
             });
           } else {
             // Keep as text if no user match
@@ -99,7 +99,7 @@ export function ProjectAssigneeSelector({
     const user = users.find(u => u.id === pendingUserId);
     if (!user) return;
 
-    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
     const newUser: SelectedUser = {
       id: user.id,
       name: fullName
@@ -210,7 +210,7 @@ export function ProjectAssigneeSelector({
                   .filter(user => !selectedUsers.some(su => su.id === user.id))
                   .map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      {`${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email}
+                      {`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}
                     </SelectItem>
                   ))}
               </SelectContent>
