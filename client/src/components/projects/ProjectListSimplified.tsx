@@ -276,7 +276,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
                   <CardContent className="p-6">
                     {/* Header with title and priority */}
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors line-clamp-1 flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors flex-1">
                         {project.title}
                       </h3>
                       <div className="flex items-center gap-2 ml-3">
