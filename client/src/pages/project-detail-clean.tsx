@@ -200,26 +200,9 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
     enabled: !!projectId
   });
 
-  // Fetch project assignments
+  // Fetch project assignments using API
   const { data: projectAssignments = [] } = useQuery({
-    queryKey: ["project-assignments", projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('project_assignments')
-        .select(`
-          *,
-          user:users(id, email, first_name, last_name)
-        `)
-        .eq('project_id', projectId);
-      
-      if (error) {
-        console.error('Error fetching project assignments:', error);
-        return [];
-      }
-      
-      console.log('Project assignments data:', data);
-      return data || [];
-    },
+    queryKey: ["/api/projects", projectId, "assignments"],
     enabled: !!projectId
   });
 

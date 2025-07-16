@@ -122,9 +122,19 @@ export class DatabaseStorage implements IStorage {
     return this.getNonDeletedQuery(projects).orderBy(desc(projects.createdAt));
   }
 
+  // Interface compatibility method
+  async getAllProjects() {
+    return this.getProjects();
+  }
+
   async getProjectById(id: number) {
     const result = await db.select().from(projects).where(and(eq(projects.id, id), isNull(projects.deletedAt))).limit(1);
     return result[0] || null;
+  }
+
+  // Interface compatibility method
+  async getProject(id: number) {
+    return this.getProjectById(id);
   }
 
   async createProject(projectData: any) {
@@ -453,5 +463,152 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(recipients)
       .where(and(eq(recipients.status, 'active'), isNull(recipients.deletedAt)))
       .orderBy(recipients.name);
+  }
+
+  // PROJECT ASSIGNMENT METHODS
+  async getProjectAssignments(projectId: number) {
+    return db.select({
+      id: projectAssignments.id,
+      project_id: projectAssignments.projectId,
+      user_id: projectAssignments.userId,
+      role: projectAssignments.role,
+      assigned_at: projectAssignments.assignedAt,
+      user: {
+        id: users.id,
+        email: users.email,
+        first_name: users.firstName,
+        last_name: users.lastName,
+        display_name: users.displayName
+      }
+    })
+    .from(projectAssignments)
+    .leftJoin(users, eq(projectAssignments.userId, users.id))
+    .where(and(
+      eq(projectAssignments.projectId, projectId),
+      isNull(projectAssignments.deletedAt)
+    ))
+    .orderBy(projectAssignments.assignedAt);
+  }
+
+  async addProjectAssignment(assignment: { projectId: number; userId: string; role: string }) {
+    const [newAssignment] = await db.insert(projectAssignments).values({
+      projectId: assignment.projectId,
+      userId: assignment.userId,
+      role: assignment.role
+    }).returning();
+    return newAssignment;
+  }
+
+  async removeProjectAssignment(projectId: number, userId: string): Promise<boolean> {
+    try {
+      const result = await db.update(projectAssignments)
+        .set({
+          deletedAt: new Date(),
+          deletedBy: 'system', // This should be the actual user ID in real usage
+        })
+        .where(and(
+          eq(projectAssignments.projectId, projectId),
+          eq(projectAssignments.userId, userId),
+          isNull(projectAssignments.deletedAt)
+        ))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error removing project assignment:', error);
+      return false;
+    }
+  }
+
+  async updateProjectAssignment(projectId: number, userId: string, updates: { role: string }) {
+    const [updatedAssignment] = await db.update(projectAssignments)
+      .set({
+        role: updates.role,
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(projectAssignments.projectId, projectId),
+        eq(projectAssignments.userId, userId),
+        isNull(projectAssignments.deletedAt)
+      ))
+      .returning();
+    return updatedAssignment;
+  }
+
+  // Additional methods needed for task handling
+  async getProjectTask(taskId: number) {
+    const result = await db.select().from(projectTasks)
+      .where(and(eq(projectTasks.id, taskId), isNull(projectTasks.deletedAt)))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async getTaskById(id: number) {
+    return this.getProjectTask(id);
+  }
+
+  async updateTaskStatus(id: number, status: string) {
+    const [updatedTask] = await db.update(projectTasks)
+      .set({
+        status,
+        updatedAt: new Date()
+      })
+      .where(and(eq(projectTasks.id, id), isNull(projectTasks.deletedAt)))
+      .returning();
+    return updatedTask;
+  }
+
+  // Project comments methods
+  async getProjectComments(projectId: number) {
+    return db.select().from(projectComments)
+      .where(and(eq(projectComments.projectId, projectId), isNull(projectComments.deletedAt)))
+      .orderBy(projectComments.createdAt);
+  }
+
+  async createProjectComment(commentData: any) {
+    const [newComment] = await db.insert(projectComments).values(commentData).returning();
+    return newComment;
+  }
+
+  async deleteProjectComment(id: number): Promise<boolean> {
+    return this.softDelete(projectComments, id, 'Comment deleted');
+  }
+
+  // Task completion methods
+  async createTaskCompletion(completion: any) {
+    const [newCompletion] = await db.insert(taskCompletions).values(completion).returning();
+    return newCompletion;
+  }
+
+  async getTaskCompletions(taskId: number) {
+    return db.select().from(taskCompletions)
+      .where(and(eq(taskCompletions.taskId, taskId), isNull(taskCompletions.deletedAt)))
+      .orderBy(taskCompletions.createdAt);
+  }
+
+  async removeTaskCompletion(taskId: number, userId: string): Promise<boolean> {
+    try {
+      const result = await db.update(taskCompletions)
+        .set({
+          deletedAt: new Date(),
+          deletedBy: 'system', // This should be the actual user ID in real usage
+        })
+        .where(and(
+          eq(taskCompletions.taskId, taskId),
+          eq(taskCompletions.userId, userId),
+          isNull(taskCompletions.deletedAt)
+        ))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error removing task completion:', error);
+      return false;
+    }
+  }
+
+  async getProjectCongratulations(projectId: number) {
+    // This might need to be implemented based on your specific requirements
+    return [];
   }
 }

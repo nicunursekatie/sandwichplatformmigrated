@@ -48,28 +48,32 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
   });
   
   const { data: projects = [], isLoading } = useQuery<Project[]>({
-    queryKey: ["projects"]
+    queryKey: ["/api/projects"]
   });
 
-  // Fetch project assignments for all projects
+  // Fetch project assignments for all projects using API
   const { data: allProjectAssignments = [] } = useQuery({
     queryKey: ["all-project-assignments"],
     queryFn: async () => {
-      console.log('Fetching all project assignments...');
-      const { data, error } = await supabase
-        .from('project_assignments')
-        .select(`
-          project_id,
-          user:users(id, email, first_name, last_name)
-        `);
+      console.log('Fetching all project assignments via API...');
+      const assignmentsPromises = projects.map(async (project) => {
+        try {
+          const response = await apiRequest("GET", `/api/projects/${project.id}/assignments`);
+          const assignments = await response.json();
+          return assignments.map((assignment: any) => ({
+            ...assignment,
+            project_id: project.id
+          }));
+        } catch (error) {
+          console.error(`Error fetching assignments for project ${project.id}:`, error);
+          return [];
+        }
+      });
       
-      if (error) {
-        console.error('Error fetching project assignments:', error);
-        return [];
-      }
-      
-      console.log('Fetched project assignments:', data);
-      return data || [];
+      const allAssignments = await Promise.all(assignmentsPromises);
+      const flatAssignments = allAssignments.flat();
+      console.log('Fetched project assignments via API:', flatAssignments);
+      return flatAssignments;
     },
     enabled: projects.length > 0
   });
