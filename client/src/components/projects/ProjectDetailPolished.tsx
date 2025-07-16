@@ -865,9 +865,18 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                                 )}
 
                                 {task.kudos.length > 0 && (
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <Heart className="w-3 h-3 text-pink-500" />
-                                    {task.kudos.length} kudos
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Heart className="w-3 h-3 text-pink-500" />
+                                      {task.kudos.length} kudos
+                                    </div>
+                                    <div className="pl-5 space-y-0.5">
+                                      {task.kudos.map((kudo, index) => (
+                                        <div key={index} className="text-xs text-muted-foreground">
+                                          from {kudo.sender?.first_name} {kudo.sender?.last_name || ''}
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
                                 )}
                               </div>

@@ -422,10 +422,13 @@ export class DatabaseStorage {
         )
         .orderBy(desc(deletionAudit.deletedAt));
     } else if (tableName) {
-      query = query.where(eq(deletionAudit.tableName, tableName));
+      return baseQuery
+        .where(eq(deletionAudit.tableName, tableName))
+        .orderBy(desc(deletionAudit.deletedAt));
     } else if (recordId) {
-      query = query.where(eq(deletionAudit.recordId, recordId));
-    }
+      return baseQuery
+        .where(eq(deletionAudit.recordId, recordId))
+        .orderBy(desc(deletionAudit.deletedAt));
     }
     return baseQuery.orderBy(desc(deletionAudit.deletedAt));
   }
