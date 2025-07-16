@@ -515,6 +515,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+      
+      const project = await storage.getProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      logger.error("Failed to fetch project", error);
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
   app.post(
     "/api/projects",
     requirePermission("edit_data"),
@@ -723,6 +742,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: "Failed to delete project" });
       }
     },
+  );
+
+  // Project Assignments
+  app.get("/api/projects/:id/assignments", async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+      
+      const assignments = await storage.getProjectAssignments(projectId);
+      res.json(assignments);
+    } catch (error) {
+      logger.error("Failed to fetch project assignments", error);
+      res.status(500).json({ message: "Failed to fetch project assignments" });
+    }
+  });
+
+  app.post(
+    "/api/projects/:id/assignments",
+    requirePermission("edit_data"),
+    async (req, res) => {
+      try {
+        const projectId = parseInt(req.params.id);
+        if (isNaN(projectId)) {
+          return res.status(400).json({ message: "Invalid project ID" });
+        }
+        
+        const { userId, role } = req.body;
+        if (!userId || !role) {
+          return res.status(400).json({ message: "User ID and role are required" });
+        }
+        
+        const assignment = await storage.addProjectAssignment({
+          projectId,
+          userId,
+          role
+        });
+        res.json(assignment);
+      } catch (error) {
+        logger.error("Failed to add project assignment", error);
+        res.status(500).json({ message: "Failed to add project assignment" });
+      }
+    }
+  );
+
+  app.delete(
+    "/api/projects/:id/assignments/:userId",
+    requirePermission("edit_data"),
+    async (req, res) => {
+      try {
+        const projectId = parseInt(req.params.id);
+        const userId = req.params.userId;
+        
+        if (isNaN(projectId)) {
+          return res.status(400).json({ message: "Invalid project ID" });
+        }
+        
+        const success = await storage.removeProjectAssignment(projectId, userId);
+        if (success) {
+          res.json({ message: "Assignment removed successfully" });
+        } else {
+          res.status(404).json({ message: "Assignment not found" });
+        }
+      } catch (error) {
+        logger.error("Failed to remove project assignment", error);
+        res.status(500).json({ message: "Failed to remove project assignment" });
+      }
+    }
+  );
+
+  app.put(
+    "/api/projects/:id/assignments/:userId",
+    requirePermission("edit_data"),
+    async (req, res) => {
+      try {
+        const projectId = parseInt(req.params.id);
+        const userId = req.params.userId;
+        const { role } = req.body;
+        
+        if (isNaN(projectId)) {
+          return res.status(400).json({ message: "Invalid project ID" });
+        }
+        
+        if (!role) {
+          return res.status(400).json({ message: "Role is required" });
+        }
+        
+        const assignment = await storage.updateProjectAssignment(projectId, userId, { role });
+        res.json(assignment);
+      } catch (error) {
+        logger.error("Failed to update project assignment", error);
+        res.status(500).json({ message: "Failed to update project assignment" });
+      }
+    }
   );
 
   // Project Files

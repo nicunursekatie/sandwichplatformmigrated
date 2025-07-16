@@ -523,8 +523,7 @@ export class DatabaseStorage implements IStorage {
   async updateProjectAssignment(projectId: number, userId: string, updates: { role: string }) {
     const [updatedAssignment] = await db.update(projectAssignments)
       .set({
-        role: updates.role,
-        updatedAt: new Date()
+        role: updates.role
       })
       .where(and(
         eq(projectAssignments.projectId, projectId),
