@@ -75,6 +75,8 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
       // For each project, get assignments and task stats
       const projectsWithDetails = await Promise.all(
         (projectsData || []).map(async (project) => {
+          console.log(`Processing project: ${project.title} (ID: ${project.id})`);
+          
           // Get assignments
           const { data: assignments } = await supabase
             .from("project_assignments")
@@ -86,7 +88,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             .is("deleted_at", null);
 
           // Get detailed task stats with assignments and completions
-          const { data: tasks } = await supabase
+          const { data: tasks, error: tasksError } = await supabase
             .from("project_tasks")
             .select(`
               id,
@@ -96,6 +98,10 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             `)
             .eq("project_id", project.id)
             .is("deleted_at", null);
+            
+          if (tasksError) {
+            console.error(`Error fetching tasks for project ${project.id}:`, tasksError);
+          }
 
           let totalAssignments = 0;
           let completedAssignments = 0;
@@ -130,6 +136,8 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             total_assignments: totalAssignments,
             completed_assignments: completedAssignments,
           };
+          
+          console.log(`Project ${project.title} final stats:`, taskStats);
 
           return {
             ...project,
