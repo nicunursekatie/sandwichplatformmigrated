@@ -54,7 +54,8 @@ export function calculatePagination(
 export function optimizedFilter<T>(
   data: T[],
   filters: Record<string, any>,
-  sortConfig?: { field: keyof T; direction: 'asc' | 'desc' }
+  sortConfig?: { field: keyof T | string; direction: 'asc' | 'desc' },
+  customFieldCalculator?: (item: T, field: string) => any
 ): T[] {
   let filtered = data;
   
@@ -74,8 +75,16 @@ export function optimizedFilter<T>(
   // Apply sorting if specified
   if (sortConfig) {
     filtered.sort((a, b) => {
-      const aVal = a[sortConfig.field];
-      const bVal = b[sortConfig.field];
+      let aVal: any, bVal: any;
+      
+      // Check if we have a custom field calculator for computed fields
+      if (customFieldCalculator && typeof sortConfig.field === 'string' && !(sortConfig.field in (a as any))) {
+        aVal = customFieldCalculator(a, sortConfig.field);
+        bVal = customFieldCalculator(b, sortConfig.field);
+      } else {
+        aVal = a[sortConfig.field as keyof T];
+        bVal = b[sortConfig.field as keyof T];
+      }
       
       if (aVal === bVal) return 0;
       if (aVal === null || aVal === undefined) return 1;

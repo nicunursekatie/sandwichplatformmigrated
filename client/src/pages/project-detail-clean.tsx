@@ -1476,17 +1476,14 @@ export default function ProjectDetailClean({ projectId, onBack }: ProjectDetailC
                 </Select>
               </div>
               <div>
-                <div>
-                  <Label htmlFor="edit-project-assignees">Assigned To</Label>
-                  <div className="mb-2 text-sm text-slate-600">
-                    <strong>Team Assignment:</strong> Use the <b>Manage Team</b> button below to add or remove project owners/team members. This project supports multiple owners.
-                    <br />
-                    <span>Current: {formatAssigneeNames(projectAssignments)}</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Use the Project Team Manager to assign users to this project
-                  </p>
-                </div>
+                <Label htmlFor="edit-project-assignees">Assigned To</Label>
+                <ProjectUserManager
+                  project={project}
+                  onUpdate={() => {
+                    queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+                    queryClient.invalidateQueries({ queryKey: ["projects"] });
+                  }}
+                />
               </div>
             </div>
             <div>

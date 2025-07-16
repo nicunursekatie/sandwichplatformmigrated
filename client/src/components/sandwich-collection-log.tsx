@@ -486,8 +486,17 @@ export default function SandwichCollectionLog() {
       return true;
     })
     .sort((a: SandwichCollection, b: SandwichCollection) => {
-      const aValue = a[sortConfig.field];
-      const bValue = b[sortConfig.field];
+      let aValue: any, bValue: any;
+      
+      // Handle special case for total sandwiches
+      if (sortConfig.field === 'total_sandwiches') {
+        aValue = (a.individual_sandwiches || 0) + calculateGroupTotal(a.group_collections);
+        bValue = (b.individual_sandwiches || 0) + calculateGroupTotal(b.group_collections);
+      } else {
+        const field: keyof SandwichCollection = sortConfig.field;
+        aValue = a[field];
+        bValue = b[field];
+      }
 
       // Handle different data types
       let comparison = 0;
