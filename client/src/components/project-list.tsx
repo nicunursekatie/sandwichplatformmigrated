@@ -451,7 +451,7 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
               {availableProjects.map((project) => (
                 <div
                   key={project.id}
-                  className="bg-white p-4 rounded-lg border border-green-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer focus:ring-2 focus:ring-blue-400"
+                  className="bg-[color:var(--tsp-teal-light)] p-4 rounded-lg border border-[color:var(--tsp-teal)] shadow-sm hover:shadow-md transition-shadow cursor-pointer focus:ring-2 focus:ring-[color:var(--tsp-teal)]"
                   onClick={() => handleProjectClick(project.id)}
                   role="button"
                   tabIndex={0}
@@ -465,7 +465,7 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
                         >
                           {project.title}
                         </h3>
-                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                        <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-[color:var(--tsp-teal-light)] text-[color:var(--tsp-teal)]">
                           Available
                         </span>
                       </div>
@@ -954,7 +954,7 @@ export default function ProjectList({ onProjectSelect }: ProjectListProps = {}) 
               <DialogHeader>
                 <DialogTitle>Edit Project</DialogTitle>
               </DialogHeader>
-              <p id="edit-project-description" className="text-sm text-slate-600 mb-4">
+              <p id="edit-project-description" className="text-sm font-body text-[color:var(--tsp-gray)] mb-4">
                 Update project details, assignment, and timeline.
               </p>
               <form onSubmit={handleUpdateProject} className="space-y-4">

@@ -172,7 +172,7 @@ export function MultiUserTaskCompletion({
           {isCurrentUser && ' (You)'}
         </span>
         {isCompleted && (
-          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+          <Badge variant="secondary" className="text-xs bg-[color:var(--tsp-teal-light)] text-[color:var(--tsp-teal)]">
             ✓ Done
           </Badge>
         )}
