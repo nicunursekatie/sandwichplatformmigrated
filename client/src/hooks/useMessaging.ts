@@ -105,19 +105,60 @@ export function useMessaging() {
     mutationFn: async (params: SendMessageParams) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      // For now, we'll create messages without a conversation_id
-      // This allows the messaging to work while we figure out the conversation system
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          user_id: user.id,
-          content: params.content
-        })
-        .select()
-        .single();
+      try {
+        // First, try to find or create a general conversation for the user
+        let conversationId = null;
+        
+        // Check if we have a general conversation
+        const { data: existingConv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('name', 'General Messages')
+          .single();
+        
+        if (existingConv) {
+          conversationId = existingConv.id;
+        } else {
+          // Create a new general conversation
+          const { data: newConv, error: convError } = await supabase
+            .from('conversations')
+            .insert({
+              name: 'General Messages',
+              type: 'group'
+            })
+            .select()
+            .single();
+            
+          if (!convError && newConv) {
+            conversationId = newConv.id;
+            
+            // Add user as participant
+            await supabase
+              .from('conversation_participants')
+              .insert({
+                conversation_id: conversationId,
+                user_id: user.id
+              });
+          }
+        }
 
-      if (error) throw error;
-      return data;
+        // Insert the message
+        const { data, error } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            user_id: user.id,
+            content: params.content
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        console.error('Failed to send message:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
