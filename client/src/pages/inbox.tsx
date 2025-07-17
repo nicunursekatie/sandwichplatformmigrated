@@ -98,37 +98,53 @@ export default function InboxPage() {
   const { data: messages = [], isLoading, refetch: refetchMessages } = useQuery<Message[]>({
     queryKey: ["messages"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select(`
-          *,
-          sender_user:users!messages_user_id_fkey (
-            id,
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching messages:', error);
+      if (messagesError) {
+        console.error('Error fetching messages:', messagesError);
         return [];
       }
       
+      if (!messagesData || messagesData.length === 0) {
+        return [];
+      }
+      
+      // Get unique user IDs from messages
+      const userIds = [...new Set(messagesData.map(msg => msg.user_id))];
+      
+      // Fetch user data for all senders
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email')
+        .in('id', userIds);
+      
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+      }
+      
+      // Create a map of user data
+      const userMap = new Map((usersData || []).map(user => [user.id, user]));
+      
       // Transform the data to match the expected Message interface
-      return (data || []).map(msg => ({
-        id: msg.id,
-        senderId: msg.user_id,
-        senderName: msg.sender_user 
-          ? `${msg.sender_user.first_name || ''} ${msg.sender_user.last_name || ''}`.trim() || msg.sender_user.email
-          : msg.sender || 'Unknown',
-        content: msg.content,
-        createdAt: msg.created_at,
-        editedAt: msg.updated_at,
-        read: false, // We don't have a read status in the table yet
-        readAt: null
-      }));
+      return messagesData.map(msg => {
+        const senderUser = userMap.get(msg.user_id);
+        return {
+          id: msg.id,
+          senderId: msg.user_id,
+          senderName: senderUser 
+            ? `${senderUser.first_name || ''} ${senderUser.last_name || ''}`.trim() || senderUser.email
+            : msg.sender || msg.user_id || 'Unknown',
+          content: msg.content,
+          createdAt: msg.created_at,
+          editedAt: msg.updated_at,
+          read: false, // We don't have a read status in the table yet
+          readAt: null
+        };
+      });
     }
   });
 

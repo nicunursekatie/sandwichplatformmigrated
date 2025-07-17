@@ -1086,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // }
 
           // Temporarily use storage layer for all chat messages
-          messages = await storage.getMessages(messageContext, limit);
+          messages = await storage.getAllMessages();
         } else {
           // Default to General Chat when no parameters are provided
           const [generalConversation] = await db
