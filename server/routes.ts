@@ -926,7 +926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `[DEBUG] API call received - chatType: "${chatType}", committee: "${committee}", recipientId: "${recipientId}", groupId: ${groupId}`,
         );
 
-        let messages;
+        let messages: any[] = [];
         if (messageContext === "direct" && recipientId) {
           // For direct messages, get conversations between current user and recipient
           const currentUserId = (req as any).user?.id;
@@ -1543,7 +1543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { mode = "exact" } = req.body; // 'exact', 'suspicious', or 'og-duplicates'
       const collections = await storage.getAllSandwichCollections();
 
-      let collectionsToDelete = [];
+      let collectionsToDelete: any[] = [];
 
       if (mode === "exact") {
         // Find exact duplicates based on date, host, and counts
@@ -1562,7 +1562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duplicateGroups.forEach((group) => {
           if (group.length > 1) {
             const sorted = group.sort(
-              (a: SandwichCollection, b: SandwichCollection) =>
+              (a: any, b: any) =>
                 new Date(b.submittedAt).getTime() -
                 new Date(a.submittedAt).getTime(),
             );
@@ -1609,7 +1609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ogMap.forEach((ogGroup) => {
           if (ogGroup.length > 1) {
             const sorted = ogGroup.sort(
-              (a: SandwichCollection, b: SandwichCollection) =>
+              (a: any, b: any) =>
                 new Date(b.submittedAt).getTime() -
                 new Date(a.submittedAt).getTime(),
             );
@@ -1771,11 +1771,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ogMap.forEach((ogGroup) => {
         if (ogGroup.length > 1) {
           const sorted = ogGroup.sort(
-            (a: SandwichCollection, b: SandwichCollection) =>
+            (a: any, b: any) =>
               new Date(b.submittedAt).getTime() -
               new Date(a.submittedAt).getTime(),
           );
-          sorted.slice(1).forEach((duplicate) => {
+          sorted.slice(1).forEach((duplicate: any) => {
             ogDuplicates.push({
               ogEntry: sorted[0],
               duplicateOgEntry: duplicate,
@@ -1792,7 +1792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           entries: group,
           count: group.length,
           keepNewest: group.sort(
-            (a, b) =>
+            (a: any, b: any) =>
               new Date(b.submittedAt).getTime() -
               new Date(a.submittedAt).getTime(),
           )[0],
@@ -1843,7 +1843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duplicateGroups.forEach((group) => {
           if (group.length > 1) {
             const sorted = group.sort(
-              (a: SandwichCollection, b: SandwichCollection) =>
+              (a: any, b: any) =>
                 new Date(b.submittedAt).getTime() -
                 new Date(a.submittedAt).getTime(),
             );

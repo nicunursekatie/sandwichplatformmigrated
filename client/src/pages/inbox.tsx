@@ -98,10 +98,11 @@ export default function InboxPage() {
   const { data: messages = [], isLoading, refetch: refetchMessages } = useQuery<Message[]>({
     queryKey: ["messages"],
     queryFn: async () => {
-      // First get messages
+      // First get messages - only direct messages (no conversation_id)
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('*')
+        .is('conversation_id', null)
         .order('created_at', { ascending: false });
       
       if (messagesError) {
