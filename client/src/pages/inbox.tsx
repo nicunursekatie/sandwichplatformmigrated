@@ -100,7 +100,15 @@ export default function InboxPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select(`
+          *,
+          sender_user:users!messages_user_id_fkey (
+            id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -108,7 +116,19 @@ export default function InboxPage() {
         return [];
       }
       
-      return data || [];
+      // Transform the data to match the expected Message interface
+      return (data || []).map(msg => ({
+        id: msg.id,
+        senderId: msg.user_id,
+        senderName: msg.sender_user 
+          ? `${msg.sender_user.first_name || ''} ${msg.sender_user.last_name || ''}`.trim() || msg.sender_user.email
+          : msg.sender || 'Unknown',
+        content: msg.content,
+        createdAt: msg.created_at,
+        editedAt: msg.updated_at,
+        read: false, // We don't have a read status in the table yet
+        readAt: null
+      }));
     }
   });
 
