@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ interface MessageNotificationsProps {
   user: any; // User object passed from parent Dashboard
 }
 
-function MessageNotifications({ user }: MessageNotificationsProps) {
+const MessageNotifications = memo(function MessageNotifications({ user }: MessageNotificationsProps) {
   console.log('🔔 MessageNotifications component mounting...');
 
   // ALL HOOKS MUST BE CALLED FIRST, BEFORE ANY CONDITIONAL LOGIC
@@ -38,10 +38,15 @@ function MessageNotifications({ user }: MessageNotificationsProps) {
 
   // Memoize user ID to prevent unnecessary re-renders
   const userId = useMemo(() => user?.id || null, [user?.id]);
+  
+  // Early stability check - prevent rendering during user transitions
+  const isUserStable = useMemo(() => {
+    return user !== undefined; // user can be null (not authenticated) or object (authenticated), but not undefined
+  }, [user]);
 
   // Use a stable query key that doesn't change based on user state
   const { data: unreadCounts, refetch, error, isLoading } = useQuery<UnreadCounts>({
-    queryKey: ['message-notifications-unread-counts', userId || 'no-user', lastCheck],
+    queryKey: ['message-notifications-unread-counts', userId || 'no-user'],
     queryFn: async () => {
       if (!userId) {
         return {
@@ -127,6 +132,12 @@ function MessageNotifications({ user }: MessageNotificationsProps) {
 
   console.log('🔔 MessageNotifications rendering with totalUnread:', totalUnread);
 
+  // Check for stable user state first
+  if (!isUserStable) {
+    console.log('🔔 MessageNotifications: User state unstable, not rendering');
+    return null;
+  }
+
   // NOW we can safely return early after all hooks have been called
   if (!userId) {
     console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
@@ -207,6 +218,6 @@ function MessageNotifications({ user }: MessageNotificationsProps) {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+});
 
 export default MessageNotifications;
