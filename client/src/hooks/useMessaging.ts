@@ -55,7 +55,7 @@ export function useMessaging() {
   const [isConnected, setIsConnected] = useState(false);
 
 
-  // Set up realtime subscriptions
+  // Set up simple realtime connection
   useEffect(() => {
     if (!user?.id) return;
 
@@ -73,15 +73,15 @@ export function useMessaging() {
       supabase.removeChannel(channel);
       setIsConnected(false);
     };
-  }, [user?.id, queryClient, toast]);
+  }, [user?.id]);
 
   // Add polling as backup
   useEffect(() => {
     if (!user?.id) return;
 
     const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
       queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
