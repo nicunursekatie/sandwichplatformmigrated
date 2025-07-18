@@ -358,7 +358,7 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
           >
             <MessageCircle className="w-5 h-5" />
           </button>
-          <MessageNotifications user={user} />
+          {!isLoading && <MessageNotifications key={user?.id || 'no-user'} user={user} />}
           <button
             onClick={() => setActiveSection("profile")}
             className={`p-2 rounded-lg transition-colors ${
