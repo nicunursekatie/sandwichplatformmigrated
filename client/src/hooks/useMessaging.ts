@@ -103,56 +103,89 @@ export function useMessaging() {
     queryFn: async () => {
       if (!user?.id) return null;
       
-      // Get counts for chat channels
-      const { data: chatCounts } = await supabase
-        .from('messages')
-        .select(`
-          conversation_id,
-          conversations!inner(name, type)
-        `)
-        .eq('conversations.type', 'channel')
-        .not('id', 'in', `(
-          SELECT message_id 
-          FROM message_reads 
-          WHERE user_id = '${user.id}'
-        )`);
+      try {
+        // Get all messages and read messages separately
+        const [messagesResult, readsResult] = await Promise.all([
+          // Get all messages for this user
+          supabase
+            .from('messages')
+            .select(`
+              id,
+              conversation_id,
+              message_type,
+              recipient_id,
+              conversations(name, type)
+            `)
+            .or(`recipient_id.eq.${user.id},conversation_id.in.(SELECT conversation_id FROM conversation_participants WHERE user_id = '${user.id}')`),
+          
+          // Get read message IDs
+          supabase
+            .from('message_reads')
+            .select('message_id')
+            .eq('user_id', user.id)
+        ]);
 
-      // Get direct message counts
-      const { data: directCounts } = await supabase
-        .from('messages')
-        .select('id')
-        .eq('message_type', 'direct')
-        .eq('recipient_id', user.id)
-        .not('id', 'in', `(
-          SELECT message_id 
-          FROM message_reads 
-          WHERE user_id = '${user.id}'
-        )`);
-
-      // Calculate counts by channel
-      const counts = {
-        general: 0,
-        committee: 0,
-        hosts: 0,
-        drivers: 0,
-        recipients: 0,
-        core_team: 0,
-        direct: directCounts?.length || 0,
-        groups: 0,
-        total: 0,
-      };
-
-      // Count unread messages by channel name
-      chatCounts?.forEach((msg: any) => {
-        const channelName = msg.conversations?.name;
-        if (channelName && counts.hasOwnProperty(channelName)) {
-          counts[channelName as keyof typeof counts]++;
+        if (messagesResult.error || readsResult.error) {
+          console.error('Error fetching unread counts:', messagesResult.error || readsResult.error);
+          return {
+            general: 0,
+            committee: 0,
+            hosts: 0,
+            drivers: 0,
+            recipients: 0,
+            core_team: 0,
+            direct: 0,
+            groups: 0,
+            total: 0,
+          };
         }
-      });
 
-      counts.total = Object.values(counts).reduce((sum, count) => sum + count, 0);
-      
-      return counts;
+        const messages = messagesResult.data || [];
+        const readMessageIds = new Set((readsResult.data || []).map(r => r.message_id));
+
+        // Filter unread messages
+        const unreadMessages = messages.filter(msg => !readMessageIds.has(msg.id));
+
+        // Calculate counts
+        const counts = {
+          general: 0,
+          committee: 0,
+          hosts: 0,
+          drivers: 0,
+          recipients: 0,
+          core_team: 0,
+          direct: 0,
+          groups: 0,
+          total: 0,
+        };
+
+        unreadMessages.forEach((msg: any) => {
+          if (msg.message_type === 'direct' && msg.recipient_id === user.id) {
+            counts.direct++;
+          } else if (msg.conversations?.type === 'channel') {
+            const channelName = msg.conversations.name;
+            if (channelName && counts.hasOwnProperty(channelName)) {
+              counts[channelName as keyof typeof counts]++;
+            }
+          }
+        });
+
+        counts.total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+        return counts;
+      } catch (error) {
+        console.error('Error calculating unread counts:', error);
+        return {
+          general: 0,
+          committee: 0,
+          hosts: 0,
+          drivers: 0,
+          recipients: 0,
+          core_team: 0,
+          direct: 0,
+          groups: 0,
+          total: 0,
+        };
+      }
     },
     enabled: !!user?.id,
     refetchInterval: 30000, // Refetch every 30 seconds
@@ -164,33 +197,58 @@ export function useMessaging() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          sender:users!user_id(id, first_name, last_name, email),
-          conversations(name, type)
-        `)
-        .or(`recipient_id.eq.${user.id},conversation_id.in.(
-          SELECT conversation_id 
-          FROM conversation_participants 
-          WHERE user_id = '${user.id}'
-        )`)
-        .not('id', 'in', `(
-          SELECT message_id 
-          FROM message_reads 
-          WHERE user_id = '${user.id}'
-        )`)
-        .neq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      
-      if (error) {
+      try {
+        // Get messages and read status separately
+        const [messagesResult, readsResult] = await Promise.all([
+          supabase
+            .from('messages')
+            .select(`
+              *,
+              conversations(name, type)
+            `)
+            .or(`recipient_id.eq.${user.id},conversation_id.in.(SELECT conversation_id FROM conversation_participants WHERE user_id = '${user.id}')`)
+            .neq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(100),
+          
+          supabase
+            .from('message_reads')
+            .select('message_id')
+            .eq('user_id', user.id)
+        ]);
+
+        if (messagesResult.error || readsResult.error) {
+          console.error('Error fetching unread messages:', messagesResult.error || readsResult.error);
+          return [];
+        }
+
+        const messages = messagesResult.data || [];
+        const readMessageIds = new Set((readsResult.data || []).map(r => r.message_id));
+
+        // Filter unread messages and get sender info
+        const unreadMessages = messages.filter(msg => !readMessageIds.has(msg.id)).slice(0, 50);
+        
+        // Fetch sender information for unread messages
+        if (unreadMessages.length > 0) {
+          const senderIds = [...new Set(unreadMessages.map(msg => msg.user_id))];
+          const { data: senders } = await supabase
+            .from('users')
+            .select('id, first_name, last_name, email')
+            .in('id', senderIds);
+          
+          const senderMap = new Map(senders?.map(s => [s.id, s]) || []);
+          
+          // Add sender info to messages
+          unreadMessages.forEach(msg => {
+            msg.sender = senderMap.get(msg.user_id) || null;
+          });
+        }
+        
+        return unreadMessages;
+      } catch (error) {
         console.error('Error fetching unread messages:', error);
         return [];
       }
-      
-      return data || [];
     },
     enabled: !!user?.id,
   });
