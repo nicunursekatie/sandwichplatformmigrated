@@ -54,6 +54,7 @@ export function useMessaging() {
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
 
+
   // Set up realtime subscriptions
   useEffect(() => {
     if (!user?.id) return;
