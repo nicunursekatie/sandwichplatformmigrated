@@ -50,7 +50,7 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
   const [activeSection, setActiveSection] = useState(initialSection);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut, isLoading } = useAuth();
 
   // Make setActiveSection available globally for embedded components
   React.useEffect(() => {
