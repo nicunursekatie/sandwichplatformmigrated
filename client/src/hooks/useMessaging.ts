@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from '@/lib/supabase';
 import { useAuth } from "./useAuth";
@@ -14,17 +14,19 @@ interface UnreadCounts {
   direct: number;
   groups: number;
   total: number;
-  suggestion: number;
-  project: number;
-  task: number;
 }
 
 interface Message {
   id: number;
-  conversation_id: string;
-  sender_id: string;
+  conversation_id: number | null;
+  user_id: string;
   content: string;
-  metadata?: any;
+  message_type: 'chat' | 'direct' | 'group';
+  reply_to_id?: number;
+  recipient_id?: string;
+  subject?: string;
+  priority: 'low' | 'normal' | 'high';
+  status: 'sent' | 'delivered' | 'read';
   created_at: string;
   updated_at: string;
   sender?: {
@@ -33,22 +35,80 @@ interface Message {
     first_name: string;
     last_name: string;
   };
+  is_read?: boolean;
 }
 
 interface SendMessageParams {
-  recipientIds: string[];
   content: string;
-  contextType?: 'suggestion' | 'project' | 'task' | 'direct';
-  contextId?: string;
-  parentMessageId?: number;
+  conversation_id?: number;
+  message_type?: 'chat' | 'direct' | 'group';
+  recipient_id?: string;
+  subject?: string;
+  priority?: 'low' | 'normal' | 'high';
+  reply_to_id?: number;
 }
 
 export function useMessaging() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [isConnected, setIsConnected] = useState(false);
 
-  // For now, return empty unread counts since we don't have a proper message read tracking system
+  // Set up realtime subscriptions
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('messaging-system')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          console.log('New message event:', payload);
+          
+          // Invalidate relevant queries to refresh data
+          queryClient.invalidateQueries({ queryKey: ['messages'] });
+          queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+          queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
+          queryClient.invalidateQueries({ queryKey: ['inbox-messages'] });
+          
+          // Show notification for new messages
+          if (payload.eventType === 'INSERT' && payload.new?.user_id !== user.id) {
+            toast({
+              title: "New message",
+              description: "You have received a new message",
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reads'
+        },
+        () => {
+          // Refresh unread counts when read status changes
+          queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+        }
+      )
+      .subscribe((status) => {
+        setIsConnected(status === 'SUBSCRIBED');
+        console.log('Realtime connection status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setIsConnected(false);
+    };
+  }, [user?.id, queryClient, toast]);
+
+  // Get unread message counts
   const { data: unreadCounts = {
     general: 0,
     committee: 0,
@@ -59,43 +119,99 @@ export function useMessaging() {
     direct: 0,
     groups: 0,
     total: 0,
-    suggestion: 0,
-    project: 0,
-    task: 0,
   } as UnreadCounts, refetch: refetchUnreadCounts } = useQuery({
     queryKey: ['unread-counts', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       
-      // TODO: Implement proper unread message counting
-      // This would require a message_reads table or similar tracking mechanism
-      return {
+      // Get counts for chat channels
+      const { data: chatCounts } = await supabase
+        .from('messages')
+        .select(`
+          conversation_id,
+          conversations!inner(name, type)
+        `)
+        .eq('conversations.type', 'channel')
+        .not('id', 'in', `(
+          SELECT message_id 
+          FROM message_reads 
+          WHERE user_id = '${user.id}'
+        )`);
+
+      // Get direct message counts
+      const { data: directCounts } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('message_type', 'direct')
+        .eq('recipient_id', user.id)
+        .not('id', 'in', `(
+          SELECT message_id 
+          FROM message_reads 
+          WHERE user_id = '${user.id}'
+        )`);
+
+      // Calculate counts by channel
+      const counts = {
         general: 0,
         committee: 0,
         hosts: 0,
         drivers: 0,
         recipients: 0,
         core_team: 0,
-        direct: 0,
+        direct: directCounts?.length || 0,
         groups: 0,
         total: 0,
-        suggestion: 0,
-        project: 0,
-        task: 0,
       };
+
+      // Count unread messages by channel name
+      chatCounts?.forEach((msg: any) => {
+        const channelName = msg.conversations?.name;
+        if (channelName && counts.hasOwnProperty(channelName)) {
+          counts[channelName as keyof typeof counts]++;
+        }
+      });
+
+      counts.total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+      
+      return counts;
     },
     enabled: !!user?.id,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  // Get unread messages (empty for now)
+  // Get unread messages for notifications
   const { data: unreadMessages = [], refetch: refetchUnreadMessages } = useQuery({
     queryKey: ['unread-messages', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
       
-      // TODO: Implement proper unread message fetching
-      return [];
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:users!user_id(id, first_name, last_name, email),
+          conversations(name, type)
+        `)
+        .or(`recipient_id.eq.${user.id},conversation_id.in.(
+          SELECT conversation_id 
+          FROM conversation_participants 
+          WHERE user_id = '${user.id}'
+        )`)
+        .not('id', 'in', `(
+          SELECT message_id 
+          FROM message_reads 
+          WHERE user_id = '${user.id}'
+        )`)
+        .neq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) {
+        console.error('Error fetching unread messages:', error);
+        return [];
+      }
+      
+      return data || [];
     },
     enabled: !!user?.id,
   });
@@ -105,16 +221,25 @@ export function useMessaging() {
     mutationFn: async (params: SendMessageParams) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      // For testing, we'll insert directly into messages without conversation
-      // The table schema shows conversation_id can be null
+      const messageData = {
+        user_id: user.id,
+        content: params.content,
+        conversation_id: params.conversation_id,
+        message_type: params.message_type || 'chat',
+        recipient_id: params.recipient_id,
+        subject: params.subject,
+        priority: params.priority || 'normal',
+        reply_to_id: params.reply_to_id,
+        status: 'sent'
+      };
+
       const { data, error } = await supabase
         .from('messages')
-        .insert({
-          user_id: user.id,
-          content: params.content,
-          sender: user.email || user.id // Use email as sender if available
-        })
-        .select()
+        .insert(messageData)
+        .select(`
+          *,
+          sender:users!user_id(id, first_name, last_name, email)
+        `)
         .single();
 
       if (error) {
@@ -126,6 +251,8 @@ export function useMessaging() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['inbox-messages'] });
       toast({ description: 'Message sent successfully' });
     },
     onError: (error: any) => {
@@ -137,10 +264,20 @@ export function useMessaging() {
     },
   });
 
-  // Mark message as read mutation (placeholder)
+  // Mark message as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (messageId: number) => {
-      // TODO: Implement message read tracking
+      if (!user?.id) throw new Error('Not authenticated');
+      
+      const { error } = await supabase
+        .from('message_reads')
+        .upsert({
+          message_id: messageId,
+          user_id: user.id,
+          read_at: new Date().toISOString()
+        }, { onConflict: 'message_id,user_id' });
+      
+      if (error) throw error;
       return { success: true };
     },
     onSuccess: () => {
@@ -150,10 +287,47 @@ export function useMessaging() {
     },
   });
 
-  // Mark all messages as read mutation (placeholder)
+  // Mark all messages as read mutation
   const markAllAsReadMutation = useMutation({
-    mutationFn: async (contextType?: string) => {
-      // TODO: Implement mark all as read
+    mutationFn: async (conversationId?: number) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      
+      // Get all unread message IDs for this conversation or user
+      let query = supabase
+        .from('messages')
+        .select('id');
+        
+      if (conversationId) {
+        query = query.eq('conversation_id', conversationId);
+      } else {
+        query = query.or(`recipient_id.eq.${user.id},conversation_id.in.(
+          SELECT conversation_id 
+          FROM conversation_participants 
+          WHERE user_id = '${user.id}'
+        )`);
+      }
+      
+      const { data: messages } = await query
+        .not('id', 'in', `(
+          SELECT message_id 
+          FROM message_reads 
+          WHERE user_id = '${user.id}'
+        )`);
+      
+      if (!messages || messages.length === 0) return { success: true };
+      
+      // Mark all as read
+      const readRecords = messages.map(msg => ({
+        message_id: msg.id,
+        user_id: user.id,
+        read_at: new Date().toISOString()
+      }));
+      
+      const { error } = await supabase
+        .from('message_reads')
+        .upsert(readRecords, { onConflict: 'message_id,user_id' });
+      
+      if (error) throw error;
       return { success: true };
     },
     onSuccess: () => {
@@ -166,17 +340,8 @@ export function useMessaging() {
 
   // Send a message
   const sendMessage = useCallback(async (params: SendMessageParams) => {
-    if (!user?.id) {
-      toast({
-        title: 'Not authenticated',
-        description: 'Please log in to send messages',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     return await sendMessageMutation.mutateAsync(params);
-  }, [user?.id, sendMessageMutation, toast]);
+  }, [sendMessageMutation]);
 
   // Mark message as read
   const markAsRead = useCallback(async (messageId: number) => {
@@ -184,51 +349,76 @@ export function useMessaging() {
   }, [markAsReadMutation]);
 
   // Mark all messages as read
-  const markAllAsRead = useCallback(async (contextType?: string) => {
-    return await markAllAsReadMutation.mutateAsync(contextType);
+  const markAllAsRead = useCallback(async (conversationId?: number) => {
+    return await markAllAsReadMutation.mutateAsync(conversationId);
   }, [markAllAsReadMutation]);
 
-  // Get messages for a specific context
-  const getContextMessages = useCallback(async (contextType: string, contextId: string) => {
+  // Get messages for a specific chat channel
+  const getChatMessages = useCallback(async (channelName: string) => {
     try {
       const { data, error } = await supabase
         .from('messages')
         .select(`
           *,
-          sender:users!sender_id(
-            id,
-            email,
-            first_name,
-            last_name
-          )
+          sender:users!user_id(id, first_name, last_name, email),
+          conversation:conversations!conversation_id(id, name, type)
         `)
-        .eq('conversation_id', `${contextType}-${contextId}`)
+        .eq('conversations.name', channelName)
+        .eq('conversations.type', 'channel')
+        .eq('message_type', 'chat')
         .order('created_at', { ascending: true });
 
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Failed to fetch context messages:', error);
+      console.error(`Failed to fetch ${channelName} messages:`, error);
       return [];
     }
   }, []);
+
+  // Get inbox messages (direct and group)
+  const getInboxMessages = useCallback(async () => {
+    if (!user?.id) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:users!user_id(id, first_name, last_name, email),
+          recipient:users!recipient_id(id, first_name, last_name, email),
+          conversation:conversations!conversation_id(id, name, type),
+          is_read:message_reads!inner(read_at)
+        `)
+        .in('message_type', ['direct', 'group'])
+        .or(`recipient_id.eq.${user.id},user_id.eq.${user.id}`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Failed to fetch inbox messages:', error);
+      return [];
+    }
+  }, [user?.id]);
 
   return {
     // Data
     unreadCounts,
     unreadMessages,
-    totalUnread: 0, // Always 0 for now until we implement read tracking
+    totalUnread: unreadCounts?.total || 0,
 
     // Actions
     sendMessage,
     markAsRead,
     markAllAsRead,
-    getContextMessages,
+    getChatMessages,
+    getInboxMessages,
     refetchUnreadCounts,
     refetchUnreadMessages,
 
     // Status
-    isConnected: true, // Always true since we're not using WebSocket
+    isConnected,
     isSending: sendMessageMutation.isPending,
   };
 }

@@ -7,10 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessaging } from "@/hooks/useMessaging";
-import { queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
 
 import { formatDistanceToNow } from "date-fns";
@@ -21,16 +22,14 @@ import {
   Search,
   CheckCheck,
   Circle,
-  Lightbulb,
-  FolderOpen,
-  ListTodo,
-  Archive,
-  Star,
-  MoreVertical,
+  Plus,
   Reply,
+  Forward,
   Trash2,
-  Edit2,
-  Plus
+  Archive,
+  MoreVertical,
+  Users,
+  User
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,539 +38,665 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MessageComposer } from "@/components/message-composer";
-import { KudosInbox } from "@/components/kudos-inbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-interface Message {
+interface InboxMessage {
   id: number;
-  senderId: string;
-  senderName?: string;
+  user_id: string;
+  recipient_id?: string;
+  conversation_id?: number;
   content: string;
-  contextType?: string;
-  contextId?: string;
-  contextTitle?: string;
-  createdAt: string;
-  editedAt?: string;
-  editedContent?: string;
-  read?: boolean;
-  readAt?: string;
+  subject?: string;
+  message_type: 'direct' | 'group';
+  priority: 'low' | 'normal' | 'high';
+  status: string;
+  created_at: string;
+  sender?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  recipient?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  conversation?: {
+    id: number;
+    name: string;
+    type: string;
+  };
+  is_read?: boolean;
 }
 
-interface MessageFormData {
-  senderId: string;
-  recipientId: string;
+interface ComposeData {
+  recipients: string[];
   subject: string;
   content: string;
-  messageType: string;
-  priority: string;
-  status?: string;
+  priority: 'low' | 'normal' | 'high';
+  message_type: 'direct' | 'group';
 }
 
 export default function InboxPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { 
-    unreadMessages, 
-    markAsRead, 
-    markAllAsRead,
-    getContextMessages,
-    sendMessage,
-    isSending 
-  } = useMessaging();
+  const { sendMessage, markAsRead, markAllAsRead, isConnected } = useMessaging();
   
   const [selectedTab, setSelectedTab] = useState("all");
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [replyContent, setReplyContent] = useState("");
   const [showComposer, setShowComposer] = useState(false);
-  const [isComposing, setIsComposing] = useState(false);
-  const [composeData, setComposeData] = useState<MessageFormData>({
-    senderId: "",
-    recipientId: "",
+  const [replyContent, setReplyContent] = useState("");
+  const [composeData, setComposeData] = useState<ComposeData>({
+    recipients: [],
     subject: "",
     content: "",
-    messageType: "direct",
-    priority: "normal"
+    priority: "normal",
+    message_type: "direct"
   });
 
-  // Fetch all messages with fresh user data
-  const { data: messages = [], isLoading, refetch: refetchMessages } = useQuery<Message[]>({
-    queryKey: ["messages"],
+  // Fetch all users for recipient selection
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
     queryFn: async () => {
-      // First get messages - only direct messages (no conversation_id)
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('messages')
-        .select('*')
-        .is('conversation_id', null)
-        .order('created_at', { ascending: false });
-      
-      if (messagesError) {
-        console.error('Error fetching messages:', messagesError);
-        return [];
-      }
-      
-      if (!messagesData || messagesData.length === 0) {
-        return [];
-      }
-      
-      // Get unique user IDs from messages
-      const userIds = [...new Set(messagesData.map(msg => msg.user_id))];
-      
-      // Fetch user data for all senders
-      const { data: usersData, error: usersError } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .select('id, first_name, last_name, email')
-        .in('id', userIds);
+        .neq('id', user?.id || '');
       
-      if (usersError) {
-        console.error('Error fetching users:', usersError);
+      if (error) {
+        console.error('Error fetching users:', error);
+        return [];
       }
       
-      // Create a map of user data
-      const userMap = new Map((usersData || []).map(user => [user.id, user]));
-      
-      // Transform the data to match the expected Message interface
-      return messagesData.map(msg => {
-        const senderUser = userMap.get(msg.user_id);
-        return {
-          id: msg.id,
-          senderId: msg.user_id,
-          senderName: senderUser 
-            ? `${senderUser.first_name || ''} ${senderUser.last_name || ''}`.trim() || senderUser.email
-            : msg.sender || msg.user_id || 'Unknown',
-          content: msg.content,
-          createdAt: msg.created_at,
-          editedAt: msg.updated_at,
-          read: false, // We don't have a read status in the table yet
-          readAt: null
-        };
-      });
+      return data || [];
+    },
+    enabled: !!user?.id
+  });
+
+  // Fetch inbox messages
+  const { data: messages = [], isLoading, refetch } = useQuery<InboxMessage[]>({
+    queryKey: ["inbox-messages", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:users!user_id(id, first_name, last_name, email),
+          recipient:users!recipient_id(id, first_name, last_name, email),
+          conversation:conversations!conversation_id(id, name, type),
+          message_reads!left(user_id, read_at)
+        `)
+        .in('message_type', ['direct', 'group'])
+        .or(`recipient_id.eq.${user.id},user_id.eq.${user.id},conversation_id.in.(
+          SELECT conversation_id 
+          FROM conversation_participants 
+          WHERE user_id = '${user.id}'
+        )`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching inbox messages:', error);
+        return [];
+      }
+
+      // Process read status
+      return (data || []).map(msg => ({
+        ...msg,
+        is_read: msg.message_reads?.some((read: any) => read.user_id === user.id) || false
+      }));
+    },
+    enabled: !!user?.id,
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
+
+  // Set up realtime subscription
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('inbox-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `or(recipient_id.eq.${user.id},user_id.eq.${user.id})`
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, refetch]);
+
+  // Filter messages based on tab
+  const filteredMessages = messages.filter(msg => {
+    if (searchQuery && !msg.content.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !msg.subject?.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+
+    switch (selectedTab) {
+      case "unread":
+        return !msg.is_read && msg.user_id !== user?.id;
+      case "sent":
+        return msg.user_id === user?.id;
+      case "direct":
+        return msg.message_type === 'direct';
+      case "group":
+        return msg.message_type === 'group';
+      default:
+        return true;
     }
   });
 
-  const sendMessageMutation = useMutation({
-    mutationFn: async (data: MessageFormData) => {
-      const { data: result, error } = await supabase
-        .from('messages')
-        .insert({
-          sender_id: data.senderId,
-          recipient_id: data.recipientId,
-          subject: data.subject,
-          content: data.content,
-          message_type: data.messageType,
-          priority: data.priority,
-          status: data.status || 'sent'
+  const unreadCount = messages.filter(msg => !msg.is_read && msg.user_id !== user?.id).length;
+
+  const handleSendMessage = async () => {
+    if (!composeData.content.trim() || composeData.recipients.length === 0) return;
+
+    try {
+      if (composeData.message_type === 'direct' && composeData.recipients.length === 1) {
+        // Send direct message
+        await sendMessage({
+          content: composeData.content,
+          message_type: 'direct',
+          recipient_id: composeData.recipients[0],
+          subject: composeData.subject,
+          priority: composeData.priority
         });
-      
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages"] });
-      setIsComposing(false);
+      } else {
+        // Create group conversation and send message
+        const { data: conversation, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            type: 'group',
+            name: composeData.subject || 'Group Message'
+          })
+          .select()
+          .single();
+
+        if (convError) throw convError;
+
+        // Add participants
+        const participants = [
+          ...composeData.recipients.map(id => ({ conversation_id: conversation.id, user_id: id })),
+          { conversation_id: conversation.id, user_id: user?.id }
+        ];
+
+        await supabase.from('conversation_participants').insert(participants);
+
+        // Send message
+        await sendMessage({
+          content: composeData.content,
+          message_type: 'group',
+          conversation_id: conversation.id,
+          subject: composeData.subject,
+          priority: composeData.priority
+        });
+      }
+
+      // Reset form
       setComposeData({
-        senderId: "",
-        recipientId: "",
+        recipients: [],
         subject: "",
         content: "",
-        messageType: "direct",
-        priority: "normal"
+        priority: "normal",
+        message_type: "direct"
       });
+      setShowComposer(false);
+      toast({ title: "Message sent", description: "Your message has been delivered." });
+      
+    } catch (error) {
+      console.error('Failed to send message:', error);
       toast({
-        title: "Message sent",
-        description: "Your message has been sent successfully.",
+        title: "Failed to send message",
+        description: "Please try again",
+        variant: "destructive"
       });
-    },
-    onError: (error) => {
-      console.error("Send message error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Fetch thread messages when a message is selected with fresh user data
-  const { data: threadMessages = [] } = useQuery({
-    queryKey: ['messaging-thread', selectedMessage?.contextType, selectedMessage?.contextId],
-    queryFn: async () => {
-      try {
-        if (!selectedMessage?.contextType || !selectedMessage?.contextId) return [];
-        // TODO: Implement thread fetching with Supabase
-        return [];
-      } catch (error) {
-        console.error('Failed to fetch thread messages:', error);
-        return [];
-      }
-    },
-    enabled: !!selectedMessage?.contextType && !!selectedMessage?.contextId && !!user,
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 30000, // Cache for 30 seconds only
-    refetchOnWindowFocus: true,
-  });
-
-  // Handle message selection and mark as read
-  const handleSelectMessage = async (message: Message) => {
-    setSelectedMessage(message);
-    setShowComposer(false); // Close composer when selecting a message
-    if (!message.read) {
-      await markAsRead(message.id);
-      refetchMessages();
     }
   };
 
-  // Handle reply
   const handleReply = async () => {
     if (!replyContent.trim() || !selectedMessage) return;
 
     try {
-      await sendMessageMutation.mutateAsync({
-        senderId: user?.id || '',
-        recipientId: selectedMessage.senderId,
-        subject: `Re: Message`,
-        content: replyContent,
-        messageType: "direct",
-        priority: "normal"
-      });
-      
+      if (selectedMessage.message_type === 'direct') {
+        await sendMessage({
+          content: replyContent,
+          message_type: 'direct',
+          recipient_id: selectedMessage.user_id === user?.id ? selectedMessage.recipient_id : selectedMessage.user_id,
+          subject: selectedMessage.subject ? `Re: ${selectedMessage.subject}` : undefined,
+          priority: selectedMessage.priority
+        });
+      } else if (selectedMessage.conversation_id) {
+        await sendMessage({
+          content: replyContent,
+          message_type: 'group',
+          conversation_id: selectedMessage.conversation_id,
+          priority: selectedMessage.priority
+        });
+      }
+
       setReplyContent("");
-      refetchMessages();
-      toast({ description: "Reply sent successfully" });
+      toast({ title: "Reply sent", description: "Your reply has been delivered." });
+      
     } catch (error) {
-      toast({ 
-        description: "Failed to send reply", 
-        variant: "destructive" 
+      console.error('Failed to send reply:', error);
+      toast({
+        title: "Failed to send reply",
+        description: "Please try again",
+        variant: "destructive"
       });
     }
   };
 
-  // Debug logging to understand invalid messages
-  console.log('Raw allMessages array:', messages);
-  console.log('Invalid allMessages:', messages?.filter(msg => !msg || !msg.senderName));
-  
-  // Filter out undefined/invalid messages first
-  const validMessages = (messages || [])
-    .filter(msg => msg && typeof msg === 'object' && msg.senderName && msg.content) || [];
-  
-  console.log('Valid messages after filtering:', validMessages);
-  
-  // Debug threadMessages too
-  const validThreadMessages = (threadMessages || [])
-    .filter((msg: any) => msg && typeof msg === 'object' && msg.senderName) || [];
-  
-  // Filter messages based on search
-  const filteredMessages = validMessages.filter((message: Message) => {
-    if (!searchQuery) return true;
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      (message.content || '').toLowerCase().includes(searchLower) ||
-      (message.senderName || '').toLowerCase().includes(searchLower) ||
-      (message.contextTitle || '').toLowerCase().includes(searchLower)
-    );
-  });
-
-  // Get context icon
-  const getContextIcon = (contextType?: string) => {
-    switch (contextType) {
-      case 'suggestion': return <Lightbulb className="h-4 w-4" />;
-      case 'project': return <FolderOpen className="h-4 w-4" />;
-      case 'task': return <ListTodo className="h-4 w-4" />;
-      default: return <MessageCircle className="h-4 w-4" />;
+  const handleMarkAsRead = async (messageId: number) => {
+    try {
+      await markAsRead(messageId);
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
     }
   };
 
-  // Get context color
-  const getContextColor = (contextType?: string) => {
-    switch (contextType) {
-      case 'suggestion': return 'text-yellow-600 bg-yellow-50';
-      case 'project': return 'text-blue-600 bg-blue-50';
-      case 'task': return 'text-green-600 bg-green-50';
-      default: return 'text-gray-600 bg-gray-50';
+  const getUserDisplayName = (user: any) => {
+    if (!user) return 'Unknown';
+    if (user.first_name || user.last_name) {
+      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    }
+    return user.email || user.id;
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'low': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-blue-100 text-blue-800';
     }
   };
+
+  // Mark message as read when selected
+  useEffect(() => {
+    if (selectedMessage && !selectedMessage.is_read && selectedMessage.user_id !== user?.id) {
+      handleMarkAsRead(selectedMessage.id);
+    }
+  }, [selectedMessage, user?.id]);
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
-      {/* Message List */}
-      <div className="w-1/3 border-r flex flex-col">
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <InboxIcon className="h-5 w-5" />
-              Inbox
-            </h2>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setShowComposer(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Compose
-              </Button>
-              {unreadMessages.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => markAllAsRead()}
-                >
-                  <CheckCheck className="h-4 w-4 mr-2" />
-                  Mark all read
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search messages..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-main-heading text-primary flex items-center gap-2">
+            <InboxIcon className="h-6 w-6" />
+            Inbox
+          </h1>
+          <p className="text-sm sm:text-base font-body text-muted-foreground">
+            Direct and group messages
+          </p>
         </div>
-
-        <div className="flex-1 flex flex-col">
-          {/* Custom Tab Navigation */}
-          <div className="px-4 py-3 border-b bg-slate-50">
-            <div className="flex gap-2 overflow-x-auto">
-              {[
-                { id: 'all', label: 'All Messages', icon: InboxIcon, count: validMessages.length },
-                { id: 'direct', label: 'Direct', icon: MessageCircle, count: validMessages.filter((m: Message) => m && (m.contextType === 'direct' || !m.contextType)).length },
-                { id: 'suggestion', label: 'Suggestions', icon: Lightbulb, count: validMessages.filter((m: Message) => m && m.contextType === 'suggestion').length },
-                { id: 'project', label: 'Projects', icon: FolderOpen, count: validMessages.filter((m: Message) => m && m.contextType === 'project').length },
-                { id: 'task', label: 'Tasks', icon: ListTodo, count: validMessages.filter((m: Message) => m && m.contextType === 'task').length },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSelectedTab(tab.id)}
-                  className={`
-                    flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap
-                    ${selectedTab === tab.id 
-                      ? 'bg-white text-[#236383] shadow-sm border border-slate-200' 
-                      : 'text-slate-600 hover:text-slate-800 hover:bg-white/50'
-                    }
-                  `}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                  {tab.count > 0 && (
-                    <Badge 
-                      variant={selectedTab === tab.id ? "default" : "secondary"}
-                      className={`
-                        h-5 px-2 text-xs
-                        ${selectedTab === tab.id 
-                          ? 'bg-[#236383] text-white' 
-                          : 'bg-slate-200 text-slate-700'
-                        }
-                      `}
-                    >
-                      {tab.count}
-                    </Badge>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1">
-            <div className="p-2">
-              {filteredMessages.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No messages found
-                </div>
-              ) : (
-                filteredMessages.map((message: Message) => (
-                  <Card
-                    key={message.id}
-                    className={`mb-2 cursor-pointer transition-colors ${
-                      selectedMessage?.id === message.id 
-                        ? 'bg-blue-50 border-blue-300' 
-                        : 'hover:bg-gray-50'
-                    } ${!message.read ? 'border-l-4 border-l-blue-500' : ''}`}
-                    onClick={() => handleSelectMessage(message)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-start justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              {message?.senderName?.charAt(0) || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">
-                              {message?.senderName || 'Unknown'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {message?.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : 'Unknown time'}
-                            </p>
-                          </div>
-                        </div>
-                        {!message?.read && (
-                          <Circle className="h-2 w-2 fill-blue-500 text-blue-500" />
-                        )}
-                      </div>
-                      
-                      <p className="text-sm text-gray-700 line-clamp-2 mb-2">
-                        {message.editedContent || message.content}
-                      </p>
-                      
-                      {message.contextType && (
-                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${getContextColor(message.contextType)}`}>
-                          {getContextIcon(message.contextType)}
-                          <span>{message.contextTitle || message.contextType}</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </ScrollArea>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-sm text-gray-500">
+            {isConnected ? 'Connected' : 'Disconnected'}
+          </span>
         </div>
       </div>
 
-      {/* Message Detail */}
-      <div className="flex-1 flex flex-col">
-        {showComposer ? (
-          <div className="p-4">
-            <MessageComposer
-              contextType="direct"
-              onSent={() => {
-                setShowComposer(false);
-                refetchMessages();
-              }}
-              onCancel={() => setShowComposer(false)}
-            />
-          </div>
-        ) : selectedMessage ? (
-          <>
-            {/* Message Header */}
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {selectedMessage.senderName?.charAt(0) || '?'}
-                    </AvatarFallback>
-                  </Avatar>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+        {/* Message List */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Controls */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search messages..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Dialog open={showComposer} onOpenChange={setShowComposer}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Compose Message</DialogTitle>
+                  <DialogDescription>
+                    Send a direct message or create a group conversation
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Message Type</Label>
+                      <Select
+                        value={composeData.message_type}
+                        onValueChange={(value: 'direct' | 'group') => 
+                          setComposeData(prev => ({ ...prev, message_type: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="direct">Direct Message</SelectItem>
+                          <SelectItem value="group">Group Message</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Priority</Label>
+                      <Select
+                        value={composeData.priority}
+                        onValueChange={(value: 'low' | 'normal' | 'high') => 
+                          setComposeData(prev => ({ ...prev, priority: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
                   <div>
-                    <h3 className="font-semibold">{selectedMessage.senderName || 'Unknown'}</h3>
-                    <p className="text-sm text-gray-500">
-                      {formatDistanceToNow(new Date(selectedMessage.createdAt), { addSuffix: true })}
-                      {selectedMessage.editedAt && ' (edited)'}
-                    </p>
+                    <Label>Recipients</Label>
+                    <Select
+                      value=""
+                      onValueChange={(value) => {
+                        if (value && !composeData.recipients.includes(value)) {
+                          setComposeData(prev => ({
+                            ...prev,
+                            recipients: [...prev.recipients, value]
+                          }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select recipients..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.map(user => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {getUserDisplayName(user)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {composeData.recipients.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {composeData.recipients.map(recipientId => {
+                          const recipient = users.find(u => u.id === recipientId);
+                          return (
+                            <Badge key={recipientId} variant="secondary" className="flex items-center gap-1">
+                              {getUserDisplayName(recipient)}
+                              <button
+                                onClick={() => setComposeData(prev => ({
+                                  ...prev,
+                                  recipients: prev.recipients.filter(id => id !== recipientId)
+                                }))}
+                                className="ml-1 hover:bg-gray-200 rounded"
+                              >
+                                ×
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label>Subject</Label>
+                    <Input
+                      placeholder="Subject (optional)"
+                      value={composeData.subject}
+                      onChange={(e) => setComposeData(prev => ({ ...prev, subject: e.target.value }))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Message</Label>
+                    <Textarea
+                      placeholder="Type your message..."
+                      value={composeData.content}
+                      onChange={(e) => setComposeData(prev => ({ ...prev, content: e.target.value }))}
+                      rows={6}
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setShowComposer(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleSendMessage}
+                      disabled={!composeData.content.trim() || composeData.recipients.length === 0}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Tabs */}
+          <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="all" className="text-xs">
+                All
+                {messages.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {messages.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="unread" className="text-xs">
+                Unread
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="ml-1 text-xs">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="sent" className="text-xs">Sent</TabsTrigger>
+              <TabsTrigger value="direct" className="text-xs">Direct</TabsTrigger>
+              <TabsTrigger value="group" className="text-xs">Group</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={selectedTab} className="mt-4">
+              <ScrollArea className="h-[calc(100vh-400px)]">
+                <div className="space-y-2">
+                  {isLoading ? (
+                    <div className="text-center py-8 text-gray-500">Loading messages...</div>
+                  ) : filteredMessages.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <InboxIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <div className="text-lg font-medium mb-2">No messages</div>
+                      <div className="text-sm">
+                        {selectedTab === 'unread' ? 'All caught up!' : 'Your inbox is empty'}
+                      </div>
+                    </div>
+                  ) : (
+                    filteredMessages.map((message) => (
+                      <Card 
+                        key={message.id}
+                        className={`cursor-pointer transition-colors hover:bg-gray-50 ${
+                          selectedMessage?.id === message.id ? 'ring-2 ring-primary' : ''
+                        } ${!message.is_read && message.user_id !== user?.id ? 'bg-blue-50 border-blue-200' : ''}`}
+                        onClick={() => setSelectedMessage(message)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <Avatar className="w-8 h-8">
+                              <AvatarFallback className="text-xs">
+                                {getUserDisplayName(message.sender).substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-sm">
+                                  {message.user_id === user?.id ? (
+                                    <>To: {getUserDisplayName(message.recipient)}</>
+                                  ) : (
+                                    getUserDisplayName(message.sender)
+                                  )}
+                                </span>
+                                
+                                <div className="flex items-center gap-1">
+                                  {message.message_type === 'group' && (
+                                    <Users className="h-3 w-3 text-gray-400" />
+                                  )}
+                                  {message.priority !== 'normal' && (
+                                    <Badge variant="outline" className={`text-xs ${getPriorityColor(message.priority)}`}>
+                                      {message.priority}
+                                    </Badge>
+                                  )}
+                                  {!message.is_read && message.user_id !== user?.id && (
+                                    <Circle className="h-2 w-2 fill-blue-500 text-blue-500" />
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {message.subject && (
+                                <div className="font-medium text-sm text-gray-900 mb-1">
+                                  {message.subject}
+                                </div>
+                              )}
+                              
+                              <div className="text-sm text-gray-600 line-clamp-2">
+                                {message.content}
+                              </div>
+                              
+                              <div className="text-xs text-gray-400 mt-2">
+                                {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Message Detail */}
+        <div className="lg:col-span-2">
+          {selectedMessage ? (
+            <Card className="h-full">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">
+                      {selectedMessage.subject || 'No Subject'}
+                    </CardTitle>
+                    <CardDescription>
+                      From: {getUserDisplayName(selectedMessage.sender)} • {' '}
+                      {formatDistanceToNow(new Date(selectedMessage.created_at), { addSuffix: true })}
+                    </CardDescription>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleMarkAsRead(selectedMessage.id)}>
+                        <CheckCheck className="h-4 w-4 mr-2" />
+                        Mark as Read
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-600">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="flex-1 flex flex-col">
+                <div className="flex-1 mb-4">
+                  <div className="whitespace-pre-wrap text-sm">
+                    {selectedMessage.content}
                   </div>
                 </div>
                 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Star className="h-4 w-4 mr-2" />
-                      Star
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Archive className="h-4 w-4 mr-2" />
-                      Archive
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              
-              {selectedMessage.contextType && (
-                <div className="mt-2">
-                  <Badge variant="secondary" className="gap-1">
-                    {getContextIcon(selectedMessage.contextType)}
-                    {selectedMessage.contextTitle || selectedMessage.contextType}
-                  </Badge>
-                </div>
-              )}
-            </div>
-
-            {/* Thread Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {/* Original Message */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {selectedMessage.editedContent || selectedMessage.content}
-                  </p>
-                </div>
-
-                {/* Thread Replies */}
-                {((threadMessages || [])
-                  .filter((m: any) => m && typeof m === 'object' && m.senderName && m.content && m.id !== selectedMessage?.id)
-                ).map((message: Message) => (
-                  <div 
-                    key={message.id} 
-                    className={`rounded-lg p-4 ${
-                      message.senderId === user?.id 
-                        ? 'bg-blue-50 ml-auto max-w-[80%]' 
-                        : 'bg-gray-50 mr-auto max-w-[80%]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="font-medium text-sm">{message?.senderName || 'Unknown'}</p>
-                      <p className="text-xs text-gray-500">
-                        {message?.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : 'Unknown time'}
-                      </p>
+                {/* Reply Area */}
+                <div className="border-t pt-4">
+                  <div className="space-y-3">
+                    <Textarea
+                      placeholder="Type your reply..."
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      rows={3}
+                    />
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={handleReply}
+                        disabled={!replyContent.trim()}
+                        size="sm"
+                      >
+                        <Reply className="h-4 w-4 mr-2" />
+                        Reply
+                      </Button>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">
-                      {message?.editedContent || message?.content || ''}
-                    </p>
                   </div>
-                ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="h-full flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <div className="text-lg font-medium mb-2">Select a message</div>
+                <div className="text-sm">Choose a message to read and reply</div>
               </div>
-            </ScrollArea>
-
-            {/* Reply Box */}
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Type your reply..."
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleReply()}
-                />
-                <Button 
-                  onClick={handleReply} 
-                  disabled={!replyContent.trim() || isSending}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <InboxIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Select a message to view</p>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => setShowComposer(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Compose New Message
-              </Button>
-            </div>
-          </div>
-        )}
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );

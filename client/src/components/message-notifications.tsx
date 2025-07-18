@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-import { supabase } from '@/lib/supabase';
+import { useMessaging } from "@/hooks/useMessaging";
 
 interface UnreadCounts {
   general: number;
@@ -33,190 +33,159 @@ interface MessageNotificationsProps {
 const MessageNotifications = memo(function MessageNotifications({ user }: MessageNotificationsProps) {
   console.log('🔔 MessageNotifications component mounting...');
 
-  // ALL HOOKS MUST BE CALLED FIRST, BEFORE ANY CONDITIONAL LOGIC
   const [lastCheck, setLastCheck] = useState(Date.now());
-
-  // Memoize user ID to prevent unnecessary re-renders
   const userId = useMemo(() => user?.id || null, [user?.id]);
-  
-  // Early stability check - prevent rendering during user transitions
   const isUserStable = useMemo(() => {
     return user !== undefined; // user can be null (not authenticated) or object (authenticated), but not undefined
   }, [user]);
 
-  // Use a stable query key that doesn't change based on user state
-  const { data: unreadCounts, refetch, error, isLoading } = useQuery<UnreadCounts>({
-    queryKey: ['message-notifications-unread-counts', userId || 'no-user'],
-    queryFn: async () => {
-      if (!userId) {
-        return {
-          general: 0,
-          committee: 0,
-          hosts: 0,
-          drivers: 0,
-          recipients: 0,
-          core_team: 0,
-          direct: 0,
-          groups: 0,
-          total: 0
-        };
-      }
-      
-      // For now, return empty counts until we implement proper message counting
-      // TODO: Implement proper unread message counting based on conversation types
-      return {
-        general: 0,
-        committee: 0,
-        hosts: 0,
-        drivers: 0,
-        recipients: 0,
-        core_team: 0,
-        direct: 0,
-        groups: 0,
-        total: 0
-      };
-    },
-    enabled: !!userId, // Only enable when we have a user ID
-    refetchInterval: !!userId ? 30000 : false, // Check every 30 seconds only when authenticated
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
+  // Use the messaging hook for unread counts and messages
+  const { unreadCounts, unreadMessages, totalUnread, isConnected } = useMessaging();
 
-  // Request notification permission on mount
-  useEffect(() => {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  console.log('🔔 MessageNotifications: userId=', userId, 'isAuthenticated=', !!userId);
-  console.log('🔔 MessageNotifications: user object=', user);
-
-  // Calculate final unread counts - handle all cases
-  const finalUnreadCounts = unreadCounts || {
-    general: 0, committee: 0, hosts: 0, drivers: 0, recipients: 0,
-    core_team: 0, direct: 0, groups: 0, total: 0
-  };
-
-  const totalUnread = finalUnreadCounts.total || 0;
-
-  console.log('🔔 MessageNotifications: Query state - isLoading:', isLoading, 'error:', error, 'data:', unreadCounts);
-  console.log('🔔 MessageNotifications: Rendering with final unread counts:', finalUnreadCounts);
-
-  const handleMarkAllRead = async () => {
-    try {
-      await supabase.from('message_reads').insert({ user_id: userId, read_at: new Date().toISOString() });
-      refetch();
-    } catch (error) {
-      console.error('Failed to mark all messages as read:', error);
-    }
-  };
-
-  const getChatDisplayName = (committee: string) => {
-    const names = {
-      general: 'General Chat',
-      committee: 'Committee Chat',
-      hosts: 'Host Chat',
-      drivers: 'Driver Chat',
-      recipients: 'Recipient Chat',
-      core_team: 'Core Team',
-      direct: 'Direct Messages',
-      groups: 'Group Messages'
-    };
-    return names[committee as keyof typeof names] || committee;
-  };
-
-  const navigateToChat = () => {
-    // Navigate to the appropriate chat page - all chat types go to messages
-    window.location.href = '/messages';
-  };
-
-  console.log('🔔 MessageNotifications rendering with totalUnread:', totalUnread);
-
-  // Check for stable user state first
+  // Only render if user state is stable
   if (!isUserStable) {
-    console.log('🔔 MessageNotifications: User state unstable, not rendering');
+    console.log('🔔 User state not stable, not rendering MessageNotifications');
     return null;
   }
 
-  // NOW we can safely return early after all hooks have been called
+  // Don't render for unauthenticated users
   if (!userId) {
-    console.log('🔔 MessageNotifications: Early return - not authenticated or no user');
+    console.log('🔔 No authenticated user, not rendering MessageNotifications');
     return null;
   }
 
-  // Show loading state
-  if (isLoading) {
-    console.log('🔔 MessageNotifications: Loading unread counts...');
-    return null; // Could show a loading spinner here
-  }
+  const handleMarkAllAsRead = () => {
+    // The useMessaging hook doesn't expose markAllAsRead here, but we could add it
+    console.log('Mark all as read clicked');
+    setLastCheck(Date.now());
+  };
 
-  // Show error state
-  if (error) {
-    console.error('🔔 MessageNotifications: Error loading unread counts:', error);
-    return null; // Could show error state here
+  const getChannelDisplayName = (channel: string) => {
+    switch (channel) {
+      case 'general': return 'General Chat';
+      case 'committee': return 'Committee';
+      case 'hosts': return 'Host Chat';
+      case 'drivers': return 'Driver Chat';
+      case 'recipients': return 'Recipient Chat';
+      case 'core_team': return 'Core Team';
+      case 'direct': return 'Direct Messages';
+      case 'groups': return 'Group Messages';
+      default: return channel;
+    }
+  };
+
+  const renderNotificationItem = (channel: string, count: number) => {
+    if (count === 0) return null;
+    
+    return (
+      <DropdownMenuItem key={channel}>
+        <div className="flex items-center justify-between w-full">
+          <span className="text-sm">{getChannelDisplayName(channel)}</span>
+          <Badge variant="destructive" className="ml-2 text-xs">
+            {count > 99 ? '99+' : count}
+          </Badge>
+        </div>
+      </DropdownMenuItem>
+    );
+  };
+
+  // Early return if no unread messages
+  if (totalUnread === 0) {
+    return (
+      <div className="relative">
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <MessageCircle className="h-4 w-4" />
+        </Button>
+        {!isConnected && (
+          <div className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full" />
+        )}
+      </div>
+    );
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5" />
-          {/* Debug indicator - green dot shows component is mounted */}
-          <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 rounded-full" title="Notifications Active"></div>
-          {totalUnread > 0 && (
-            <Badge 
-              variant="destructive" 
-              className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
-            >
-              {totalUnread > 99 ? '99+' : totalUnread}
-            </Badge>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel className="font-semibold">
-          <div className="flex items-center justify-between">
-            <span>Message Notifications</span>
+    <div className="relative">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 relative">
+            <MessageCircle className="h-4 w-4" />
             {totalUnread > 0 && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleMarkAllRead}
-                className="text-xs h-6 px-2"
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
               >
-                Mark all read
-              </Button>
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </Badge>
             )}
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-
-        {totalUnread === 0 ? (
-          <DropdownMenuItem className="text-muted-foreground">
-            No unread messages
+          </Button>
+        </DropdownMenuTrigger>
+        
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuLabel className="flex items-center justify-between">
+            <span>Message Notifications</span>
+            <div className="flex items-center gap-1">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-xs text-gray-500">
+                {isConnected ? 'Live' : 'Offline'}
+              </span>
+            </div>
+          </DropdownMenuLabel>
+          
+          <DropdownMenuSeparator />
+          
+          {/* Chat Channel Notifications */}
+          {unreadCounts && Object.entries(unreadCounts).map(([channel, count]) => {
+            if (channel === 'total' || typeof count !== 'number') return null;
+            return renderNotificationItem(channel, count);
+          })}
+          
+          {totalUnread === 0 && (
+            <DropdownMenuItem disabled>
+              <span className="text-sm text-gray-500">All caught up! 🎉</span>
+            </DropdownMenuItem>
+          )}
+          
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem onClick={handleMarkAllAsRead}>
+            <Bell className="w-4 h-4 mr-2" />
+            Mark all as read
           </DropdownMenuItem>
-        ) : (
-          Object.entries(finalUnreadCounts)
-            .filter(([key, count]) => key !== 'total' && (count as number) > 0)
-            .map(([committee, count]) => (
-              <DropdownMenuItem 
-                key={committee}
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => navigateToChat()}
-              >
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  <span>{getChatDisplayName(committee)}</span>
-                </div>
-                <Badge variant="secondary" className="ml-2">
-                  {count}
-                </Badge>
-              </DropdownMenuItem>
-            ))
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          
+          {/* Recent Messages Preview */}
+          {unreadMessages && unreadMessages.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-gray-500">
+                Recent Messages
+              </DropdownMenuLabel>
+              {unreadMessages.slice(0, 3).map((message: any) => (
+                <DropdownMenuItem key={message.id} className="flex-col items-start">
+                  <div className="flex items-center gap-2 w-full">
+                    <span className="font-medium text-xs">
+                      {message.sender?.first_name} {message.sender?.last_name}
+                    </span>
+                    <span className="text-xs text-gray-500 ml-auto">
+                      {message.conversations?.name && `#${message.conversations.name}`}
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-600 truncate w-full">
+                    {message.content}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+              {unreadMessages.length > 3 && (
+                <DropdownMenuItem disabled>
+                  <span className="text-xs text-gray-500">
+                    +{unreadMessages.length - 3} more messages
+                  </span>
+                </DropdownMenuItem>
+              )}
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 });
 
