@@ -58,55 +58,33 @@ export function useMessaging() {
   useEffect(() => {
     if (!user?.id) return;
 
+    console.log('Setting up realtime messaging connection...');
+
     const channel = supabase
-      .channel('messaging-system')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages'
-        },
-        (payload) => {
-          console.log('New message event:', payload);
-          
-          // Invalidate relevant queries to refresh data
-          queryClient.invalidateQueries({ queryKey: ['messages'] });
-          queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
-          queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
-          queryClient.invalidateQueries({ queryKey: ['inbox-messages'] });
-          
-          // Show notification for new messages
-          if (payload.eventType === 'INSERT' && payload.new?.user_id !== user.id) {
-            toast({
-              title: "New message",
-              description: "You have received a new message",
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'message_reads'
-        },
-        () => {
-          // Refresh unread counts when read status changes
-          queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
-        }
-      )
+      .channel('messaging-updates')
       .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
         console.log('Realtime connection status:', status);
+        setIsConnected(status === 'SUBSCRIBED');
       });
 
     return () => {
+      console.log('Cleaning up realtime connection');
       supabase.removeChannel(channel);
       setIsConnected(false);
     };
   }, [user?.id, queryClient, toast]);
+
+  // Add polling as backup
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [user?.id, queryClient]);
 
   // Get unread message counts
   const { data: unreadCounts = {
