@@ -1,16 +1,14 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { storage } from './storage';
-import { insertSuggestionSchema, insertSuggestionResponseSchema } from "@shared/schema";
-import { isAuthenticated, requirePermission } from './temp-auth';
-import { PERMISSIONS } from "@shared/auth-utils";
+import { PERMISSIONS } from '../shared/auth-utils';
+import { requirePermission } from './temp-auth';
 
 const router = Router();
 
 // Use the requirePermission middleware from temp-auth
 
 // Get all suggestions
-router.get('/', requirePermission([PERMISSIONS.VIEW_SUGGESTIONS]), async (req, res) => {
+router.get('/', requirePermission(PERMISSIONS.VIEW_SUGGESTIONS), async (req, res) => {
   try {
     const suggestions = await storage.getAllSuggestions();
     res.json(suggestions);
@@ -20,14 +18,16 @@ router.get('/', requirePermission([PERMISSIONS.VIEW_SUGGESTIONS]), async (req, r
   }
 });
 
-// Get single suggestion
-router.get('/:id', requirePermission([PERMISSIONS.VIEW_SUGGESTIONS]), async (req, res) => {
+// Get a specific suggestion
+router.get('/:id', requirePermission(PERMISSIONS.VIEW_SUGGESTIONS), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const suggestion = await storage.getSuggestion(id);
+    const { id } = req.params;
+    const suggestion = await storage.getSuggestion(Number(id));
+    
     if (!suggestion) {
       return res.status(404).json({ error: 'Suggestion not found' });
     }
+    
     res.json(suggestion);
   } catch (error) {
     console.error('Error fetching suggestion:', error);
@@ -35,85 +35,99 @@ router.get('/:id', requirePermission([PERMISSIONS.VIEW_SUGGESTIONS]), async (req
   }
 });
 
-// Create new suggestion
-router.post('/', requirePermission([PERMISSIONS.SUBMIT_SUGGESTIONS]), async (req, res) => {
+// Submit a new suggestion
+router.post('/', requirePermission(PERMISSIONS.SUBMIT_SUGGESTIONS), async (req, res) => {
   try {
     console.log('=== SUGGESTION SUBMISSION DEBUG ===');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    console.log('User from request:', (req as any).user);
-    console.log('Session:', req.session);
-    console.log('Session user:', req.session?.user);
+    console.log('Request body:', req.body);
+    console.log('User object:', (req as any).user);
     
-    const validatedData = insertSuggestionSchema.parse(req.body);
-    
-    // Add user information from session
-    const user = (req as any).user || req.session?.user;
-    const suggestionData = {
-      ...validatedData,
-      submittedBy: user?.id || 'anonymous',
-      submitterEmail: user?.email || null,
-      submitterName: user?.firstName 
-        ? `${user.firstName} ${user.lastName || ''}`.trim()
-        : null
-    };
-    
-    const suggestion = await storage.createSuggestion(suggestionData);
-    res.status(201).json(suggestion);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.log('=== VALIDATION ERROR ===');
-      console.log('Zod validation errors:', JSON.stringify(error.errors, null, 2));
-      return res.status(400).json({ 
-        error: 'Validation failed', 
-        details: error.errors 
-      });
+    const user = (req as any).user;
+    if (!user?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
+
+    const { title, description, priority = 'medium', category = 'general', tags } = req.body;
+    
+    if (!title || !description) {
+      return res.status(400).json({ error: 'Title and description are required' });
+    }
+
+    const suggestionData = {
+      title,
+      description,
+      priority,
+      category,
+      tags: tags || [],
+      upvotes: 0,
+      status: 'open' as const,
+      submittedBy: user.id,
+      submitterEmail: user.email || '',
+      submitterName: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Anonymous'
+    };
+
+    console.log('Creating suggestion with data:', suggestionData);
+    
+    const newSuggestion = await storage.createSuggestion(suggestionData);
+    console.log('Created suggestion:', newSuggestion);
+    
+    res.status(201).json(newSuggestion);
+  } catch (error) {
     console.error('Error creating suggestion:', error);
     res.status(500).json({ error: 'Failed to create suggestion' });
   }
 });
 
-// Update suggestion (admin only)
-router.patch('/:id', requirePermission([PERMISSIONS.MANAGE_SUGGESTIONS]), async (req, res) => {
+// Update suggestion status (admin only)
+router.patch('/:id', requirePermission(PERMISSIONS.MANAGE_SUGGESTIONS), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const updates = req.body;
+    const { id } = req.params;
+    const { status, adminResponse } = req.body;
     
-    const suggestion = await storage.updateSuggestion(id, updates);
-    if (!suggestion) {
+    const updatedSuggestion = await storage.updateSuggestion(Number(id), { 
+      status,
+      ...(adminResponse && { adminResponse })
+    });
+    
+    if (!updatedSuggestion) {
       return res.status(404).json({ error: 'Suggestion not found' });
     }
-    res.json(suggestion);
+    
+    res.json(updatedSuggestion);
   } catch (error) {
     console.error('Error updating suggestion:', error);
     res.status(500).json({ error: 'Failed to update suggestion' });
   }
 });
 
-// Delete suggestion (admin only)
-router.delete('/:id', requirePermission([PERMISSIONS.MANAGE_SUGGESTIONS]), async (req, res) => {
+// Delete a suggestion (admin only)
+router.delete('/:id', requirePermission(PERMISSIONS.MANAGE_SUGGESTIONS), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const success = await storage.deleteSuggestion(id);
+    const { id } = req.params;
+    const success = await storage.deleteSuggestion(Number(id));
+    
     if (!success) {
       return res.status(404).json({ error: 'Suggestion not found' });
     }
-    res.json({ success: true });
+    
+    res.json({ message: 'Suggestion deleted successfully' });
   } catch (error) {
     console.error('Error deleting suggestion:', error);
     res.status(500).json({ error: 'Failed to delete suggestion' });
   }
 });
 
-// Upvote suggestion
-router.post('/:id/upvote', requirePermission([PERMISSIONS.VIEW_SUGGESTIONS]), async (req, res) => {
+// Upvote a suggestion
+router.post('/:id/upvote', requirePermission(PERMISSIONS.VIEW_SUGGESTIONS), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const success = await storage.upvoteSuggestion(id);
-    if (!success) {
+    const { id } = req.params;
+    const updatedSuggestion = await storage.upvoteSuggestion(Number(id));
+    
+    if (!updatedSuggestion) {
       return res.status(404).json({ error: 'Suggestion not found' });
     }
-    res.json({ success: true });
+    
+    res.json(updatedSuggestion);
   } catch (error) {
     console.error('Error upvoting suggestion:', error);
     res.status(500).json({ error: 'Failed to upvote suggestion' });
@@ -121,10 +135,10 @@ router.post('/:id/upvote', requirePermission([PERMISSIONS.VIEW_SUGGESTIONS]), as
 });
 
 // Get responses for a suggestion
-router.get('/:id/responses', requirePermission([PERMISSIONS.VIEW_SUGGESTIONS]), async (req, res) => {
+router.get('/:id/responses', requirePermission(PERMISSIONS.VIEW_SUGGESTIONS), async (req, res) => {
   try {
-    const suggestionId = parseInt(req.params.id);
-    const responses = await storage.getSuggestionResponses(suggestionId);
+    const { id } = req.params;
+    const responses = await storage.getSuggestionResponses(Number(id));
     res.json(responses);
   } catch (error) {
     console.error('Error fetching suggestion responses:', error);
@@ -132,99 +146,88 @@ router.get('/:id/responses', requirePermission([PERMISSIONS.VIEW_SUGGESTIONS]), 
   }
 });
 
-// Create response to suggestion
-router.post('/:id/responses', requirePermission([PERMISSIONS.RESPOND_TO_SUGGESTIONS]), async (req, res) => {
+// Add a response to a suggestion
+router.post('/:id/responses', requirePermission(PERMISSIONS.RESPOND_TO_SUGGESTIONS), async (req, res) => {
   try {
-    const suggestionId = parseInt(req.params.id);
-    const validatedData = insertSuggestionResponseSchema.parse(req.body);
+    const { id } = req.params;
+    const { message, isAdminResponse = false, isInternal = false } = req.body;
+    const user = (req as any).user;
     
-    // Add response data with user information
-    const responseData = {
-      ...validatedData,
-      suggestionId,
-      respondedBy: (req as any).user?.id || 'anonymous',
-      respondentName: (req as any).user?.firstName 
-        ? `${(req as any).user.firstName} ${(req as any).user.lastName || ''}`.trim()
-        : null,
-      isAdminResponse: (req as any).user?.permissions?.includes(PERMISSIONS.MANAGE_SUGGESTIONS) || false
-    };
-    
-    const response = await storage.createSuggestionResponse(responseData);
-    res.status(201).json(response);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ 
-        error: 'Validation failed', 
-        details: error.errors 
-      });
+    if (!user?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
+
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const responseData = {
+      suggestionId: Number(id),
+      message,
+      isAdminResponse,
+      isInternal,
+      respondedBy: user.id,
+      respondentName: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Anonymous'
+    };
+
+    const newResponse = await storage.createSuggestionResponse(responseData);
+    res.status(201).json(newResponse);
+  } catch (error) {
     console.error('Error creating suggestion response:', error);
     res.status(500).json({ error: 'Failed to create response' });
   }
 });
 
-// Delete response (admin or response author only)
-router.delete('/responses/:responseId', requirePermission([PERMISSIONS.RESPOND_TO_SUGGESTIONS]), async (req, res) => {
+// Delete a response (admin only)
+router.delete('/responses/:responseId', requirePermission(PERMISSIONS.RESPOND_TO_SUGGESTIONS), async (req, res) => {
   try {
-    const responseId = parseInt(req.params.responseId);
-    const success = await storage.deleteSuggestionResponse(responseId);
+    const { responseId } = req.params;
+    const success = await storage.deleteSuggestionResponse(Number(responseId));
+    
     if (!success) {
       return res.status(404).json({ error: 'Response not found' });
     }
-    res.json({ success: true });
+    
+    res.json({ message: 'Response deleted successfully' });
   } catch (error) {
     console.error('Error deleting suggestion response:', error);
     res.status(500).json({ error: 'Failed to delete response' });
   }
 });
 
-// Send clarification request to suggestion creator
-router.post('/:id/clarification', requirePermission([PERMISSIONS.MANAGE_SUGGESTIONS]), async (req, res) => {
+// Request clarification (creates a private conversation)
+router.post('/:id/clarification', requirePermission(PERMISSIONS.MANAGE_SUGGESTIONS), async (req, res) => {
   try {
-    const suggestionId = parseInt(req.params.id);
+    const { id } = req.params;
     const { message } = req.body;
+    const currentUser = (req as any).user;
     
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({ error: 'Message is required' });
+    if (!currentUser?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
-    
+
     // Get the suggestion to find the creator
-    const suggestion = await storage.getSuggestion(suggestionId);
+    const suggestion = await storage.getSuggestion(Number(id));
     if (!suggestion) {
       return res.status(404).json({ error: 'Suggestion not found' });
     }
-    
-    // Get the current user (who is requesting clarification)
-    const currentUser = (req as any).user;
-    if (!currentUser) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-    
-    // Get the suggestion creator's user ID
+
     const creatorUserId = suggestion.submittedBy;
     
-    if (!creatorUserId || creatorUserId === 'anonymous') {
-      return res.status(400).json({ error: 'Cannot send clarification to anonymous suggestion' });
-    }
-    
-    console.log(`[CLARIFICATION] Sending clarification request from ${currentUser.id} to ${creatorUserId} for suggestion ${suggestionId}`);
-    
-    // Create or find direct conversation between current user and suggestion creator
+    // Create or find existing direct conversation
     let conversation = await storage.getDirectConversation(currentUser.id, creatorUserId);
     
     if (!conversation) {
-      // Create new direct conversation
+      // Create new conversation
       const conversationData = {
-        name: `Direct Message`,
-        description: `Direct conversation between ${currentUser.firstName || 'User'} and suggestion creator`,
-        type: 'direct',
-        isPrivate: true,
+        type: 'direct' as const,
+        title: `Suggestion Discussion: ${suggestion.title}`,
         createdBy: currentUser.id
       };
       
       conversation = await storage.createConversation(conversationData);
       
-      // Add both participants
+      // Add participants
       await storage.addConversationParticipant({
         conversationId: conversation.id,
         userId: currentUser.id,
@@ -236,30 +239,24 @@ router.post('/:id/clarification', requirePermission([PERMISSIONS.MANAGE_SUGGESTI
         userId: creatorUserId,
         role: 'member'
       });
-      
-      console.log(`[CLARIFICATION] Created new direct conversation ${conversation.id}`);
     }
-    
-    // Send clarification message
-    const clarificationMessage = `📝 Clarification request for your suggestion "${suggestion.title}":\n\n${message}`;
-    
+
+    // Send the clarification message
     const messageData = {
       conversationId: conversation.id,
       userId: currentUser.id,
-      content: clarificationMessage,
-      sender: `${currentUser.firstName || 'Admin'} ${currentUser.lastName || 'User'}`.trim()
+      content: `Regarding your suggestion "${suggestion.title}": ${message}`,
+      sender: currentUser.displayName || currentUser.email || 'Admin'
     };
-    
+
     const sentMessage = await storage.createMessage(messageData);
-    console.log(`[CLARIFICATION] Sent clarification message ${sentMessage.id} in conversation ${conversation.id}`);
-    
-    res.json({ 
-      success: true, 
-      message: 'Clarification request sent successfully',
+
+    res.json({
+      success: true,
       conversationId: conversation.id,
-      messageId: sentMessage.id
+      messageId: sentMessage.id,
+      message: 'Clarification request sent successfully'
     });
-    
   } catch (error) {
     console.error('Error sending clarification request:', error);
     res.status(500).json({ error: 'Failed to send clarification request' });

@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, isNull, isNotNull, desc } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, sql } from "drizzle-orm";
 import { deletionAudit } from "../shared/schema";
 
 // Helper interface for soft delete operations
@@ -121,12 +121,12 @@ export async function getDeletionHistory(tableName?: string, recordId?: string) 
     query = query.where(eq(deletionAudit.recordId, recordId));
   }
   
-  return query.orderBy(desc(deletionAudit.deletedAt));
+  return query.orderBy(sql`${deletionAudit.deletedAt} DESC`);
 }
 
 // Helper function to get all soft-deleted records from a table
 export function getDeletedRecords(table: any) {
-  return db.select().from(table).where(isNull(table.deletedAt) === false);
+  return db.select().from(table).where(isNotNull(table.deletedAt));
 }
 
 // Helper function to permanently delete a soft-deleted record (admin only)
@@ -139,7 +139,7 @@ export async function permanentlyDeleteRecord(
     // Only delete if it's already soft-deleted
     const result = await db
       .delete(table)
-      .where(and(eq(table.id, id), isNull(table.deletedAt) === false));
+      .where(and(eq(table.id, id), isNotNull(table.deletedAt)));
     
     // Update deletion audit log
     if (result.rowCount && result.rowCount > 0) {
@@ -205,7 +205,7 @@ export class SoftDeleteQueryBuilder {
   
   // Only get soft-deleted records
   onlyDeleted() {
-    return db.select().from(this.table).where(isNull(this.table.deletedAt) === false);
+    return db.select().from(this.table).where(isNotNull(this.table.deletedAt));
   }
   
   // Get all records (default behavior excludes deleted)
