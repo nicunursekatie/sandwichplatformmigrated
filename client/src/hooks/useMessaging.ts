@@ -104,6 +104,14 @@ export function useMessaging() {
       if (!user?.id) return null;
       
       try {
+        // Get user's conversation IDs first
+        const { data: participations } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('user_id', user.id);
+        
+        const conversationIds = participations?.map(p => p.conversation_id) || [];
+        
         // Get all messages and read messages separately
         const [messagesResult, readsResult] = await Promise.all([
           // Get all messages for this user
@@ -116,7 +124,7 @@ export function useMessaging() {
               recipient_id,
               conversations(name, type)
             `)
-            .or(`recipient_id.eq.${user.id},conversation_id.in.(SELECT conversation_id FROM conversation_participants WHERE user_id = '${user.id}')`),
+            .or(`recipient_id.eq.${user.id}${conversationIds.length > 0 ? `,conversation_id.in.(${conversationIds.join(',')})` : ''}`),
           
           // Get read message IDs
           supabase
@@ -198,6 +206,14 @@ export function useMessaging() {
       if (!user?.id) return [];
       
       try {
+        // Get user's conversation IDs first
+        const { data: participations } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('user_id', user.id);
+        
+        const conversationIds = participations?.map(p => p.conversation_id) || [];
+        
         // Get messages and read status separately
         const [messagesResult, readsResult] = await Promise.all([
           supabase
@@ -206,7 +222,7 @@ export function useMessaging() {
               *,
               conversations(name, type)
             `)
-            .or(`recipient_id.eq.${user.id},conversation_id.in.(SELECT conversation_id FROM conversation_participants WHERE user_id = '${user.id}')`)
+            .or(`recipient_id.eq.${user.id}${conversationIds.length > 0 ? `,conversation_id.in.(${conversationIds.join(',')})` : ''}`)
             .neq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(100),
