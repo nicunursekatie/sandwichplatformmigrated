@@ -121,10 +121,10 @@ export default function SimpleNav({ onSectionChange }: { onSectionChange: (secti
         if (item.id === 'inbox') {
           unreadCount = totalUnread;
         } else if (item.id === 'chat' || item.id === 'messages') {
-          unreadCount = unreadCounts.general;
+          unreadCount = unreadCounts?.general || 0;
         } else if (item.id === 'committee-chat') {
-          unreadCount = unreadCounts.committee;
-        } else if (item.id === 'suggestions' && unreadCounts.suggestion) {
+          unreadCount = unreadCounts?.committee || 0;
+        } else if (item.id === 'suggestions' && unreadCounts?.suggestion) {
           unreadCount = unreadCounts.suggestion;
         }
         
