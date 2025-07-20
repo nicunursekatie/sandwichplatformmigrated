@@ -49,60 +49,92 @@ interface SendMessageParams {
 }
 
 export function useMessaging() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
 
-
-  // Set up simple realtime connection
+  // Set up realtime subscriptions
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log('Setting up realtime messaging connection...');
+    console.log('🔄 Setting up realtime subscriptions for messaging...');
 
-    const channel = supabase
-      .channel('messaging-updates')
+    // Subscribe to new messages
+    const messagesChannel = supabase
+      .channel(`messages-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          console.log('📨 New message event:', payload);
+          
+          // Invalidate relevant queries to refetch data
+          queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-messages', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['messages'] });
+          queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
+          queryClient.invalidateQueries({ queryKey: ['inbox-messages'] });
+        }
+      )
       .subscribe((status) => {
-        console.log('Realtime connection status:', status);
+        console.log('📡 Messages subscription status:', status);
         setIsConnected(status === 'SUBSCRIBED');
       });
 
+    // Subscribe to message_reads changes
+    const readsChannel = supabase
+      .channel(`message-reads-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reads',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('📖 Message read event:', payload);
+          
+          // Invalidate unread counts when read status changes
+          queryClient.invalidateQueries({ queryKey: ['unread-counts', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['unread-messages', user.id] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Message reads subscription status:', status);
+      });
+
+    // Cleanup subscriptions
     return () => {
-      console.log('Cleaning up realtime connection');
-      supabase.removeChannel(channel);
-      setIsConnected(false);
+      console.log('🧹 Cleaning up messaging subscriptions...');
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(readsChannel);
     };
-  }, [user?.id]);
-
-  // Add polling as backup
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
-    }, 10000); // Refresh every 10 seconds
-
-    return () => clearInterval(interval);
   }, [user?.id, queryClient]);
 
   // Get unread message counts
-  const { data: unreadCounts = {
-    general: 0,
-    committee: 0,
-    hosts: 0,
-    drivers: 0,
-    recipients: 0,
-    core_team: 0,
-    direct: 0,
-    groups: 0,
-    total: 0,
-  } as UnreadCounts, refetch: refetchUnreadCounts } = useQuery({
+  const { data: unreadCounts, refetch: refetchUnreadCounts } = useQuery({
     queryKey: ['unread-counts', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      
+    queryFn: async (): Promise<UnreadCounts> => {
+      if (!user?.id) {
+        return {
+          general: 0,
+          committee: 0,
+          hosts: 0,
+          drivers: 0,
+          recipients: 0,
+          core_team: 0,
+          direct: 0,
+          groups: 0,
+          total: 0,
+        };
+      }
+
       try {
         // Get user's conversation IDs first
         const { data: participations } = await supabase
@@ -112,9 +144,8 @@ export function useMessaging() {
         
         const conversationIds = participations?.map(p => p.conversation_id) || [];
         
-        // Get all messages and read messages separately
+        // Get messages and read status separately
         const [messagesResult, readsResult] = await Promise.all([
-          // Get all messages for this user
           supabase
             .from('messages')
             .select(`
@@ -154,7 +185,7 @@ export function useMessaging() {
         // Filter unread messages
         const unreadMessages = messages.filter(msg => !readMessageIds.has(msg.id));
 
-        // Calculate counts
+        // Count by category
         const counts = {
           general: 0,
           committee: 0,
@@ -167,21 +198,49 @@ export function useMessaging() {
           total: 0,
         };
 
-        unreadMessages.forEach((msg: any) => {
-          if (msg.message_type === 'direct' && msg.recipient_id === user.id) {
+        unreadMessages.forEach(msg => {
+          const conversation = msg.conversations;
+          
+          if (msg.message_type === 'direct') {
             counts.direct++;
-          } else if (msg.conversations?.type === 'channel') {
-            const channelName = msg.conversations.name;
-            if (channelName && counts.hasOwnProperty(channelName)) {
-              counts[channelName as keyof typeof counts]++;
+          } else if (msg.message_type === 'group') {
+            counts.groups++;
+          } else if (conversation?.type === 'channel') {
+            const channelName = conversation.name?.toLowerCase();
+            switch (channelName) {
+              case 'general':
+                counts.general++;
+                break;
+              case 'committee':
+                counts.committee++;
+                break;
+              case 'hosts':
+              case 'host chat':
+                counts.hosts++;
+                break;
+              case 'drivers':
+              case 'driver chat':
+                counts.drivers++;
+                break;
+              case 'recipients':
+              case 'recipient chat':
+                counts.recipients++;
+                break;
+              case 'core_team':
+              case 'core team':
+                counts.core_team++;
+                break;
             }
           }
         });
 
-        counts.total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+        counts.total = counts.general + counts.committee + counts.hosts + 
+                      counts.drivers + counts.recipients + counts.core_team + 
+                      counts.direct + counts.groups;
+
         return counts;
       } catch (error) {
-        console.error('Error calculating unread counts:', error);
+        console.error('Error in unread counts query:', error);
         return {
           general: 0,
           committee: 0,
@@ -196,7 +255,8 @@ export function useMessaging() {
       }
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000, // Refetch every 30 seconds as fallback
+    staleTime: 1000 * 60 * 2, // Data considered fresh for 2 minutes
   });
 
   // Get unread messages for notifications
@@ -251,15 +311,15 @@ export function useMessaging() {
             .from('users')
             .select('id, first_name, last_name, email')
             .in('id', senderIds);
+
+          const sendersMap = new Map(senders?.map(s => [s.id, s]) || []);
           
-          const senderMap = new Map(senders?.map(s => [s.id, s]) || []);
-          
-          // Add sender info to messages
-          unreadMessages.forEach(msg => {
-            msg.sender = senderMap.get(msg.user_id) || null;
-          });
+          return unreadMessages.map(msg => ({
+            ...msg,
+            sender: sendersMap.get(msg.user_id)
+          }));
         }
-        
+
         return unreadMessages;
       } catch (error) {
         console.error('Error fetching unread messages:', error);
@@ -267,36 +327,35 @@ export function useMessaging() {
       }
     },
     enabled: !!user?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds as fallback
+    staleTime: 1000 * 60 * 2, // Data considered fresh for 2 minutes
   });
 
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (params: SendMessageParams) => {
       if (!user?.id) throw new Error('Not authenticated');
-
+      
       const messageData = {
         user_id: user.id,
         content: params.content,
-        conversation_id: params.conversation_id,
         message_type: params.message_type || 'chat',
-        recipient_id: params.recipient_id,
-        subject: params.subject,
+        conversation_id: params.conversation_id || null,
+        recipient_id: params.recipient_id || null,
+        subject: params.subject || null,
         priority: params.priority || 'normal',
-        reply_to_id: params.reply_to_id,
-        status: 'sent'
+        reply_to_id: params.reply_to_id || null,
+        status: 'sent' as const,
       };
 
       const { data, error } = await supabase
         .from('messages')
         .insert(messageData)
-        .select(`
-          *,
-          sender:users!user_id(id, first_name, last_name, email)
-        `)
+        .select()
         .single();
 
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('Send message error:', error);
         throw error;
       }
       
