@@ -348,6 +348,8 @@ export function useMessaging() {
         status: 'sent' as const,
       };
 
+      console.log('Sending message with data:', messageData);
+
       const { data, error } = await supabase
         .from('messages')
         .insert(messageData)

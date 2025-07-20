@@ -146,11 +146,7 @@ export default function InboxPage() {
           message_reads!left(user_id, read_at)
         `)
         .in('message_type', ['direct', 'group'])
-        .or(`recipient_id.eq.${user.id},user_id.eq.${user.id},conversation_id.in.(
-          SELECT conversation_id 
-          FROM conversation_participants 
-          WHERE user_id = '${user.id}'
-        )`)
+        .or(`recipient_id.eq.${user.id},user_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -158,6 +154,9 @@ export default function InboxPage() {
         return [];
       }
 
+      console.log('Fetched inbox messages:', data?.length, 'messages');
+      console.log('User ID:', user.id);
+      
       // Process read status
       return (data || []).map(msg => ({
         ...msg,
