@@ -585,7 +585,7 @@ export default function SandwichCollectionLog() {
       // Try to parse as JSON first
       const groupData = JSON.parse(collection.group_collections);
       if (Array.isArray(groupData)) {
-        groupTotal = groupData.reduce((sum: number, group: any) => sum + (Number(group.sandwichCount) || Number(group.sandwich_count) || 0), 0);
+        groupTotal = groupData.reduce((sum: number, group: any) => sum + (Number(group.sandwichCount) || Number(group.sandwich_count) || Number(group.count) || 0), 0);
       } else if (typeof groupData === 'number') {
         groupTotal = Number(groupData);
       } else if (typeof groupData === 'object' && (groupData.sandwichCount || groupData.sandwich_count)) {
@@ -1870,7 +1870,7 @@ export default function SandwichCollectionLog() {
                       <span className="text-sm font-medium text-slate-700">Group Collections</span>
                       <span className="text-sm font-semibold text-slate-900">
                         {Array.isArray(groupData) 
-                          ? groupData.reduce((sum: number, group: any) => sum + (group.sandwichCount || 0), 0)
+                          ? groupData.reduce((sum: number, group: any) => sum + (group.sandwichCount || group.count || 0), 0)
                           : 0}
                       </span>
                     </div>
