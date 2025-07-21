@@ -450,6 +450,7 @@ export function useMessaging() {
       refetchUnreadCounts();
       refetchUnreadMessages();
       queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['inbox-messages', user.id] });
       toast({ description: 'All messages marked as read' });
     },
   });
