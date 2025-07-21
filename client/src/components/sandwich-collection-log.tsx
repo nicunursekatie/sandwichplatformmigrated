@@ -89,6 +89,11 @@ export default function SandwichCollectionLog() {
     sandwich_count_max: "",
     collection_type: "all" as "all" | "individual" | "group" | "both"
   });
+  
+  // Debug log for filter changes
+  useEffect(() => {
+    console.log('Search filters changed:', searchFilters);
+  }, [searchFilters]);
 
   const [sortConfig, setSortConfig] = useState({
     field: "collection_date" as keyof SandwichCollection | "total_sandwiches",
@@ -117,8 +122,7 @@ export default function SandwichCollectionLog() {
   ]);
   const [newCollectionGroupOnlyMode, setNewCollectionGroupOnlyMode] = useState(false);
   // State for filtered total
-  const [filteredTotal, setFilteredTotal] = useState<number | null>(null);
-  const [filteredTotalLoading, setFilteredTotalLoading] = useState(false);
+  // Removed - now using filteredStats from useQuery instead
 
   // Memoize expensive computations
   const needsAllData = useMemo(() => 
@@ -353,6 +357,7 @@ export default function SandwichCollectionLog() {
   // Query for complete database totals including both individual and group collections
   const { data: totalStats } = useQuery({
     queryKey: ["sandwich-collections-stats"],
+    staleTime: 0, // Force refresh to get latest data
     queryFn: async () => {
       console.log('Starting stats calculation...');
       try {
@@ -1210,27 +1215,7 @@ export default function SandwichCollectionLog() {
     setCurrentPage(1);
   };
 
-  // Fetch filtered total sandwiches whenever filters change
-  useEffect(() => {
-    let isMounted = true;
-    setFilteredTotalLoading(true);
-    supabaseService.sandwichCollection.getFilteredCollectionStats({
-      host_name: searchFilters.host_name || undefined,
-      collection_date_from: searchFilters.collection_date_from || undefined,
-      collection_date_to: searchFilters.collection_date_to || undefined,
-      individual_min: searchFilters.sandwich_count_min ? parseInt(searchFilters.sandwich_count_min) : undefined,
-      individual_max: searchFilters.sandwich_count_max ? parseInt(searchFilters.sandwich_count_max) : undefined,
-    }).then((stats) => {
-      if (isMounted && stats && stats[0]) {
-        setFilteredTotal(stats[0].complete_total_sandwiches || 0);
-      }
-    }).catch(() => {
-      if (isMounted) setFilteredTotal(null);
-    }).finally(() => {
-      if (isMounted) setFilteredTotalLoading(false);
-    });
-    return () => { isMounted = false; };
-  }, [searchFilters]);
+  // This is now handled by the useQuery above (filteredStats)
 
   if (isLoading) {
     return (
@@ -1257,10 +1242,10 @@ export default function SandwichCollectionLog() {
   const renderFilteredTotal = () => (
     <div className="mb-4 flex items-center gap-4">
       <div className="text-lg font-semibold">
-        Total Sandwiches (Filtered): {filteredTotalLoading ? 'Loading...' : (filteredTotal ?? '—')}
+        Total Sandwiches (Filtered): {isStatsLoading ? 'Loading...' : (filteredStats?.completeTotalSandwiches?.toLocaleString() ?? '—')}
       </div>
       {totalStats && (
-        <div className="text-sm text-gray-500">(All-time: {totalStats.completeTotalSandwiches})</div>
+        <div className="text-sm text-gray-500">(All-time: {totalStats.completeTotalSandwiches?.toLocaleString()})</div>
       )}
     </div>
   );
