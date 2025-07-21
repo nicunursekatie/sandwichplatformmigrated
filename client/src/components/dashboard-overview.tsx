@@ -7,6 +7,7 @@ import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
 import type { Project, Message, MeetingMinutes, DriveLink, WeeklyReport, SandwichCollection, Meeting } from "@shared/schema";
 
 import { supabase } from '@/lib/supabase';
+import { supabaseService } from '@/lib/supabase-service';
 interface DashboardOverviewProps {
   onSectionChange: (section: string) => void;
 }
@@ -107,6 +108,22 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
   const { data: statsData } = useQuery({
     queryKey: ["sandwich-collections-stats"],
     queryFn: async () => {
+      try {
+        // Use the same RPC function that the collections log uses for accurate totals
+        const stats = await supabaseService.sandwichCollection.getCollectionStats();
+        console.log('Dashboard stats from RPC:', stats);
+        if (stats && stats[0]) {
+          return {
+            completeTotalSandwiches: stats[0].complete_total_sandwiches || 0,
+            individual_sandwiches: stats[0].individual_sandwiches || 0,
+            groupSandwiches: stats[0].group_sandwiches || 0
+          };
+        }
+      } catch (error) {
+        console.warn('RPC function failed in dashboard, falling back to manual calculation:', error);
+      }
+      
+      // Fallback to manual calculation if RPC fails
       const { data, error } = await supabase
         .from('sandwich_collections')
         .select('individual_sandwiches, group_collections');
@@ -116,22 +133,40 @@ export default function DashboardOverview({ onSectionChange }: DashboardOverview
         return { completeTotalSandwiches: 0 };
       }
       
-      // Calculate total sandwiches
-      let total = 0;
+      // Use the same calculation logic as the collections log for consistency
+      let individualTotal = 0;
+      let groupTotal = 0;
+      
       data?.forEach(collection => {
-        total += collection.individual_sandwiches || 0;
-        // Parse group collections if it's a string like "100 from Group A"
-        if (collection.group_collections) {
-          const matches = collection.group_collections.match(/\d+/g);
-          if (matches) {
-            matches.forEach(num => {
-              total += parseInt(num, 10);
-            });
+        const individualCount = collection.individual_sandwiches || 0;
+        individualTotal += individualCount;
+        
+        // Calculate group collections total using same logic as collections log
+        try {
+          if (collection.group_collections && collection.group_collections !== "[]" && collection.group_collections !== "") {
+            const groupData = JSON.parse(collection.group_collections);
+            if (Array.isArray(groupData)) {
+              groupTotal += groupData.reduce((sum: number, group: any) => 
+                sum + (Number(group.sandwichCount) || Number(group.sandwich_count) || Number(group.count) || 0), 0
+              );
+            }
+          }
+        } catch (error) {
+          // Handle text format like "Marketing Team: 8, Development: 6"
+          if (collection.group_collections && collection.group_collections !== "[]") {
+            const matches = collection.group_collections.match(/(\d+)/g);
+            if (matches) {
+              groupTotal += matches.reduce((sum, num) => sum + parseInt(num), 0);
+            }
           }
         }
       });
       
-      return { completeTotalSandwiches: total };
+      return { 
+        completeTotalSandwiches: individualTotal + groupTotal,
+        individual_sandwiches: individualTotal,
+        groupSandwiches: groupTotal
+      };
     },
     staleTime: 0, // Always fetch fresh data to show corrected totals
     refetchOnWindowFocus: true
