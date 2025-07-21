@@ -160,7 +160,9 @@ export default function InboxPage() {
       // Process read status
       return (data || []).map(msg => ({
         ...msg,
-        is_read: msg.message_reads?.some((read: any) => read.user_id === user.id) || false
+        is_read: msg.user_id === user.id || // Sent messages are always "read" by sender
+                 msg.message_reads?.some((read: any) => read.user_id === user.id) || 
+                 false
       }));
     },
     enabled: !!user?.id,
@@ -205,11 +207,12 @@ export default function InboxPage() {
       case "sent":
         return msg.user_id === user?.id;
       case "direct":
-        return msg.message_type === 'direct';
+        return msg.message_type === 'direct' && msg.user_id !== user?.id;
       case "group":
-        return msg.message_type === 'group';
+        return msg.message_type === 'group' && msg.user_id !== user?.id;
+      case "all":
       default:
-        return true;
+        return msg.user_id !== user?.id; // Show only received messages in "All" tab
     }
   });
 
