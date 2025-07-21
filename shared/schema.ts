@@ -240,11 +240,17 @@ export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   conversationId: integer("conversation_id").references(() => conversations.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull(),
-  senderId: text("sender_id").notNull(),
+  senderId: text("sender_id"),
+  recipientId: text("recipient_id"), // Direct recipient for direct messages
   content: text("content").notNull(),
   sender: text("sender"), // Display name of sender
+  subject: text("subject"), // Message subject
+  messageType: varchar("message_type", { length: 20 }).default("direct"), // 'direct', 'group', 'chat'
+  priority: varchar("priority", { length: 10 }).default("normal"), // 'low', 'normal', 'high'
   contextType: text("context_type"), // 'suggestion', 'project', 'task', 'direct'
   contextId: text("context_id"),
+  isRead: boolean("is_read").default(false), // Read status for the recipient
+  readAt: timestamp("read_at"), // When the message was read
   editedAt: timestamp("edited_at"),
   editedContent: text("edited_content"),
   deletedAt: timestamp("deleted_at"),

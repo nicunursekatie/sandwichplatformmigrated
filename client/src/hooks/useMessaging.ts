@@ -115,7 +115,7 @@ export function useMessaging() {
         const unreadReceivedMessages = (allMessages || []).filter(msg =>
           !msg.is_read && // Message is unread
           msg.user_id !== user.id && // Message was not sent by this user
-          (msg.recipient_id === user.id || !msg.recipient_id) // Message is for this user (handle both schemas)
+          (msg.recipient_id === user.id || (!msg.recipient_id && msg.user_id !== user.id)) // Message is for this user
         );
 
         const unreadCount = unreadReceivedMessages.length;
@@ -176,7 +176,7 @@ export function useMessaging() {
         const unreadReceivedMessages = (allMessages || []).filter(msg =>
           !msg.is_read && // Message is unread
           msg.user_id !== user.id && // Message was not sent by this user
-          (msg.recipient_id === user.id || !msg.recipient_id) // Message is for this user (handle both schemas)
+          (msg.recipient_id === user.id || (!msg.recipient_id && msg.user_id !== user.id)) // Message is for this user
         ).slice(0, 10); // Limit to recent unread messages for notifications
 
         console.log('📭 Fetched unread messages:', unreadReceivedMessages.length, 'for user:', user.id);
@@ -192,7 +192,7 @@ export function useMessaging() {
     staleTime: 1000 * 60 * 2, // Data considered fresh for 2 minutes
   });
 
-  // Send message mutation - simplified for existing schema
+  // Send message mutation - enhanced for new schema
   const sendMessageMutation = useMutation({
     mutationFn: async (params: SendMessageParams) => {
       if (!user?.id) throw new Error('Not authenticated');
@@ -201,6 +201,11 @@ export function useMessaging() {
         user_id: user.id,
         content: params.content,
         conversation_id: params.conversation_id || null,
+        recipient_id: params.recipient_id || null,
+        subject: params.subject || null,
+        message_type: params.message_type || 'direct',
+        priority: params.priority || 'normal',
+        is_read: false, // New messages start as unread
       };
 
       console.log('Sending message with data:', messageData);
@@ -238,10 +243,13 @@ export function useMessaging() {
     mutationFn: async (messageId: number) => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      // Update message as read in the database
+      // Update message as read in the database with timestamp
       const { error } = await supabase
         .from('messages')
-        .update({ is_read: true })
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString() 
+        })
         .eq('id', messageId)
         .neq('user_id', user.id); // Only update messages not sent by this user
       
