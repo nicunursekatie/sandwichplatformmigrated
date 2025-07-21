@@ -5,7 +5,7 @@
  * This script will help identify discrepancies between expected and actual totals
  */
 
-import { storage } from '../server/storage.js';
+import { storage } from '../server/storage.ts';
 
 async function debugSandwichTotals() {
   console.log('🔍 Debugging Sandwich Total Calculations');

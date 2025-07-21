@@ -1297,6 +1297,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to transform collection data from camelCase to snake_case
+  const transformCollectionToSnakeCase = (collection: any) => ({
+    id: collection.id,
+    collection_date: collection.collectionDate || collection.collection_date,
+    host_name: collection.hostName || collection.host_name,
+    individual_sandwiches: collection.individualSandwiches || collection.individual_sandwiches,
+    group_collections: collection.groupCollections || collection.group_collections,
+    submitted_at: collection.submittedAt || collection.submitted_at,
+    deleted_at: collection.deletedAt || collection.deleted_at,
+    deleted_by: collection.deletedBy || collection.deleted_by
+  });
+
   // Sandwich Collections Stats - Complete totals including individual + group collections (Optimized)
   app.get("/api/sandwich-collections/stats", async (req, res) => {
     try {
@@ -1314,17 +1326,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let individualTotal = 0;
           let groupTotal = 0;
 
-          collections.forEach((collection) => {
-            individualTotal += collection.individualSandwiches || 0;
+          collections.forEach((collection: any) => {
+            // Handle both camelCase and snake_case field names
+            const individualSandwiches = collection.individualSandwiches || collection.individual_sandwiches || 0;
+            const groupCollections = collection.groupCollections || collection.group_collections || "[]";
+            
+            individualTotal += individualSandwiches;
 
             // Calculate group collections total
             try {
-              const groupData = JSON.parse(collection.groupCollections || "[]");
+              const groupData = JSON.parse(groupCollections);
               if (Array.isArray(groupData)) {
                 groupTotal += groupData.reduce(
                   (sum: number, group: any) => {
                     // Handle both formats: sandwichCount (older) and count (newer)
-                    const count = group.sandwichCount || group.count || 0;
+                    const count = group.sandwichCount || group.sandwich_count || group.count || 0;
                     return sum + count;
                   },
                   0,
@@ -1333,10 +1349,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } catch (error) {
               // Handle text format like "Marketing Team: 8, Development: 6"
               if (
-                collection.groupCollections &&
-                collection.groupCollections !== "[]"
+                groupCollections &&
+                groupCollections !== "[]"
               ) {
-                const matches = collection.groupCollections.match(/(\d+)/g);
+                const matches = groupCollections.match(/(\d+)/g);
                 if (matches) {
                   groupTotal += matches.reduce(
                     (sum, num) => sum + parseInt(num),
@@ -1384,8 +1400,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.getSandwichCollections(limit, offset);
       const totalCount = await storage.getSandwichCollectionsCount();
 
+      // Transform camelCase to snake_case for frontend compatibility
+      const transformedCollections = result.map(transformCollectionToSnakeCase);
+
       res.json({
-        collections: result,
+        collections: transformedCollections,
         pagination: {
           page,
           limit,
@@ -1412,7 +1431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Invalidate cache when new collection is created
         QueryOptimizer.invalidateCache("sandwich-collections");
 
-        res.status(201).json(collection);
+        res.status(201).json(transformCollectionToSnakeCase(collection));
       } catch (error) {
         if (error instanceof z.ZodError) {
           logger.warn("Invalid sandwich collection input", {
@@ -1445,7 +1464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Invalidate cache when collection is updated
         QueryOptimizer.invalidateCache("sandwich-collections");
 
-        res.json(collection);
+        res.json(transformCollectionToSnakeCase(collection));
       } catch (error) {
         logger.error("Failed to update sandwich collection", error);
         res.status(400).json({ message: "Invalid update data" });
@@ -1472,7 +1491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Invalidate cache when collection is updated
         QueryOptimizer.invalidateCache("sandwich-collections");
 
-        res.json(collection);
+        res.json(transformCollectionToSnakeCase(collection));
       } catch (error) {
         logger.error("Failed to patch sandwich collection", error);
         res.status(500).json({ message: "Failed to update collection" });
@@ -7229,6 +7248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
 
   return httpServer;
 }
