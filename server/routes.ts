@@ -1300,6 +1300,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sandwich Collections Stats - Complete totals including individual + group collections (Optimized)
   app.get("/api/sandwich-collections/stats", async (req, res) => {
     try {
+      const forceRefresh = req.query.refresh === 'true';
+      
+      if (forceRefresh) {
+        QueryOptimizer.invalidateCache("sandwich-collections-stats");
+      }
+
       const stats = await QueryOptimizer.getCachedQuery(
         "sandwich-collections-stats",
         async () => {
@@ -1316,7 +1322,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const groupData = JSON.parse(collection.groupCollections || "[]");
               if (Array.isArray(groupData)) {
                 groupTotal += groupData.reduce(
-                  (sum: number, group: any) => sum + (group.sandwichCount || 0),
+                  (sum: number, group: any) => {
+                    // Handle both formats: sandwichCount (older) and count (newer)
+                    const count = group.sandwichCount || group.count || 0;
+                    return sum + count;
+                  },
                   0,
                 );
               }
@@ -1342,6 +1352,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             individualSandwiches: individualTotal,
             groupSandwiches: groupTotal,
             completeTotalSandwiches: individualTotal + groupTotal,
+            debug: {
+              lastUpdated: new Date().toISOString(),
+              sampleRecentEntries: collections.slice(0, 3).map(c => ({
+                id: c.id,
+                date: c.collectionDate,
+                individual: c.individualSandwiches,
+                hasGroups: !!c.groupCollections && c.groupCollections !== '[]'
+              }))
+            }
           };
         },
         60000, // Cache for 1 minute since this data doesn't change frequently

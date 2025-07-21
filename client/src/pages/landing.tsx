@@ -42,7 +42,7 @@ export default function Landing() {
             const groups = JSON.parse(c.group_collections);
             if (Array.isArray(groups)) {
               groups.forEach((group: any) => {
-                sandwichCount += group.count || group.sandwich_count || 0;
+                sandwichCount += group.count || group.sandwich_count || group.sandwichCount || 0;
               });
             }
           } catch (e) {

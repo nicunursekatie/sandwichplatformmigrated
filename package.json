@@ -13,7 +13,9 @@
     "migrate:groups-main": "tsx scripts/migrate-groups-main.ts",
     "fix:data-integrity": "node scripts/fix-data-integrity.js",
     "analyze:task-assignments": "node scripts/analyze-task-assignments.js",
-    "reassign:tasks": "node scripts/reassign-orphaned-tasks.js"
+    "reassign:tasks": "node scripts/reassign-orphaned-tasks.js",
+    "debug:sandwich-totals": "node scripts/debug-sandwich-totals.js",
+    "analyze:missing-collections": "node scripts/import-missing-collections.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
