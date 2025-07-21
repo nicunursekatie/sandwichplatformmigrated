@@ -99,7 +99,7 @@ export default function ImpactDashboard() {
     }> = {};
     
     collections.forEach((collection: any) => {
-      const collectionDate = collection.collection_date;
+              const collectionDate = collection.collection_date;
       if (collectionDate) {
         const date = new Date(collectionDate);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
