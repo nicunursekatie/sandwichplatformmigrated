@@ -106,9 +106,24 @@ export function useMessaging() {
       }
 
       try {
-        // For now, return zero counts to fix the false unread indicator
-        // This is a temporary fix until the database schema is properly migrated
-        console.log('📊 Returning zero unread counts (using legacy schema compatibility)');
+        // Fetch all messages and filter for unread received messages
+        const { data: allMessages } = await supabase
+          .from('messages')
+          .select('*');
+
+        // Filter for unread messages received by this user (not sent by them)
+        const unreadReceivedMessages = (allMessages || []).filter(msg =>
+          !msg.is_read && // Message is unread
+          msg.user_id !== user.id && // Message was not sent by this user
+          (msg.recipient_id === user.id || !msg.recipient_id) // Message is for this user (handle both schemas)
+        );
+
+        const unreadCount = unreadReceivedMessages.length;
+        
+        console.log('📊 Calculated unread count:', unreadCount, 'for user:', user.id);
+        console.log('📊 Total messages:', allMessages?.length || 0);
+        console.log('📊 Messages sent by user:', (allMessages || []).filter(msg => msg.user_id === user.id).length);
+        console.log('📊 Messages received by user:', (allMessages || []).filter(msg => msg.user_id !== user.id).length);
         
         return {
           general: 0,
@@ -117,9 +132,9 @@ export function useMessaging() {
           drivers: 0,
           recipients: 0,
           core_team: 0,
-          direct: 0,
+          direct: unreadCount, // Put unread count in direct messages
           groups: 0,
-          total: 0,
+          total: unreadCount,
         };
       } catch (error) {
         console.error('Error in unread counts query:', error);
@@ -148,11 +163,25 @@ export function useMessaging() {
       if (!user?.id) return [];
       
       try {
-        // For now, return empty array to fix the false unread indicator
-        // This is a temporary fix until the database schema is properly migrated
-        console.log('📭 Returning empty unread messages (using legacy schema compatibility)');
+        // Fetch all messages with sender info and filter for unread received messages
+        const { data: allMessages } = await supabase
+          .from('messages')
+          .select(`
+            *,
+            sender:users!user_id(id, first_name, last_name, email)
+          `)
+          .order('created_at', { ascending: false });
+
+        // Filter for unread messages received by this user (not sent by them)
+        const unreadReceivedMessages = (allMessages || []).filter(msg =>
+          !msg.is_read && // Message is unread
+          msg.user_id !== user.id && // Message was not sent by this user
+          (msg.recipient_id === user.id || !msg.recipient_id) // Message is for this user (handle both schemas)
+        ).slice(0, 10); // Limit to recent unread messages for notifications
+
+        console.log('📭 Fetched unread messages:', unreadReceivedMessages.length, 'for user:', user.id);
         
-        return [];
+        return unreadReceivedMessages;
       } catch (error) {
         console.error('Error fetching unread messages:', error);
         return [];
@@ -204,13 +233,24 @@ export function useMessaging() {
     },
   });
 
-  // Mark message as read mutation - placeholder for existing schema
+  // Mark message as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (messageId: number) => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      // Since message_reads table doesn't exist, this is a no-op for now
-      console.log('Mark as read called for message:', messageId, '(placeholder implementation)');
+      // Update message as read in the database
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('id', messageId)
+        .neq('user_id', user.id); // Only update messages not sent by this user
+      
+      if (error) {
+        console.error('Error marking message as read:', error);
+        throw error;
+      }
+      
+      console.log('Message marked as read:', messageId);
       return { success: true };
     },
     onSuccess: () => {
@@ -220,13 +260,24 @@ export function useMessaging() {
     },
   });
 
-  // Mark all messages as read mutation - placeholder for existing schema
+  // Mark all messages as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async (conversationId?: number) => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      // Since message_reads table doesn't exist, this is a no-op for now
-      console.log('Mark all as read called for conversation:', conversationId, '(placeholder implementation)');
+      // Update all unread messages as read for this user (only messages not sent by them)
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .neq('user_id', user.id) // Only update messages not sent by this user
+        .eq('is_read', false);
+      
+      if (error) {
+        console.error('Error marking all messages as read:', error);
+        throw error;
+      }
+      
+      console.log('All messages marked as read for user:', user.id);
       return { success: true };
     },
     onSuccess: () => {

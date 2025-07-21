@@ -154,7 +154,7 @@ export default function InboxPage() {
       console.log('Fetched inbox messages:', data?.length, 'messages');
       console.log('User ID:', user.id);
       
-      // Process messages with simplified logic
+      // Process messages with proper read status tracking
       return (data || []).map(msg => {
         const isSentByUser = msg.user_id === user.id;
         
@@ -163,7 +163,7 @@ export default function InboxPage() {
           message_type: 'direct' as const, // Default for compatibility
           priority: 'normal' as const, // Default for compatibility
           status: 'sent', // Default for compatibility
-          is_read: true, // Always mark as read to fix false unread indicator
+          is_read: msg.is_read || false, // Use actual read status from database
           is_sent_by_user: isSentByUser
         };
       });
