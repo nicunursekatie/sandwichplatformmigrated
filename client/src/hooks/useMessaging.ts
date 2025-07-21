@@ -78,7 +78,7 @@ export function useMessaging() {
           queryClient.invalidateQueries({ queryKey: ['unread-messages', user.id] });
           queryClient.invalidateQueries({ queryKey: ['messages'] });
           queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
-          queryClient.invalidateQueries({ queryKey: ['inbox-messages'] });
+          queryClient.invalidateQueries({ queryKey: ['inbox-messages', user.id] });
         }
       )
       .subscribe((status) => {
@@ -365,12 +365,12 @@ export function useMessaging() {
       
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
-      queryClient.invalidateQueries({ queryKey: ['chat-messages'] });
-      queryClient.invalidateQueries({ queryKey: ['inbox-messages'] });
-      toast({ description: 'Message sent successfully' });
-    },
+   onSuccess: () => {
+    refetchUnreadCounts();
+    refetchUnreadMessages();
+    queryClient.invalidateQueries({ queryKey: ['messages'] });
+    queryClient.invalidateQueries({ queryKey: ['inbox-messages', user.id] });
+  },
     onError: (error: any) => {
       toast({
         title: 'Failed to send message',
