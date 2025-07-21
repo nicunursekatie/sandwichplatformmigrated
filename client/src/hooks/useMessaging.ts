@@ -153,9 +153,11 @@ export function useMessaging() {
               conversation_id,
               message_type,
               recipient_id,
+              user_id,
               conversations(name, type)
             `)
-            .or(`recipient_id.eq.${user.id}${conversationIds.length > 0 ? `,conversation_id.in.(${conversationIds.join(',')})` : ''}`),
+            .or(`recipient_id.eq.${user.id}${conversationIds.length > 0 ? `,conversation_id.in.(${conversationIds.join(',')})` : ''}`)
+            .neq('user_id', user.id), // Exclude messages sent by the user
           
           // Get read message IDs
           supabase

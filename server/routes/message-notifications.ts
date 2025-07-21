@@ -1,6 +1,6 @@
 import { Request, Response, Express } from "express";
-import { eq, sql, and } from "drizzle-orm";
-import { messages, conversations, conversationParticipants } from "../../shared/schema";
+import { eq, sql, and, isNull } from "drizzle-orm";
+import { messages, conversations, conversationParticipants, messageReads } from "../../shared/schema";
 import { db } from "../db";
 
 // Helper function to check if user has permission for specific chat type
@@ -69,8 +69,15 @@ const getUnreadCounts = async (req: Request, res: Response) => {
             eq(conversationParticipants.conversationId, conversations.id),
             eq(conversationParticipants.userId, userId)
           ))
+          .leftJoin(messageReads, and(
+            eq(messageReads.messageId, messages.id),
+            eq(messageReads.userId, userId)
+          ))
           .where(
-            sql`${messages.userId} != ${userId}` // Don't count own messages
+            and(
+              sql`${messages.userId} != ${userId}`, // Don't count own messages
+              isNull(messageReads.messageId) // Only count unread messages
+            )
           )
           .groupBy(messages.conversationId, conversations.type, conversations.name);
 
