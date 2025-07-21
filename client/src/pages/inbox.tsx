@@ -160,11 +160,12 @@ export default function InboxPage() {
         
         return {
           ...msg,
-          message_type: 'direct' as const, // Default for compatibility
-          priority: 'normal' as const, // Default for compatibility
+          message_type: msg.message_type || 'direct' as const,
+          priority: msg.priority || 'normal' as const,
           status: 'sent', // Default for compatibility
           is_read: msg.is_read || false, // Use actual read status from database
-          is_sent_by_user: isSentByUser
+          is_sent_by_user: isSentByUser,
+          recipient_id: msg.recipient_id // Include recipient_id for proper filtering
         };
       });
     },
@@ -196,14 +197,29 @@ export default function InboxPage() {
     };
   }, [user?.id, refetch]);
 
-  // Filter messages based on selected tab
+  // Filter messages based on selected tab and search query
   const filteredMessages = messages.filter(msg => {
+    // Apply search filter first
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const searchMatch = 
+        msg.content.toLowerCase().includes(query) ||
+        msg.subject?.toLowerCase().includes(query) ||
+        getUserDisplayName(msg.sender).toLowerCase().includes(query);
+      if (!searchMatch) return false;
+    }
+
+    // Apply tab filter
     switch (selectedTab) {
       case "sent":
         return msg.is_sent_by_user;
       case "unread":
         return !msg.is_read && !msg.is_sent_by_user; // Show only received unread messages
-      default:
+      case "direct":
+        return msg.message_type === 'direct' && !msg.is_sent_by_user;
+      case "group":
+        return msg.message_type === 'group' && !msg.is_sent_by_user;
+      default: // "all"
         return !msg.is_sent_by_user; // Show only received messages in "All" tab
     }
   });
@@ -212,27 +228,37 @@ export default function InboxPage() {
   const unreadMessages = messages.filter(msg => 
     !msg.is_read && // Message is not read
     !msg.is_sent_by_user && // Message was not sent by this user
-    msg.user_id !== user?.id // Additional safety check
+    (msg.recipient_id === user?.id || !msg.recipient_id) // Message is for this user
   );
-  console.log('Unread messages in inbox:', unreadMessages);
+  
+  console.log('Unread messages in inbox:', unreadMessages.length);
   console.log('Total messages:', messages.length);
   console.log('Messages sent by user:', messages.filter(msg => msg.is_sent_by_user).length);
   console.log('Messages received by user:', messages.filter(msg => !msg.is_sent_by_user).length);
-  const unreadCount = 0; // Force to 0 to fix false unread indicator
+  
+  const unreadCount = unreadMessages.length;
 
   const handleSendMessage = async () => {
     if (!composeData.content.trim() || composeData.recipients.length === 0) return;
 
     try {
       if (composeData.message_type === 'direct' && composeData.recipients.length === 1) {
-        // Send direct message
-        await sendMessage({
+        // Send direct message with proper fields
+        const messageData = {
+          user_id: user?.id,
           content: composeData.content,
-          message_type: 'direct',
           recipient_id: composeData.recipients[0],
           subject: composeData.subject,
-          priority: composeData.priority
-        });
+          message_type: 'direct',
+          priority: composeData.priority,
+          is_read: false // New messages start as unread
+        };
+
+        const { error } = await supabase
+          .from('messages')
+          .insert(messageData);
+        
+        if (error) throw error;
       } else {
         // Create group conversation and send message
         const { data: conversation, error: convError } = await supabase
