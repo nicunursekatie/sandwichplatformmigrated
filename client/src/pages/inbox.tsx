@@ -83,6 +83,7 @@ interface InboxMessage {
     type: string;
   };
   is_read?: boolean;
+  is_sent_by_user?: boolean;
 }
 
 interface ComposeData {
@@ -136,6 +137,7 @@ export default function InboxPage() {
     queryFn: async () => {
       if (!user?.id) return [];
 
+      // Fetch both received and sent messages separately to have better control
       const { data, error } = await supabase
         .from('messages')
         .select(`
@@ -157,13 +159,17 @@ export default function InboxPage() {
       console.log('Fetched inbox messages:', data?.length, 'messages');
       console.log('User ID:', user.id);
       
-      // Process read status
-      return (data || []).map(msg => ({
-        ...msg,
-        is_read: msg.user_id === user.id || // Sent messages are always "read" by sender
-                 msg.message_reads?.some((read: any) => read.user_id === user.id) || 
-                 false
-      }));
+      // Process read status - be more explicit about sent vs received messages
+      return (data || []).map(msg => {
+        const isSentByUser = msg.user_id === user.id;
+        const isReadByUser = msg.message_reads?.some((read: any) => read.user_id === user.id);
+        
+        return {
+          ...msg,
+          is_read: isSentByUser || isReadByUser || false,
+          is_sent_by_user: isSentByUser
+        };
+      });
     },
     enabled: !!user?.id,
     refetchInterval: 10000, // Refetch every 10 seconds
@@ -203,21 +209,29 @@ export default function InboxPage() {
 
     switch (selectedTab) {
       case "unread":
-        return !msg.is_read && msg.user_id !== user?.id;
+        return !msg.is_read && !msg.is_sent_by_user;
       case "sent":
-        return msg.user_id === user?.id;
+        return msg.is_sent_by_user;
       case "direct":
-        return msg.message_type === 'direct' && msg.user_id !== user?.id;
+        return msg.message_type === 'direct' && !msg.is_sent_by_user;
       case "group":
-        return msg.message_type === 'group' && msg.user_id !== user?.id;
+        return msg.message_type === 'group' && !msg.is_sent_by_user;
       case "all":
       default:
-        return msg.user_id !== user?.id; // Show only received messages in "All" tab
+        return !msg.is_sent_by_user; // Show only received messages in "All" tab
     }
   });
 
-  const unreadMessages = messages.filter(msg => !msg.is_read && msg.user_id !== user?.id);
+  // Calculate unread count for RECEIVED messages only (exclude sent messages)
+  const unreadMessages = messages.filter(msg => 
+    !msg.is_read && // Message is not read
+    !msg.is_sent_by_user && // Message was not sent by this user
+    msg.user_id !== user?.id // Additional safety check
+  );
   console.log('Unread messages in inbox:', unreadMessages);
+  console.log('Total messages:', messages.length);
+  console.log('Messages sent by user:', messages.filter(msg => msg.is_sent_by_user).length);
+  console.log('Messages received by user:', messages.filter(msg => !msg.is_sent_by_user).length);
   const unreadCount = unreadMessages.length;
 
   const handleSendMessage = async () => {
@@ -293,7 +307,7 @@ export default function InboxPage() {
         await sendMessage({
           content: replyContent,
           message_type: 'direct',
-          recipient_id: selectedMessage.user_id === user?.id ? selectedMessage.recipient_id : selectedMessage.user_id,
+          recipient_id: selectedMessage.is_sent_by_user ? selectedMessage.recipient_id : selectedMessage.user_id,
           subject: selectedMessage.subject ? `Re: ${selectedMessage.subject}` : undefined,
           priority: selectedMessage.priority
         });
@@ -343,9 +357,9 @@ export default function InboxPage() {
     }
   };
 
-  // Mark message as read when selected
+  // Mark message as read when selected (only for received messages)
   useEffect(() => {
-    if (selectedMessage && !selectedMessage.is_read && selectedMessage.user_id !== user?.id) {
+    if (selectedMessage && !selectedMessage.is_read && !selectedMessage.is_sent_by_user) {
       handleMarkAsRead(selectedMessage.id);
     }
   }, [selectedMessage, user?.id]);
@@ -564,7 +578,7 @@ export default function InboxPage() {
                         key={message.id}
                         className={`cursor-pointer transition-colors hover:bg-gray-50 ${
                           selectedMessage?.id === message.id ? 'ring-2 ring-primary' : ''
-                        } ${!message.is_read && message.user_id !== user?.id ? 'bg-blue-50 border-blue-200' : ''}`}
+                        } ${!message.is_read && !message.is_sent_by_user ? 'bg-blue-50 border-blue-200' : ''}`}
                         onClick={() => setSelectedMessage(message)}
                       >
                         <CardContent className="p-4">
@@ -578,7 +592,7 @@ export default function InboxPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-medium text-sm">
-                                  {message.user_id === user?.id ? (
+                                  {message.is_sent_by_user ? (
                                     <>To: {getUserDisplayName(message.recipient)}</>
                                   ) : (
                                     getUserDisplayName(message.sender)
@@ -594,7 +608,7 @@ export default function InboxPage() {
                                       {message.priority}
                                     </Badge>
                                   )}
-                                  {!message.is_read && message.user_id !== user?.id && (
+                                  {!message.is_read && !message.is_sent_by_user && (
                                     <Circle className="h-2 w-2 fill-blue-500 text-blue-500" />
                                   )}
                                 </div>
