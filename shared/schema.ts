@@ -245,12 +245,6 @@ export const messages = pgTable("messages", {
   sender: text("sender"), // Display name of sender
   contextType: text("context_type"), // 'suggestion', 'project', 'task', 'direct'
   contextId: text("context_id"),
-  messageType: varchar("message_type", { length: 20 }).default("chat"),
-  replyToId: integer("reply_to_id").references(() => messages.id),
-  recipientId: text("recipient_id"),
-  subject: text("subject"),
-  priority: varchar("priority", { length: 10 }).default("normal"),
-  status: varchar("status", { length: 20 }).default("sent"),
   editedAt: timestamp("edited_at"),
   editedContent: text("edited_content"),
   deletedAt: timestamp("deleted_at"),
@@ -293,21 +287,7 @@ export const messageThreads = pgTable("message_threads", {
   pathIdx: index("idx_thread_path").on(table.path),
 }));
 
-// 6. Message Reads - track which messages have been read by which users
-export const messageReads = pgTable("message_reads", {
-  id: serial("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  messageId: integer("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
-  readAt: timestamp("read_at").defaultNow(),
-  deletedAt: timestamp("deleted_at"), // Soft delete timestamp
-  deletedBy: varchar("deleted_by"), // User who performed the soft delete
-}, (table) => ({
-  uniqueRead: unique().on(table.userId, table.messageId),
-  userIdx: index("idx_message_reads_user_id").on(table.userId),
-  messageIdx: index("idx_message_reads_message_id").on(table.messageId),
-}));
-
-// 7. Kudos Tracking - prevent spam by tracking sent kudos
+// 6. Kudos Tracking - prevent spam by tracking sent kudos
 export const kudosTracking = pgTable("kudos_tracking", {
   id: serial("id").primaryKey(),
   senderId: text("sender_id").notNull(),
@@ -503,7 +483,6 @@ export const insertProjectSchema = createInsertSchema(projects).omit({ id: true,
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMessageRecipientSchema = createInsertSchema(messageRecipients).omit({ id: true, createdAt: true });
 export const insertMessageThreadSchema = createInsertSchema(messageThreads).omit({ id: true, createdAt: true });
-export const insertMessageReadsSchema = createInsertSchema(messageReads).omit({ id: true, readAt: true });
 export const insertKudosTrackingSchema = createInsertSchema(kudosTracking).omit({ id: true, sentAt: true });
 export const insertWeeklyReportSchema = createInsertSchema(weeklyReports).omit({ id: true, submittedAt: true });
 export const insertSandwichCollectionSchema = createInsertSchema(sandwichCollections).omit({ id: true, submittedAt: true });
@@ -538,8 +517,6 @@ export type MessageRecipient = typeof messageRecipients.$inferSelect;
 export type InsertMessageRecipient = z.infer<typeof insertMessageRecipientSchema>;
 export type MessageThread = typeof messageThreads.$inferSelect;
 export type InsertMessageThread = z.infer<typeof insertMessageThreadSchema>;
-export type MessageRead = typeof messageReads.$inferSelect;
-export type InsertMessageRead = typeof messageReads.$inferInsert;
 export type KudosTracking = typeof kudosTracking.$inferSelect;
 export type InsertKudosTracking = z.infer<typeof insertKudosTrackingSchema>;
 export type WeeklyReport = typeof weeklyReports.$inferSelect;
