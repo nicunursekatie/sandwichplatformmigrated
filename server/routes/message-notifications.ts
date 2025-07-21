@@ -55,36 +55,42 @@ const getUnreadCounts = async (req: Request, res: Response) => {
       };
 
       try {
-        // Get basic message counts for conversations the user is a participant in
-        const unreadConversationCounts = await db
-          .select({
-            conversationId: messages.conversationId,
-            conversationType: conversations.type,
-            conversationName: conversations.name,
-            count: sql<number>`count(*)`
-          })
-          .from(messages)
-          .innerJoin(conversations, eq(messages.conversationId, conversations.id))
-          .innerJoin(conversationParticipants, and(
-            eq(conversationParticipants.conversationId, conversations.id),
-            eq(conversationParticipants.userId, userId)
-          ))
-          .where(
-            sql`${messages.userId} != ${userId}` // Don't count own messages
-          )
-          .groupBy(messages.conversationId, conversations.type, conversations.name);
+        // Get unread message counts for different types of conversations
+        // Key fix: explicitly exclude messages sent BY this user (using both user_id and sender_id)
+        // and exclude messages already read by this user
+        const unreadQuery = sql`
+          SELECT 
+            m.conversation_id,
+            c.type as conversation_type,
+            c.name as conversation_name,
+            COUNT(*) as count
+          FROM messages m
+          INNER JOIN conversations c ON m.conversation_id = c.id
+          INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
+          WHERE cp.user_id = ${userId}
+            AND m.user_id != ${userId}
+            AND (m.sender_id IS NULL OR m.sender_id != ${userId})
+            AND m.id NOT IN (
+              SELECT message_id 
+              FROM message_reads 
+              WHERE user_id = ${userId}
+            )
+          GROUP BY m.conversation_id, c.type, c.name
+        `;
+        
+        const unreadConversationCounts = await db.execute(unreadQuery);
 
         // Process conversation counts by type
-        for (const conversation of unreadConversationCounts) {
+        for (const conversation of unreadConversationCounts.rows || []) {
           const count = Number(conversation.count);
 
-          if (conversation.conversationType === 'direct') {
+          if (conversation.conversation_type === 'direct') {
             unreadCounts.direct += count;
-          } else if (conversation.conversationType === 'group') {
+          } else if (conversation.conversation_type === 'group') {
             unreadCounts.groups += count;
-          } else if (conversation.conversationType === 'channel') {
+          } else if (conversation.conversation_type === 'channel') {
             // Map channel names to specific categories
-            const name = conversation.conversationName?.toLowerCase() || '';
+            const name = conversation.conversation_name?.toLowerCase() || '';
             if (name.includes('core team')) {
               unreadCounts.core_team += count;
             } else if (name.includes('committee')) {
