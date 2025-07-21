@@ -216,7 +216,9 @@ export default function InboxPage() {
     }
   });
 
-  const unreadCount = messages.filter(msg => !msg.is_read && msg.user_id !== user?.id).length;
+  const unreadMessages = messages.filter(msg => !msg.is_read && msg.user_id !== user?.id);
+  console.log('Unread messages in inbox:', unreadMessages);
+  const unreadCount = unreadMessages.length;
 
   const handleSendMessage = async () => {
     if (!composeData.content.trim() || composeData.recipients.length === 0) return;
