@@ -420,7 +420,8 @@ export function useMessaging() {
           SELECT conversation_id 
           FROM conversation_participants 
           WHERE user_id = '${user.id}'
-        )`);
+        )`)
+        .neq('user_id', user.id); // Don't mark own messages as read
       }
       
       const { data: messages } = await query
