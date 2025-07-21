@@ -238,25 +238,29 @@ export function useMessaging() {
     mutationFn: async (messageId: number) => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      // Update message as read in the database
-      const { error } = await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('id', messageId)
-        .neq('user_id', user.id); // Only update messages not sent by this user
+      // Call the server's messaging service endpoint
+      const response = await fetch(`/api/messaging/${messageId}/read`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
       
-      if (error) {
-        console.error('Error marking message as read:', error);
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to mark message as read');
       }
       
+      const data = await response.json();
       console.log('Message marked as read:', messageId);
-      return { success: true };
+      return data;
     },
     onSuccess: () => {
       refetchUnreadCounts();
       refetchUnreadMessages();
       queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['inbox-messages', user.id] });
     },
   });
 
@@ -265,20 +269,27 @@ export function useMessaging() {
     mutationFn: async (conversationId?: number) => {
       if (!user?.id) throw new Error('Not authenticated');
       
-      // Update all unread messages as read for this user (only messages not sent by them)
-      const { error } = await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .neq('user_id', user.id) // Only update messages not sent by this user
-        .eq('is_read', false);
+      // Call the server's messaging service endpoint
+      const response = await fetch('/api/messaging/mark-all-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          contextType: conversationId ? 'conversation' : undefined,
+          contextId: conversationId?.toString(),
+        }),
+      });
       
-      if (error) {
-        console.error('Error marking all messages as read:', error);
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to mark all messages as read');
       }
       
+      const data = await response.json();
       console.log('All messages marked as read for user:', user.id);
-      return { success: true };
+      return data;
     },
     onSuccess: () => {
       refetchUnreadCounts();

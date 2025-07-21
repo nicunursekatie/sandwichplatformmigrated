@@ -1,4 +1,4 @@
-import { and, eq, sql, desc, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, eq, sql, desc, inArray, isNull, lte, or, not } from "drizzle-orm";
 import { db } from "../db";
 import { 
   messages, 
@@ -156,6 +156,56 @@ export class MessagingService {
       }));
     } catch (error) {
       console.error('Failed to get unread messages:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all messages for a recipient (both read and unread)
+   */
+  async getAllMessagesForRecipient(
+    recipientId: string,
+    options?: {
+      contextType?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<(MessageWithSender & { isRead: boolean })[]> {
+    const { contextType, limit = 50, offset = 0 } = options || {};
+    
+    try {
+      const query = db
+        .select({
+          message: messages,
+          senderName: sql<string>`COALESCE(${users.firstName}, ${messages.sender}, 'Unknown User')`,
+          senderEmail: users.email,
+          isRead: messageRecipients.read,
+        })
+        .from(messageRecipients)
+        .innerJoin(messages, eq(messages.id, messageRecipients.messageId))
+        .leftJoin(users, eq(users.id, messages.senderId))
+        .where(
+          and(
+            eq(messageRecipients.recipientId, recipientId),
+            isNull(messages.deletedAt),
+            eq(messageRecipients.contextAccessRevoked, false),
+            contextType ? eq(messages.contextType, contextType) : undefined
+          )
+        )
+        .orderBy(desc(messages.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      const results = await query;
+      
+      return results.map(row => ({
+        ...row.message,
+        senderName: row.senderName || 'Unknown User',
+        senderEmail: row.senderEmail || undefined,
+        isRead: row.isRead,
+      }));
+    } catch (error) {
+      console.error('Failed to get all messages for recipient:', error);
       throw error;
     }
   }
@@ -657,7 +707,7 @@ export class MessagingService {
         and(
           eq(messages.contextType, message.contextType),
           eq(messages.contextId, message.contextId),
-          eq(messages.id, message.id).not(),
+          not(eq(messages.id, message.id)),
           isNull(messages.deletedAt)
         )
       )

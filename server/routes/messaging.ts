@@ -147,6 +147,39 @@ router.get("/kudos/check", async (req, res) => {
 });
 
 /**
+ * Get all messages for inbox
+ */
+router.get("/inbox", async (req, res) => {
+  try {
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const { contextType, limit = "50", offset = "0" } = req.query;
+
+    const messages = await messagingService.getAllMessagesForRecipient(user.id, {
+      contextType: contextType as string | undefined,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string),
+    });
+
+    // Debug: Check for incomplete messages before sending
+    const incompleteMessages = messages.filter(msg => !msg || !msg.senderName || !msg.content);
+    if (incompleteMessages.length > 0) {
+      console.error('Found incomplete messages being sent to frontend:', incompleteMessages);
+    }
+
+    console.log('Sending inbox messages to frontend. Total:', messages.length, 'Valid:', messages.filter(msg => msg && msg.senderName && msg.content).length);
+
+    res.json({ messages });
+  } catch (error) {
+    console.error("Error getting inbox messages:", error);
+    res.status(500).json({ error: "Failed to get inbox messages" });
+  }
+});
+
+/**
  * Get unread messages
  */
 router.get("/unread", async (req, res) => {

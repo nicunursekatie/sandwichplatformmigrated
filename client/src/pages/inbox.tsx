@@ -137,33 +137,45 @@ export default function InboxPage() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Simplified query for existing schema
-      const { data, error } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          sender:users!user_id(id, first_name, last_name, email)
-        `)
-        .order('created_at', { ascending: false });
+      // Use the messaging service API endpoint
+      const response = await fetch('/api/messaging/inbox', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
 
-      if (error) {
-        console.error('Error fetching inbox messages:', error);
+      if (!response.ok) {
+        console.error('Error fetching inbox messages:', await response.text());
         return [];
       }
+
+      const { messages: data } = await response.json();
 
       console.log('Fetched inbox messages:', data?.length, 'messages');
       console.log('User ID:', user.id);
       
       // Process messages with proper read status tracking
-      return (data || []).map(msg => {
-        const isSentByUser = msg.user_id === user.id;
+      return (data || []).map((msg: any) => {
+        const isSentByUser = msg.senderId === user.id;
         
         return {
-          ...msg,
+          id: msg.id,
+          user_id: msg.senderId,
+          content: msg.content,
+          created_at: msg.createdAt,
+          updated_at: msg.updatedAt,
+          sender: {
+            id: msg.senderId,
+            first_name: msg.senderName?.split(' ')[0] || '',
+            last_name: msg.senderName?.split(' ').slice(1).join(' ') || '',
+            email: msg.senderEmail || ''
+          },
           message_type: 'direct' as const, // Default for compatibility
           priority: 'normal' as const, // Default for compatibility
           status: 'sent', // Default for compatibility
-          is_read: msg.is_read || false, // Use actual read status from database
+          is_read: msg.isRead || false, // Use actual read status from messageRecipients table
           is_sent_by_user: isSentByUser
         };
       });
