@@ -232,7 +232,7 @@ export default function InboxPage() {
   );
   
   console.log('Unread messages in inbox:', unreadMessages.length);
-  console.log('Total messages:', messages.length);
+  console.log('Total messages:', {unreadCount});
   console.log('Messages sent by user:', messages.filter(msg => msg.is_sent_by_user).length);
   console.log('Messages received by user:', messages.filter(msg => !msg.is_sent_by_user).length);
   
@@ -552,9 +552,9 @@ export default function InboxPage() {
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="all" className="text-xs">
                 All
-                {messages.length > 0 && (
+                {unreadCount > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
-                    {messages.length}
+                    {unreadCount}
                   </Badge>
                 )}
               </TabsTrigger>
