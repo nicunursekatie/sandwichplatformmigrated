@@ -142,7 +142,8 @@ export default function InboxPage() {
         .from('messages')
         .select(`
           *,
-          sender:users!user_id(id, first_name, last_name, email)
+          sender:users!user_id(id, first_name, last_name, email),
+          recipient:users!recipient_id(id, first_name, last_name, email)
         `)
         .order('created_at', { ascending: false });
 
@@ -165,7 +166,10 @@ export default function InboxPage() {
           status: 'sent', // Default for compatibility
           is_read: msg.is_read || false, // Use actual read status from database
           is_sent_by_user: isSentByUser,
-          recipient_id: msg.recipient_id // Include recipient_id for proper filtering
+          recipient_id: msg.recipient_id, // Include recipient_id for proper filtering
+          // Fix array issue for sender and recipient from Supabase joins
+          sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender,
+          recipient: Array.isArray(msg.recipient) ? msg.recipient[0] : msg.recipient
         };
       });
     },
