@@ -589,452 +589,268 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{project.title}</h1>
-            <p className="text-muted-foreground max-w-2xl">{project.description}</p>
-            <div className="flex items-center gap-4 mt-4">
-              <Badge variant={getStatusColor(project.status)}>
-                {project.status.replace("_", " ")}
-              </Badge>
-              <Badge variant={getPriorityColor(project.priority)}>
-                {getPriorityIcon(project.priority)}
-                {project.priority} priority
-              </Badge>
-              {project.due_date && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  Due {format(new Date(project.due_date), "MMM dd, yyyy")}
-                </div>
-              )}
-            </div>
-          </div>
+      {/* Back Link and Title Row */}
+      <div className="flex items-center gap-4 mb-4">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <span className="text-sm text-blue-700 font-semibold cursor-pointer" onClick={onBack}>
+          Back to Projects
+        </span>
+        <span className="text-2xl font-bold ml-6">{project.title}</span>
+        <div className="flex gap-2 ml-4">
+          <Badge variant={getStatusColor(project.status)}>{project.status.replace("_", " ")}</Badge>
+          <Badge variant={getPriorityColor(project.priority)}>{project.priority}</Badge>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setShowProjectEdit(true)}>
-              <Edit3 className="w-4 h-4 mr-2" />
-              Edit project
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="text-destructive"
-              onClick={() => {
-                if (confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
-                  deleteProjectMutation.mutate();
-                }
-              }}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete project
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="ghost" size="icon" className="ml-auto" onClick={() => setShowProjectEdit(true)}>
+          <Edit3 className="w-4 h-4" /> Edit Project
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold mb-2">{completionPercentage}%</div>
+      {/* Summary Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="border-blue-200">
+          <CardContent className="p-4 flex flex-col gap-2">
+            <span className="text-xs text-blue-700 font-semibold uppercase tracking-wide">Project Owner</span>
+            <span className="text-lg font-bold">{project.project_assignments[0]?.user ? formatUserName(project.project_assignments[0].user) : "Unassigned"}</span>
+            <span className="text-xs text-gray-500">Currently managing this project</span>
+          </CardContent>
+        </Card>
+        <Card className="border-orange-200">
+          <CardContent className="p-4 flex flex-col gap-2">
+            <span className="text-xs text-orange-700 font-semibold uppercase tracking-wide">Target Date</span>
+            <span className="text-lg font-bold">{project.due_date ? format(new Date(project.due_date), "M/d/yyyy") : "No date set"}</span>
+            {project.due_date && <span className="text-xs text-gray-500">{formatDistanceToNow(new Date(project.due_date), { addSuffix: true })}</span>}
+          </CardContent>
+        </Card>
+        <Card className="border-green-200">
+          <CardContent className="p-4 flex flex-col gap-2">
+            <span className="text-xs text-green-700 font-semibold uppercase tracking-wide">Progress</span>
+            <span className="text-lg font-bold">{completionPercentage}%</span>
             <Progress value={completionPercentage} className="h-2" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{projectStats.completedTasks}/{projectStats.totalTasks}</div>
-            <p className="text-xs text-muted-foreground">completed</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Team</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{projectStats.teamMembers}</div>
-            <p className="text-xs text-muted-foreground">members</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Overdue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{projectStats.overdueTasks}</div>
-            <p className="text-xs text-muted-foreground">tasks</p>
+            <span className="text-xs text-gray-500">{projectStats.completedTasks} of {projectStats.totalTasks} tasks</span>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Tasks Section */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Tasks</CardTitle>
-                <Button onClick={() => setShowAddTask(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Task
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-                <TabsList className="grid w-full grid-cols-3 mb-4">
-                  <TabsTrigger value="todo">
-                    To Do ({tasksByStatus.todo.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="in_progress">
-                    In Progress ({tasksByStatus.in_progress.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="done">
-                    Done ({tasksByStatus.done.length})
-                  </TabsTrigger>
-                </TabsList>
-
-                {["todo", "in_progress", "done"].map((status) => (
-                  <TabsContent key={status} value={status} className="space-y-2">
-                    {tasksByStatus[status as keyof typeof tasksByStatus].length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        No tasks in this status
-                      </div>
-                    ) : (
-                      tasksByStatus[status as keyof typeof tasksByStatus].map((task) => {
-                        const isCompleted = isTaskCompletedByUser(task);
-                        const completionPercentage = getTaskCompletionPercentage(task);
-
-                        return (
-                          <div
-                            key={task.id}
-                            className={cn(
-                              "border rounded-lg p-4 transition-all hover:shadow-sm",
-                              isCompleted && "bg-muted/50"
-                            )}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="flex-1 space-y-3">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-lg">
-                                      {task.title}
-                                    </h4>
-                                    {task.description && (
-                                      <p className="text-base mt-2 p-3 bg-muted/50 rounded-md border border-muted">
-                                        {task.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                                        <MoreVertical className="w-4 h-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => {
-                                        setEditingTask(task);
-                                        setEditTask({
-                                          title: task.title,
-                                          description: task.description || "",
-                                          status: task.status,
-                                          priority: task.priority,
-                                          due_date: task.due_date || "",
-                                        });
-                                        setEditingAssignees(task.assignments.map(a => a.user_id));
-                                      }}>
-                                        <Edit3 className="w-4 h-4 mr-2" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      {/* Only show kudos if someone else has completed the task */}
-                                      {task.completions.some(c => c.user_id !== user?.id) && (
-                                        <>
-                                          <DropdownMenuItem
-                                            onClick={() => {
-                                              setSelectedTaskForKudos(task.id);
-                                            }}
-                                          >
-                                            <Heart className="w-4 h-4 mr-2" />
-                                            Send Kudos
-                                          </DropdownMenuItem>
-                                          <DropdownMenuSeparator />
-                                        </>
-                                      )}
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={() => {
-                                          if (confirm("Are you sure you want to delete this task?")) {
-                                            deleteTaskMutation.mutate(task.id);
-                                          }
-                                        }}
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-
-                                <div className="flex items-center gap-4 text-sm">
-                                  <Badge variant={getPriorityColor(task.priority)} className="text-xs">
-                                    {task.priority}
-                                  </Badge>
-                                  {task.due_date && (
-                                    <div className="flex items-center gap-1 text-muted-foreground">
-                                      <Calendar className="w-3 h-3" />
-                                      {format(new Date(task.due_date), "MMM dd")}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Individual assignee checkboxes */}
-                                {task.assignments.length > 0 && (
-                                  <div className="space-y-2">
-                                    <div className="text-sm font-medium">Assigned to:</div>
-                                    <div className="space-y-1">
-                                      {task.assignments.map((assignment) => {
-                                        const isUserCompleted = task.completions.some(
-                                          c => c.user_id === assignment.user_id
-                                        );
-                                        const isCurrentUser = assignment.user_id === user?.id;
-                                        
-                                        return (
-                                          <div key={assignment.user_id} className="flex items-center gap-2">
-                                            <button
-                                              onClick={() => {
-                                                if (isCurrentUser) {
-                                                  toggleTaskCompletionMutation.mutate({
-                                                    taskId: task.id,
-                                                    isCompleted: isUserCompleted,
-                                                  });
-                                                }
-                                              }}
-                                              disabled={!isCurrentUser}
-                                              className="flex items-center gap-2"
-                                            >
-                                              {isUserCompleted ? (
-                                                <CheckCircle2 className="w-4 h-4 text-primary" />
-                                              ) : (
-                                                <Circle className={cn(
-                                                  "w-4 h-4",
-                                                  isCurrentUser
-                                                    ? "text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-                                                    : "text-muted-foreground/50 cursor-not-allowed"
-                                                )} />
-                                              )}
-                                              <span className={cn(
-                                                "text-sm",
-                                                isUserCompleted && "line-through text-muted-foreground"
-                                              )}>
-                                                {assignment.user.first_name} {assignment.user.last_name}
-                                                {isCurrentUser && " (You)"}
-                                              </span>
-                                            </button>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {completionPercentage > 0 && (
-                                  <div className="space-y-1">
-                                    <div className="flex items-center justify-between text-xs">
-                                      <span className="text-muted-foreground">Overall Progress</span>
-                                      <span className="font-medium">{completionPercentage}%</span>
-                                    </div>
-                                    <Progress value={completionPercentage} className="h-1" />
-                                  </div>
-                                )}
-
-                                {task.kudos.length > 0 && (
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      <Heart className="w-3 h-3 text-pink-500" />
-                                      {task.kudos.length} kudos
-                                    </div>
-                                    <div className="pl-5 space-y-0.5">
-                                      {task.kudos.map((kudo, index) => (
-                                        <div key={index} className="text-xs text-muted-foreground">
-                                          from {kudo.sender?.first_name} {kudo.sender?.last_name || ''}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
+      {/* Tasks Section */}
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xl font-bold">Tasks</h2>
+        <Button onClick={() => setShowAddTask(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Plus className="w-4 h-4 mr-2" /> Add Task
+        </Button>
+      </div>
+      <div className="space-y-4">
+        {tasks.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">No tasks yet. Add your first task!</div>
+        ) : (
+          tasks.map((task) => {
+            const isCompleted = isTaskCompletedByUser(task);
+            const completionPercentage = getTaskCompletionPercentage(task);
+            let cardColor = "bg-white";
+            if (task.status === "done") cardColor = "bg-green-50 border-green-200";
+            else if (task.status === "in_progress") cardColor = "bg-yellow-50 border-yellow-200";
+            else if (task.status === "waiting") cardColor = "bg-gray-50 border-gray-200";
+            return (
+              <Card key={task.id} className={`border ${cardColor} shadow-sm`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className={`text-lg font-semibold ${task.status === "done" ? "line-through text-green-700" : ""}`}>{task.title}</h3>
+                      {task.priority && <Badge variant={getPriorityColor(task.priority)}>{task.priority}</Badge>}
+                      {task.status && <Badge variant={getStatusColor(task.status)}>{task.status}</Badge>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="icon" variant="ghost" onClick={() => {
+                        setEditingTask(task);
+                        setEditTask({
+                          title: task.title,
+                          description: task.description || "",
+                          status: task.status,
+                          priority: task.priority,
+                          due_date: task.due_date || "",
+                        });
+                        setEditingAssignees(task.assignments.map(a => a.user_id));
+                      }}>
+                        <Edit3 className="w-4 h-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => { if (confirm("Are you sure you want to delete this task?")) deleteTaskMutation.mutate(task.id); }}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                  {task.description && <p className="text-sm text-gray-600 mb-2">{task.description}</p>}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {task.assignments.length > 0 && (
+                      <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        {task.assignments.map(a => formatUserName(a.user)).join(", ")}
+                      </span>
                     )}
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-gray-500">Team Progress: {task.completions.length}/{task.assignments.length}</span>
+                    {task.status === "done" && <Badge variant="secondary">Fully Complete</Badge>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isCompleted ? (
+                      <Button size="sm" variant="outline" onClick={() => toggleTaskCompletionMutation.mutate({ taskId: task.id, isCompleted: true })}>Mark Incomplete</Button>
+                    ) : (
+                      <Button size="sm" className="bg-green-600 text-white" onClick={() => toggleTaskCompletionMutation.mutate({ taskId: task.id, isCompleted: false })}>Mark My Portion Complete</Button>
+                    )}
+                    {task.status === "done" && (
+                      <span className="text-xs text-gray-500">Completed {task.completions[0]?.completed_at ? format(new Date(task.completions[0].completed_at), "M/d/yyyy") : ""}</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
 
-        {/* Team Section */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Team</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => setShowAddUser(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add
+      {/* Team Section */}
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Team</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setShowAddUser(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {project.project_assignments.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No team members yet</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setShowAddUser(true)}
+                >
+                  Add first member
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {project.project_assignments.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No team members yet</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => setShowAddUser(true)}
-                  >
-                    Add first member
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {project.project_assignments.map((assignment: any) => (
-                    <div key={assignment.user_id} className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${assignment.user_id}`} />
-                        <AvatarFallback>{getInitials(assignment.user)}</AvatarFallback>
-                      </Avatar>
+            ) : (
+              <div className="space-y-3">
+                {project.project_assignments.map((assignment: any) => (
+                  <div key={assignment.user_id} className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${assignment.user_id}`} />
+                      <AvatarFallback>{getInitials(assignment.user)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{formatUserName(assignment.user)}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{assignment.role}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {activities.length > 0 ? (
+                activities.map((activity) => {
+                  const getActivityIcon = () => {
+                    switch (activity.activity_type) {
+                      case 'task_created':
+                      case 'task_updated':
+                        return <FileText className="w-4 h-4 text-primary" />;
+                      case 'task_completed':
+                        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+                      case 'member_added':
+                      case 'assignee_added':
+                        return <UserPlus className="w-4 h-4 text-blue-600" />;
+                      case 'member_removed':
+                      case 'assignee_removed':
+                        return <UserMinus className="w-4 h-4 text-red-600" />;
+                      case 'due_date_changed':
+                        return <Calendar className="w-4 h-4 text-orange-600" />;
+                      case 'priority_changed':
+                        return <AlertCircle className="w-4 h-4 text-yellow-600" />;
+                      default:
+                        return <div className="w-2 h-2 bg-primary rounded-full mt-0.5" />;
+                    }
+                  };
+
+                  const getActivityDescription = () => {
+                    const userName = activity.user ? `${activity.user.first_name} ${activity.user.last_name}` : 'Someone';
+                    const targetUserName = activity.target_user ? `${activity.target_user.first_name} ${activity.target_user.last_name}` : '';
+                    const taskTitle = activity.task ? activity.task.title : '';
+
+                    switch (activity.activity_type) {
+                      case 'task_created':
+                        return `${userName} created task "${taskTitle}"`;
+                      case 'task_updated':
+                        return `${userName} updated task "${taskTitle}"`;
+                      case 'task_completed':
+                        return `${userName} completed task "${taskTitle}"`;
+                      case 'task_uncompleted':
+                        return `${userName} reopened task "${taskTitle}"`;
+                      case 'member_added':
+                        return `${userName} added ${targetUserName} to the project`;
+                      case 'assignee_added':
+                        return `${userName} assigned ${targetUserName} to "${taskTitle}"`;
+                      case 'assignee_removed':
+                        return `${userName} unassigned ${targetUserName} from "${taskTitle}"`;
+                      case 'due_date_changed':
+                        return `${userName} changed due date for "${taskTitle}"`;
+                      case 'priority_changed':
+                        return `${userName} changed priority for "${taskTitle}" to ${activity.metadata?.new_priority || 'unknown'}`;
+                      case 'status_changed':
+                        return `${userName} changed status for "${taskTitle}" to ${activity.metadata?.new_status || 'unknown'}`;
+                      default:
+                        return activity.description || `${userName} made changes`;
+                    }
+                  };
+
+                  return (
+                    <div key={activity.id} className="flex items-start gap-3 text-sm">
+                      {getActivityIcon()}
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{formatUserName(assignment.user)}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{assignment.role}</p>
+                        <p className="text-sm">{getActivityDescription()}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })
+              ) : (
+                // Fallback to showing recent tasks if no activities yet
+                tasks
+                  .filter(task => task.status !== 'done')
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  .slice(0, 5)
+                  .map((task) => (
+                    <div key={task.id} className="flex items-start gap-3 text-sm">
+                      <FileText className="w-4 h-4 text-primary" />
+                      <div className="flex-1">
+                        <p className="text-sm">Task "{task.title}" created</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  ))
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {activities.length > 0 ? (
-                  activities.map((activity) => {
-                    const getActivityIcon = () => {
-                      switch (activity.activity_type) {
-                        case 'task_created':
-                        case 'task_updated':
-                          return <FileText className="w-4 h-4 text-primary" />;
-                        case 'task_completed':
-                          return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-                        case 'member_added':
-                        case 'assignee_added':
-                          return <UserPlus className="w-4 h-4 text-blue-600" />;
-                        case 'member_removed':
-                        case 'assignee_removed':
-                          return <UserMinus className="w-4 h-4 text-red-600" />;
-                        case 'due_date_changed':
-                          return <Calendar className="w-4 h-4 text-orange-600" />;
-                        case 'priority_changed':
-                          return <AlertCircle className="w-4 h-4 text-yellow-600" />;
-                        default:
-                          return <div className="w-2 h-2 bg-primary rounded-full mt-0.5" />;
-                      }
-                    };
-
-                    const getActivityDescription = () => {
-                      const userName = activity.user ? `${activity.user.first_name} ${activity.user.last_name}` : 'Someone';
-                      const targetUserName = activity.target_user ? `${activity.target_user.first_name} ${activity.target_user.last_name}` : '';
-                      const taskTitle = activity.task ? activity.task.title : '';
-
-                      switch (activity.activity_type) {
-                        case 'task_created':
-                          return `${userName} created task "${taskTitle}"`;
-                        case 'task_updated':
-                          return `${userName} updated task "${taskTitle}"`;
-                        case 'task_completed':
-                          return `${userName} completed task "${taskTitle}"`;
-                        case 'task_uncompleted':
-                          return `${userName} reopened task "${taskTitle}"`;
-                        case 'member_added':
-                          return `${userName} added ${targetUserName} to the project`;
-                        case 'assignee_added':
-                          return `${userName} assigned ${targetUserName} to "${taskTitle}"`;
-                        case 'assignee_removed':
-                          return `${userName} unassigned ${targetUserName} from "${taskTitle}"`;
-                        case 'due_date_changed':
-                          return `${userName} changed due date for "${taskTitle}"`;
-                        case 'priority_changed':
-                          return `${userName} changed priority for "${taskTitle}" to ${activity.metadata?.new_priority || 'unknown'}`;
-                        case 'status_changed':
-                          return `${userName} changed status for "${taskTitle}" to ${activity.metadata?.new_status || 'unknown'}`;
-                        default:
-                          return activity.description || `${userName} made changes`;
-                      }
-                    };
-
-                    return (
-                      <div key={activity.id} className="flex items-start gap-3 text-sm">
-                        {getActivityIcon()}
-                        <div className="flex-1">
-                          <p className="text-sm">{getActivityDescription()}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  // Fallback to showing recent tasks if no activities yet
-                  tasks
-                    .filter(task => task.status !== 'done')
-                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                    .slice(0, 5)
-                    .map((task) => (
-                      <div key={task.id} className="flex items-start gap-3 text-sm">
-                        <FileText className="w-4 h-4 text-primary" />
-                        <div className="flex-1">
-                          <p className="text-sm">Task "{task.title}" created</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                )}
-                {activities.length === 0 && tasks.filter(task => task.status !== 'done').length === 0 && (
-                  <p className="text-sm text-muted-foreground">No recent activity</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              {activities.length === 0 && tasks.filter(task => task.status !== 'done').length === 0 && (
+                <p className="text-sm text-muted-foreground">No recent activity</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Add Task Dialog */}
@@ -1166,118 +982,102 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
         </DialogContent>
       </Dialog>
 
-      {/* Edit Task Dialog */}
-      <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
+      {/* Edit Project Dialog */}
+      <Dialog open={showProjectEdit} onOpenChange={setShowProjectEdit}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
+            <DialogTitle>Edit Project</DialogTitle>
             <DialogDescription>
-              Update task details for {project.title}
+              Update project details for {project.title}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-task-title">Title</Label>
+              <Label htmlFor="edit-project-title">Title</Label>
               <Input
-                id="edit-task-title"
-                value={editTask.title}
-                onChange={(e) => setEditTask({ ...editTask, title: e.target.value })}
-                placeholder="Task title"
+                id="edit-project-title"
+                value={project.title}
+                onChange={(e) => {
+                  // This part of the original code doesn't update the project object directly.
+                  // It's a placeholder for a future edit.
+                }}
+                placeholder="Project title"
               />
             </div>
             <div>
-              <Label htmlFor="edit-task-description">Description</Label>
+              <Label htmlFor="edit-project-description">Description</Label>
               <Textarea
-                id="edit-task-description"
-                value={editTask.description}
-                onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
-                placeholder="Task description (optional)"
+                id="edit-project-description"
+                value={project.description}
+                onChange={(e) => {
+                  // This part of the original code doesn't update the project object directly.
+                  // It's a placeholder for a future edit.
+                }}
+                placeholder="Project description (optional)"
                 rows={3}
               />
             </div>
             <div>
-              <Label>Assign to</Label>
-              <div className="space-y-2 mt-2 max-h-32 overflow-y-auto">
-                {project.project_assignments.map((assignment: any) => (
-                  <label key={assignment.user_id} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="rounded"
-                      checked={editingAssignees.includes(assignment.user_id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setEditingAssignees([...editingAssignees, assignment.user_id]);
-                        } else {
-                          setEditingAssignees(
-                            editingAssignees.filter((id) => id !== assignment.user_id)
-                          );
-                        }
-                      }}
-                    />
-                    <span className="text-sm">{formatUserName(assignment.user)}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-task-priority">Priority</Label>
-                <Select
-                  value={editTask.priority}
-                  onValueChange={(value) => setEditTask({ ...editTask, priority: value })}
-                >
-                  <SelectTrigger id="edit-task-priority">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-task-due">Due Date</Label>
-                <Input
-                  id="edit-task-due"
-                  type="date"
-                  value={editTask.due_date}
-                  onChange={(e) => setEditTask({ ...editTask, due_date: e.target.value })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="edit-task-status">Status</Label>
+              <Label htmlFor="edit-project-status">Status</Label>
               <Select
-                value={editTask.status}
-                onValueChange={(value) => setEditTask({ ...editTask, status: value })}
+                value={project.status}
+                onValueChange={(value) => {
+                  // This part of the original code doesn't update the project object directly.
+                  // It's a placeholder for a future edit.
+                }}
               >
-                <SelectTrigger id="edit-task-status">
+                <SelectTrigger id="edit-project-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="on_hold">On Hold</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="edit-project-priority">Priority</Label>
+              <Select
+                value={project.priority}
+                onValueChange={(value) => {
+                  // This part of the original code doesn't update the project object directly.
+                  // It's a placeholder for a future edit.
+                }}
+              >
+                <SelectTrigger id="edit-project-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-project-due">Due Date</Label>
+              <Input
+                id="edit-project-due"
+                type="date"
+                value={project.due_date || ""}
+                onChange={(e) => {
+                  // This part of the original code doesn't update the project object directly.
+                  // It's a placeholder for a future edit.
+                }}
+              />
+            </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditingTask(null)}>
+              <Button variant="outline" onClick={() => setShowProjectEdit(false)}>
                 Cancel
               </Button>
               <Button
                 onClick={() => {
-                  if (editingTask) {
-                    updateTaskMutation.mutate({
-                      taskId: editingTask.id,
-                      updates: editTask,
-                    });
-                  }
+                  // This part of the original code doesn't update the project object directly.
+                  // It's a placeholder for a future edit.
                 }}
-                disabled={!editTask.title}
               >
-                Update Task
+                Update Project
               </Button>
             </div>
           </div>
