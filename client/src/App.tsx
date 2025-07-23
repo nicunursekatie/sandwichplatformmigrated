@@ -16,6 +16,7 @@ import SignupPage from "@/pages/signup";
 import NotFound from "@/pages/not-found";
 import DataDiagnostics from "@/components/data-diagnostics";
 import ProjectsToggle from "@/pages/projects-toggle";
+import { ChatInitializer } from "@/components/chat-initializer";
 
 function Router() {
   const { isAuthenticated, isLoading, error } = useAuth();
@@ -75,16 +76,19 @@ function Router() {
   }
 
   return (
-    <Switch>
-      <Route path="/diagnostics" component={DataDiagnostics} />
-      <Route path="/messages">{() => <Dashboard initialSection="messages" />}</Route>
-      <Route path="/inbox">{() => <Dashboard initialSection="inbox" />}</Route>
-      <Route path="/suggestions">{() => <Dashboard initialSection="suggestions" />}</Route>
-      <Route path="/google-sheets">{() => <Dashboard initialSection="google-sheets" />}</Route>
-      <Route path="/projects">{() => <ProjectsToggle />}</Route>
-      <Route path="/">{() => <Dashboard />}</Route>
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <ChatInitializer />
+      <Switch>
+        <Route path="/diagnostics" component={DataDiagnostics} />
+        <Route path="/messages">{() => <Dashboard initialSection="messages" />}</Route>
+        <Route path="/inbox">{() => <Dashboard initialSection="inbox" />}</Route>
+        <Route path="/suggestions">{() => <Dashboard initialSection="suggestions" />}</Route>
+        <Route path="/google-sheets">{() => <Dashboard initialSection="google-sheets" />}</Route>
+        <Route path="/projects">{() => <ProjectsToggle />}</Route>
+        <Route path="/">{() => <Dashboard />}</Route>
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 

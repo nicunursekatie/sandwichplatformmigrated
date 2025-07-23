@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMessaging } from "@/hooks/useMessaging";
 import { supabase } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
+import { ensureChannelExists } from "@/lib/initialize-chat-channels";
 
 interface Message {
   id: number;
@@ -55,12 +56,20 @@ export default function ChatChannel({
   const { data: conversation } = useQuery({
     queryKey: ['conversation', channelName],
     queryFn: async () => {
+      // Try to get existing conversation
       const { data, error } = await supabase
         .from('conversations')
         .select('id, name, type')
         .eq('name', channelName)
         .eq('type', 'channel')
         .single();
+      
+      if (error && error.code === 'PGRST116') {
+        // Channel doesn't exist, create it
+        console.log(`Channel ${channelName} not found, creating...`);
+        const newChannel = await ensureChannelExists(channelName);
+        return newChannel;
+      }
       
       if (error) {
         console.error('Error fetching conversation:', error);
