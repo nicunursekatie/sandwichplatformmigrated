@@ -15,6 +15,7 @@ import Landing from "@/pages/landing";
 import SignupPage from "@/pages/signup";
 import NotFound from "@/pages/not-found";
 import DataDiagnostics from "@/components/data-diagnostics";
+import ProjectsToggle from "@/pages/projects-toggle";
 import { useLocation } from "wouter";
 
 function Router() {
@@ -62,6 +63,7 @@ function Router() {
       <Route path="/inbox">{() => <Dashboard initialSection="inbox" />}</Route>
       <Route path="/suggestions">{() => <Dashboard initialSection="suggestions" />}</Route>
       <Route path="/google-sheets">{() => <Dashboard initialSection="google-sheets" />}</Route>
+      <Route path="/projects">{() => <ProjectsToggle />}</Route>
       <Route path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>

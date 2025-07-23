@@ -211,6 +211,39 @@ export function getDefaultPermissionsForRole(role: string): string[] {
 }
 
 // Chat room to permission mapping
+// Project permission helpers
+export function canEditProject(user: any, project: any): boolean {
+  if (!user) return false;
+  
+  // Super admins can edit any project
+  if (user.role === USER_ROLES.SUPER_ADMIN) return true;
+  
+  // Check if user has project management permission
+  if (hasPermission(user, PERMISSIONS.MANAGE_PROJECTS)) return true;
+  
+  // Check if user is the creator of the project
+  if (project && project.created_by === user.id) return true;
+  
+  // Check if user is assigned to the project and has edit rights
+  // This can be customized based on your project structure
+  return false;
+}
+
+export function canDeleteProject(user: any, project: any): boolean {
+  if (!user) return false;
+  
+  // Super admins can delete any project
+  if (user.role === USER_ROLES.SUPER_ADMIN) return true;
+  
+  // Check if user has project management permission
+  if (hasPermission(user, PERMISSIONS.MANAGE_PROJECTS)) return true;
+  
+  // Check if user is the creator of the project
+  if (project && project.created_by === user.id) return true;
+  
+  return false;
+}
+
 export const CHAT_PERMISSIONS = {
   'general': PERMISSIONS.GENERAL_CHAT,
   'committee': PERMISSIONS.COMMITTEE_CHAT,
