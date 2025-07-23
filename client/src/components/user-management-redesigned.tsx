@@ -733,11 +733,15 @@ export default function UserManagementRedesigned() {
                           <td className="p-4">
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                                {user.firstName[0]}{user.lastName[0]}
+                                {user.firstName && user.firstName[0] ? user.firstName[0].toUpperCase() : ''}
+                                {user.lastName && user.lastName[0] ? user.lastName[0].toUpperCase() : ''}
+                                {!user.firstName && !user.lastName && user.email ? user.email[0].toUpperCase() : ''}
                               </div>
                               <div>
                                 <div className="font-medium">
-                                  {user.firstName} {user.lastName}
+                                  {user.firstName || user.lastName 
+                                    ? `${user.firstName} ${user.lastName}`.trim()
+                                    : user.email}
                                 </div>
                                 <div className="text-sm text-gray-500 flex items-center gap-1">
                                   <Mail className="h-3 w-3" />
