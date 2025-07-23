@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 
 import { queryClient } from "@/lib/queryClient";
-import { supabaseService } from "@/lib/supabase-service";
 import { useAuth } from "@/hooks/useAuth";
 
 import { Toaster } from "@/components/ui/toaster";
@@ -17,7 +16,6 @@ import SignupPage from "@/pages/signup";
 import NotFound from "@/pages/not-found";
 import DataDiagnostics from "@/components/data-diagnostics";
 import ProjectsToggle from "@/pages/projects-toggle";
-import { useLocation } from "wouter";
 
 function Router() {
   const { isAuthenticated, isLoading, error } = useAuth();
@@ -84,7 +82,7 @@ function Router() {
       <Route path="/suggestions">{() => <Dashboard initialSection="suggestions" />}</Route>
       <Route path="/google-sheets">{() => <Dashboard initialSection="google-sheets" />}</Route>
       <Route path="/projects">{() => <ProjectsToggle />}</Route>
-      <Route path="/" component={Dashboard} />
+      <Route path="/">{() => <Dashboard />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

@@ -40,20 +40,9 @@ export default function AuthDebug() {
     setError(null);
     
     try {
-      const [sessionResponse, statusResponse] = await Promise.all([
-        // Debug endpoint removed - use Supabase dashboard for debugging,
-        // Debug endpoint removed - use Supabase dashboard for debugging
-      ]);
-
-      if (sessionResponse.ok) {
-        const sessionData = await sessionResponse.json();
-        setDebugInfo(sessionData);
-      }
-
-      if (statusResponse.ok) {
-        const statusData = await statusResponse.json();
-        setAuthStatus(statusData);
-      }
+      // Debug endpoints removed - use Supabase dashboard for debugging
+      setDebugInfo(null);
+      setAuthStatus(null);
     } catch (err) {
       setError('Failed to fetch debug information');
       console.error('Debug fetch error:', err);
@@ -144,7 +133,7 @@ export default function AuthDebug() {
                     <div className="pt-2 border-t">
                       <div className="text-sm text-gray-600">User: {authStatus.userEmail}</div>
                       <div className="text-sm text-gray-600">Role: {authStatus.userRole}</div>
-                      <div className="text-sm text-gray-600">ID: {authStatus.user_id}</div>
+                      <div className="text-sm text-gray-600">ID: {authStatus.userId}</div>
                     </div>
                   )}
                 </CardContent>

@@ -101,7 +101,11 @@ export default function ChatChannel({
         return [];
       }
       
-      return data || [];
+      // Transform the data to match the Message interface
+      return (data || []).map(msg => ({
+        ...msg,
+        sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender
+      }));
     },
     enabled: !!conversation?.id,
     refetchInterval: 5000, // Fallback polling every 5 seconds
