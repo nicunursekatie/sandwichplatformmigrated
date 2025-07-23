@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ import { useMessaging } from "@/hooks/useMessaging";
 import { supabase } from "@/lib/supabase";
 
 import { formatDistanceToNow } from "date-fns";
+import { groupMessagesIntoThreads, ThreadedMessage } from "@/lib/message-threads";
+import { InboxMessageThread } from "@/components/inbox-message-thread";
 import { 
   Inbox as InboxIcon, 
   MessageCircle, 
@@ -24,12 +26,9 @@ import {
   Circle,
   Plus,
   Reply,
-  Forward,
   Trash2,
-  Archive,
   MoreVertical,
-  Users,
-  User
+  Users
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -97,7 +96,7 @@ interface ComposeData {
 export default function InboxPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { sendMessage, markAsRead, markAllAsRead, isConnected } = useMessaging();
+  const { sendMessage, markAsRead, isConnected } = useMessaging();
   
   const [selectedTab, setSelectedTab] = useState("all");
   const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
@@ -234,6 +233,9 @@ export default function InboxPage() {
     ...filteredMessages.filter(msg => msg.is_read || msg.is_sent_by_user).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   ];
 
+  // Group filtered messages into threads
+  const threadedMessages = groupMessagesIntoThreads(filteredMessages);
+
   // Calculate unread count for RECEIVED messages only (exclude sent messages)
   const unreadMessages = messages.filter(msg => 
     !msg.is_read && // Message is not read
@@ -331,14 +333,16 @@ export default function InboxPage() {
           message_type: 'direct',
           recipient_id: selectedMessage.is_sent_by_user ? selectedMessage.recipient_id : selectedMessage.user_id,
           subject: selectedMessage.subject ? `Re: ${selectedMessage.subject}` : undefined,
-          priority: selectedMessage.priority
+          priority: selectedMessage.priority,
+          reply_to_id: selectedMessage.id // Add reply_to_id for threading
         });
       } else if (selectedMessage.conversation_id) {
         await sendMessage({
           content: replyContent,
           message_type: 'group',
           conversation_id: selectedMessage.conversation_id,
-          priority: selectedMessage.priority
+          priority: selectedMessage.priority,
+          reply_to_id: selectedMessage.id // Add reply_to_id for threading
         });
       }
 
