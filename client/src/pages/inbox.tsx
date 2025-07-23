@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,12 +26,9 @@ import {
   Circle,
   Plus,
   Reply,
-  Forward,
   Trash2,
-  Archive,
   MoreVertical,
-  Users,
-  User
+  Users
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -99,7 +96,7 @@ interface ComposeData {
 export default function InboxPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { sendMessage, markAsRead, markAllAsRead, isConnected } = useMessaging();
+  const { sendMessage, markAsRead, isConnected } = useMessaging();
   
   const [selectedTab, setSelectedTab] = useState("all");
   const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
@@ -681,6 +678,7 @@ export default function InboxPage() {
                         </CardContent>
                       </Card>
                     ))
+                    */
                   )}
                 </div>
               </ScrollArea>
