@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 interface Project {
   id: number;
@@ -58,6 +59,18 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
     priority: "medium",
     due_date: "",
   });
+
+  // New state for filters and sorting
+  const [category, setCategory] = useState<string>("all");
+  const [myProjectsOnly, setMyProjectsOnly] = useState(false);
+  const [sortBy, setSortBy] = useState("alphabetical");
+  const [order, setOrder] = useState("az");
+  const categoryChips = [
+    { label: "Tech", value: "tech" },
+    { label: "Events", value: "events" },
+    { label: "Grants", value: "grants" },
+    { label: "Outreach", value: "outreach" },
+  ];
 
   // Fetch all projects with assignments and task stats
   const { data: projects = [], isLoading } = useQuery<ProjectWithDetails[]>({
@@ -232,28 +245,45 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
       .join(", ");
   };
 
-  // Group projects by status - MUST be before any conditional returns
-  const projectsByStatus = useMemo(() => {
-    const grouped = {
-      in_progress: [] as ProjectWithDetails[],
-      on_hold: [] as ProjectWithDetails[],
-      completed: [] as ProjectWithDetails[],
+  // Filtered and sorted projects
+  const filteredProjects = useMemo(() => {
+    let filtered = [...projects];
+    if (category !== "all") filtered = filtered.filter(p => (p.category || "").toLowerCase() === category);
+    if (myProjectsOnly) filtered = filtered.filter(p => p.assignments.some(a => a.user_id === "me")); // Replace 'me' with actual user id if available
+    // Sorting
+    if (sortBy === "alphabetical") {
+      filtered.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    if (order === "za") filtered.reverse();
+    return filtered;
+  }, [projects, category, myProjectsOnly, sortBy, order]);
+
+  // Status tab counts
+  const statusCounts = useMemo(() => {
+    return {
+      active: filteredProjects.filter(p => p.status === "in_progress" || p.status === "active").length,
+      available: filteredProjects.filter(p => p.status === "available").length,
+      waiting: filteredProjects.filter(p => p.status === "waiting").length,
+      done: filteredProjects.filter(p => p.status === "completed").length,
     };
+  }, [filteredProjects]);
+  const [activeTab, setActiveTab] = useState("active");
 
-    projects.forEach((project) => {
-      if (project.status in grouped) {
-        grouped[project.status as keyof typeof grouped].push(project);
-      } else if (project.status === 'active') {
-        // Map 'active' to 'in_progress' for backwards compatibility
-        grouped.in_progress.push(project);
-      } else {
-        // Default to in_progress for any other status
-        grouped.in_progress.push(project);
-      }
-    });
-
-    return grouped;
-  }, [projects]);
+  // Tabbed projects
+  const tabProjects = useMemo(() => {
+    switch (activeTab) {
+      case "active":
+        return filteredProjects.filter(p => p.status === "in_progress" || p.status === "active");
+      case "available":
+        return filteredProjects.filter(p => p.status === "available");
+      case "waiting":
+        return filteredProjects.filter(p => p.status === "waiting");
+      case "done":
+        return filteredProjects.filter(p => p.status === "completed");
+      default:
+        return filteredProjects;
+    }
+  }, [filteredProjects, activeTab]);
 
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     in_progress: false,
@@ -290,151 +320,134 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Projects</h2>
-        <Button onClick={() => setShowCreateDialog(true)}>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+            Project Management
+          </h1>
+          <p className="text-gray-600">Organize and track all team projects</p>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
           <Plus className="w-4 h-4 mr-2" />
           New Project
         </Button>
       </div>
 
-
-      {Object.entries(projectsByStatus).map(([status, statusProjects]) => (
-        <div key={status} className="space-y-3">
-          <button
-            onClick={() => toggleSection(status)}
-            className="flex items-center gap-2 text-lg font-semibold hover:text-primary transition-colors w-full"
-          >
-            {collapsedSections[status] ? (
-              <ChevronRight className="w-5 h-5" />
-            ) : (
-              <ChevronDown className="w-5 h-5" />
-            )}
-            <span>{statusIcons[status as keyof typeof statusIcons]}</span>
-            <span>{statusLabels[status as keyof typeof statusLabels]}</span>
-            <span className="text-sm font-normal text-muted-foreground">({statusProjects.length})</span>
-          </button>
-
-          {!collapsedSections[status] && (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 ml-7">
-              {statusProjects.map((project) => (
-                <Card
-                  key={project.id}
-                  className="cursor-pointer hover:shadow-lg transition-all group"
-                  onClick={() => onProjectSelect(project.id)}
-                >
-                  <CardContent className="p-6">
-                    {/* Header with title and priority */}
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-primary transition-colors flex-1">
-                        {project.title}
-                      </h3>
-                      <div className="flex items-center gap-2 ml-3">
-                        {project.priority === 'high' && (
-                          <Badge variant="destructive" className="text-xs">High Priority</Badge>
-                        )}
-                        {project.priority === 'medium' && (
-                          <Badge variant="secondary" className="text-xs">Medium</Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    {project.description && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {project.description}
-                      </p>
-                    )}
-
-                    {/* Assignees */}
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs text-gray-500 uppercase tracking-wide">Assigned to</span>
-                      </div>
-                      <div className="pl-6">
-                        {project.assignments.length === 0 ? (
-                          <span className="text-gray-400 italic text-sm">No one assigned</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-x-1 gap-y-1">
-                            {project.assignments.map((assignment, index) => {
-                              const userName = assignment.user?.first_name && assignment.user?.last_name
-                                ? `${assignment.user.first_name} ${assignment.user.last_name}`
-                                : assignment.user?.email || 'Unknown';
-                              return (
-                                <React.Fragment key={assignment.user_id}>
-                                  <span className="text-sm font-bold text-gray-900">
-                                    {userName}
-                                  </span>
-                                  {index < project.assignments.length - 1 && (
-                                    <span className="text-gray-400 mx-1">•</span>
-                                  )}
-                                </React.Fragment>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Footer with due date and progress */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        {/* Due date */}
-                        {project.due_date && (
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <span className={cn(
-                              "text-sm font-medium",
-                              new Date(project.due_date) < new Date() ? "text-red-600" : "text-gray-700"
-                            )}>
-                              {new Date(project.due_date).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric',
-                                year: new Date(project.due_date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                              })}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Task progress */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-700 font-medium">
-                          {project.task_stats.completed}/{project.task_stats.total} tasks
-                        </span>
-                        {project.task_stats.total > 0 && (
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-primary h-2 rounded-full transition-all"
-                              style={{
-                                width: `${(project.task_stats.completed / project.task_stats.total) * 100}%`
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+      {/* Filters Row */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <div>
+          <Label htmlFor="category">Category</Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-40">
+              <SelectValue>{category === "all" ? "All Categories" : category.charAt(0).toUpperCase() + category.slice(1)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categoryChips.map(c => (
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
               ))}
-            </div>
-          )}
-
-          {!collapsedSections[status] && statusProjects.length === 0 && (
-            <div className="text-center py-8 ml-7 text-muted-foreground text-sm">
-              No {statusLabels[status as keyof typeof statusLabels].toLowerCase()} yet
-            </div>
-          )}
+            </SelectContent>
+          </Select>
         </div>
-      ))}
-
-      {projects.length === 0 && (
-        <div className="text-center py-12">
-          <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No projects yet. Create your first project!</p>
+        <div className="flex gap-2 items-center">
+          <Label>Filters:</Label>
+          <Button size="sm" variant={category === "all" ? "secondary" : "outline"} onClick={() => setCategory("all")}>All</Button>
+          {categoryChips.map(c => (
+            <Button key={c.value} size="sm" variant={category === c.value ? "secondary" : "outline"} onClick={() => setCategory(c.value)}>{c.label}</Button>
+          ))}
         </div>
-      )}
+        <div className="flex gap-2 items-center">
+          <Label>Sort By</Label>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-32">
+              <SelectValue>{sortBy === "alphabetical" ? "Alphabetical" : sortBy}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="alphabetical">Alphabetical</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2 items-center">
+          <Label>Order</Label>
+          <Select value={order} onValueChange={setOrder}>
+            <SelectTrigger className="w-32">
+              <SelectValue>{order === "az" ? "A-Z / Low-High" : "Z-A / High-Low"}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="az">A-Z / Low-High</SelectItem>
+              <SelectItem value="za">Z-A / High-Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2 items-center">
+          <Label>My Projects Only</Label>
+          <Switch checked={myProjectsOnly} onCheckedChange={setMyProjectsOnly} />
+        </div>
+      </div>
+
+      {/* Status Tabs */}
+      <div className="flex gap-2 mt-2">
+        <Button variant={activeTab === "active" ? "secondary" : "outline"} onClick={() => setActiveTab("active")}>Active ({statusCounts.active})</Button>
+        <Button variant={activeTab === "available" ? "secondary" : "outline"} onClick={() => setActiveTab("available")}>Available ({statusCounts.available})</Button>
+        <Button variant={activeTab === "waiting" ? "secondary" : "outline"} onClick={() => setActiveTab("waiting")}>Waiting ({statusCounts.waiting})</Button>
+        <Button variant={activeTab === "done" ? "secondary" : "outline"} onClick={() => setActiveTab("done")}>Done ({statusCounts.done})</Button>
+      </div>
+
+      {/* Project Cards */}
+      <div className="grid gap-4 mt-4">
+        {tabProjects.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">No projects found for this filter.</div>
+        ) : (
+          tabProjects.map((project) => (
+            <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onProjectSelect(project.id)}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{project.title}</h3>
+                    {project.priority && (
+                      <Badge variant="outline" className={getPriorityColor(project.priority)}>{project.priority}</Badge>
+                    )}
+                  </div>
+                  {project.due_date && (
+                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Due: {new Date(project.due_date).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                {project.description && (
+                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{project.description}</p>
+                )}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {project.category && (
+                    <Badge variant="secondary" className="text-xs">{project.category}</Badge>
+                  )}
+                  {project.status && (
+                    <Badge variant="outline" className={getStatusColor(project.status)}>{project.status}</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-gray-400" />
+                  <span className="text-xs text-gray-500">{formatAssignees(project.assignments)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Progress:</span>
+                  <div className="w-32 bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${project.task_stats.total > 0 ? (project.task_stats.completed / project.task_stats.total) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-700 font-medium">
+                    {project.task_stats.completed}/{project.task_stats.total} tasks
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
       {/* Create Project Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

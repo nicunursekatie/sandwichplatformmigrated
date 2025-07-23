@@ -228,6 +228,12 @@ export default function InboxPage() {
     }
   });
 
+  // Group and sort messages: unread first (newest to oldest), then read (newest to oldest)
+  const sortedMessages = [
+    ...filteredMessages.filter(msg => !msg.is_read && !msg.is_sent_by_user).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    ...filteredMessages.filter(msg => msg.is_read || msg.is_sent_by_user).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  ];
+
   // Calculate unread count for RECEIVED messages only (exclude sent messages)
   const unreadMessages = messages.filter(msg => 
     !msg.is_read && // Message is not read
@@ -595,7 +601,7 @@ export default function InboxPage() {
                 <div className="space-y-2">
                   {isLoading ? (
                     <div className="text-center py-8 text-gray-500">Loading messages...</div>
-                  ) : filteredMessages.length === 0 ? (
+                  ) : sortedMessages.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <InboxIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                       <div className="text-lg font-medium mb-2">No messages</div>
@@ -604,7 +610,7 @@ export default function InboxPage() {
                       </div>
                     </div>
                   ) : (
-                    filteredMessages.map((message) => (
+                    sortedMessages.map((message) => (
                       <Card 
                         key={message.id}
                         className={`cursor-pointer transition-colors hover:bg-gray-50 ${
@@ -656,7 +662,14 @@ export default function InboxPage() {
                               </div>
                               
                               <div className="text-xs text-gray-400 mt-2">
-                                {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                                {(() => {
+                                  const now = new Date();
+                                  const msgDate = new Date(message.created_at);
+                                  if (msgDate > now) {
+                                    return 'just now';
+                                  }
+                                  return formatDistanceToNow(msgDate, { addSuffix: true });
+                                })()}
                               </div>
                             </div>
                           </div>
