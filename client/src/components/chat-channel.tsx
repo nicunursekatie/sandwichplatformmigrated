@@ -19,6 +19,8 @@ import { useMessaging } from "@/hooks/useMessaging";
 import { supabase } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { ensureChannelExists } from "@/lib/initialize-chat-channels";
+import { groupMessagesIntoThreads, ThreadedMessage } from "@/lib/message-threads";
+import { MessageThread } from "@/components/chat-message-thread";
 
 interface Message {
   id: number;
@@ -81,7 +83,7 @@ export default function ChatChannel({
   });
 
   // Get messages for this channel
-  const { data: messages = [], isLoading, refetch } = useQuery<Message[]>({
+  const { data: flatMessages = [], isLoading, refetch } = useQuery<Message[]>({
     queryKey: ['chat-messages', channelName, conversation?.id],
     queryFn: async () => {
       if (!conversation?.id) return [];
@@ -194,6 +196,9 @@ export default function ChatChannel({
     }
   };
 
+  // Group messages into threads
+  const threadedMessages = groupMessagesIntoThreads(flatMessages);
+
   const getUserDisplayName = (msg: Message) => {
     if (msg.sender?.first_name || msg.sender?.last_name) {
       return `${msg.sender.first_name || ''} ${msg.sender.last_name || ''}`.trim();
@@ -202,7 +207,7 @@ export default function ChatChannel({
   };
 
   const getReplyToMessage = (replyToId: number) => {
-    return messages.find(m => m.id === replyToId);
+    return flatMessages.find(m => m.id === replyToId);
   };
 
   if (!conversation) {
@@ -234,7 +239,7 @@ export default function ChatChannel({
           )}
         </div>
         <div className="text-sm text-gray-500">
-          {messages.length} messages
+          {flatMessages.length} messages
         </div>
       </div>
 
@@ -243,73 +248,20 @@ export default function ChatChannel({
         <div className="space-y-4">
           {isLoading ? (
             <div className="text-center text-gray-500">Loading messages...</div>
-          ) : messages.length === 0 ? (
+          ) : flatMessages.length === 0 ? (
             <div className="text-center text-gray-500">
               <div className="text-lg font-medium mb-2">Welcome to #{channelName}!</div>
               <div className="text-sm">This is the beginning of your conversation.</div>
             </div>
           ) : (
-            messages.map((msg) => {
-              const replyTo = msg.reply_to_id ? getReplyToMessage(msg.reply_to_id) : null;
-              
-              return (
-                <div key={msg.id} className="group">
-                  {/* Reply context */}
-                  {replyTo && (
-                    <div className="ml-8 mb-1 p-2 bg-gray-50 rounded text-sm border-l-2 border-gray-300">
-                      <div className="font-medium text-gray-600">
-                        Replying to {getUserDisplayName(replyTo)}
-                      </div>
-                      <div className="text-gray-500 truncate">
-                        {replyTo.content}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Message */}
-                  <div className="flex items-start gap-3">
-                    <Avatar className="w-8 h-8 mt-1">
-                      <AvatarFallback className="text-xs">
-                        {getUserDisplayName(msg).substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm">
-                          {getUserDisplayName(msg)}
-                        </span>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
-                        </span>
-                      </div>
-                      
-                      <div className="text-sm text-gray-900 whitespace-pre-wrap">
-                        {msg.content}
-                      </div>
-                    </div>
-
-                    {/* Message actions */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                            <MoreVertical className="w-3 h-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setReplyingTo(msg)}>
-                            <Reply className="w-4 h-4 mr-2" />
-                            Reply
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            threadedMessages.map((thread) => (
+              <MessageThread
+                key={thread.id}
+                message={thread}
+                currentUserId={user?.id || ''}
+                onReply={setReplyingTo}
+              />
+            ))
           )}
           <div ref={messagesEndRef} />
         </div>
