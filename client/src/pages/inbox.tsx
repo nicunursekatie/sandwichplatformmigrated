@@ -231,12 +231,12 @@ export default function InboxPage() {
     (msg.recipient_id === user?.id || !msg.recipient_id) // Message is for this user
   );
   
+  const unreadCount = unreadMessages.length;
+  
   console.log('Unread messages in inbox:', unreadMessages.length);
-  console.log('Total messages:', {unreadCount});
+  console.log('Total messages:', unreadCount);
   console.log('Messages sent by user:', messages.filter(msg => msg.is_sent_by_user).length);
   console.log('Messages received by user:', messages.filter(msg => !msg.is_sent_by_user).length);
-  
-  const unreadCount = unreadMessages.length;
 
   const handleSendMessage = async () => {
     if (!composeData.content.trim() || composeData.recipients.length === 0) return;
