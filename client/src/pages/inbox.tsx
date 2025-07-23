@@ -359,10 +359,25 @@ export default function InboxPage() {
 
   const getUserDisplayName = (user: any) => {
     if (!user) return 'Unknown';
-    if (user.first_name || user.last_name) {
-      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    const name = (user.first_name || user.last_name) 
+      ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+      : '';
+    const email = user.email || '';
+    
+    // If we have both name and email, show both
+    if (name && email) {
+      return `${name} (${email})`;
     }
-    return user.email || user.id;
+    // If only email, show email
+    if (email) {
+      return email;
+    }
+    // If only name, show name
+    if (name) {
+      return name;
+    }
+    // Fallback to user id
+    return user.id || 'Unknown';
   };
 
   const getPriorityColor = (priority: string) => {
