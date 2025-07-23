@@ -7,14 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { supabaseService } from "@/lib/supabase-service";
 import { hasPermission, PERMISSIONS } from "@shared/auth-utils";
+
 export default function WorkLogPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [description, setDescription] = useState("");
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
-
-  // All hooks must be called before any conditional returns
+  
+  // All React hooks must be called unconditionally before any conditional returns
   const { data: logs = [], refetch, isLoading, error } = useQuery({
     queryKey: ["work-logs"],
     queryFn: async () => {
@@ -29,46 +30,8 @@ export default function WorkLogPage() {
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window gains focus
   });
-
-  // Check if user has permission to access work logs
-  const hasWorkLogPermission = hasPermission(user, PERMISSIONS.LOG_WORK) || 
-                              hasPermission(user, PERMISSIONS.MANAGE_WORK_LOGS) ||
-                              user?.role === 'admin' || 
-                              user?.role === 'super_admin' ||
-                              user?.email === 'mdlouza@gmail.com';
-
-  if (!hasWorkLogPermission) {
-    return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-            Access Restricted
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300">
-            You don't have permission to access the work log feature.
-          </p>
-        </div>
-      </div>
-    );
-  }
   
-    queryKey: ["work-logs"],
-    queryFn: async () => {
-      console.log("🚀 Work logs query function called");
-      const workLogs = await supabaseService.workLog.getAllWorkLogs();
-      console.log("🚀 Work logs API response data:", workLogs);
-      return workLogs;
-    },
-    enabled: !!user, // Only fetch when user is authenticated
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 0, // Don't cache results (TanStack Query v5 uses gcTime instead of cacheTime)
-    refetchOnMount: true, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-  });
-
-  // Ensure logs is always an array
-  const safelogs = Array.isArray(logs) ? logs : [];
-
+  // Call additional hooks before any conditional returns
   const createLog = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
@@ -98,6 +61,32 @@ export default function WorkLogPage() {
       refetch(); // Force refetch to update the list immediately
     },
   });
+
+  // Check if user has permission to access work logs
+  const hasWorkLogPermission = hasPermission(user, PERMISSIONS.LOG_WORK) || 
+                              hasPermission(user, PERMISSIONS.MANAGE_WORK_LOGS) ||
+                              user?.role === 'admin' || 
+                              user?.role === 'super_admin' ||
+                              user?.email === 'mdlouza@gmail.com';
+
+  // Only after all hooks are called, we can have conditional returns
+  if (!hasWorkLogPermission) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+            Access Restricted
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300">
+            You don't have permission to access the work log feature.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Ensure logs is always an array
+  const safelogs = Array.isArray(logs) ? logs : [];
 
   return (
     <div className="max-w-2xl mx-auto py-8">
@@ -210,4 +199,4 @@ export default function WorkLogPage() {
       </div>
     </div>
   );
-} 
+}
