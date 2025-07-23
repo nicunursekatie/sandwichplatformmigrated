@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { useState, useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 
 import { queryClient } from "@/lib/queryClient";
@@ -21,7 +22,26 @@ import { useLocation } from "wouter";
 function Router() {
   const { isAuthenticated, isLoading, error } = useAuth();
 
-  if (isLoading) {
+  // Add debugging for Router component
+  console.log('Router: Auth state', { isAuthenticated, isLoading, hasError: !!error });
+  
+  // Only show loading state for a maximum of 5 seconds
+  // After that, assume there's no valid session and show login
+  const [authTimeout, setAuthTimeout] = useState(false);
+
+  useEffect(() => {
+    // If still loading after 5 seconds, show login screen
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        console.log('Router: Auth loading timeout reached, showing login screen');
+        setAuthTimeout(true);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading && !authTimeout) {
     return <LoadingState text="Authenticating..." size="lg" className="min-h-screen" />;
   }
 

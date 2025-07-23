@@ -22,15 +22,23 @@ export function useAuth() {
 
   useEffect(() => {
     // Get initial session
+    console.log('useAuth: Initializing auth and fetching session');
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('useAuth: Session fetch complete', session ? 'Session exists' : 'No session');
       setSession(session);
       setSupabaseUser(session?.user ?? null);
+      setIsLoading(false);
+      setHasInitialized(true);
+    }).catch(error => {
+      console.error('useAuth: Error fetching session:', error);
       setIsLoading(false);
       setHasInitialized(true);
     });
 
     // Listen for auth changes
+    console.log('useAuth: Setting up auth state change listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('useAuth: Auth state changed:', _event, session ? 'Session exists' : 'No session');
       setSession(session);
       setSupabaseUser(session?.user ?? null);
       setIsLoading(false);
@@ -41,32 +49,43 @@ export function useAuth() {
   }, []);
 
   // Always call useQuery, but with a stable query key
-  const { data: userData, isLoading: userDataLoading } = useQuery({
+  const { data: userData, isLoading: userDataLoading, error: userDataError } = useQuery({
     queryKey: ['user-data', supabaseUser?.id || 'no-user'],
     queryFn: async () => {
       if (!supabaseUser?.id) {
-        console.log("No Supabase user ID available for user data query");
+        console.log("useAuth: No Supabase user ID available for user data query");
         return null;
       }
       
-      console.log("Fetching user data for Supabase user ID:", supabaseUser.id);
+      console.log("useAuth: Fetching user data for Supabase user ID:", supabaseUser.id);
       
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching user data:', error);
-        return null;
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
+        
+        if (error) {
+          console.error('useAuth: Error fetching user data:', error);
+          // Handle specific error cases
+          if (error.code === 'PGRST116') {
+            console.log('useAuth: User not found in database - might need to create user record');
+            return null;
+          }
+          throw error;
+        }
+        
+        console.log("useAuth: Fetched user data from database:", data);
+        return data;
+      } catch (err) {
+        console.error('useAuth: Exception in user data query:', err);
+        throw err;
       }
-      
-      console.log("Fetched user data from database:", data);
-      return data;
     },
     enabled: !!supabaseUser?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: 1, // Only retry once to avoid infinite loops
   });
 
   // Combine Supabase auth user with database user data
@@ -86,12 +105,23 @@ export function useAuth() {
     await supabase.auth.signOut();
   };
 
+  // Debug the current state
+  console.log('useAuth: Current state:', { 
+    hasInitialized, 
+    isLoading, 
+    userDataLoading, 
+    sessionExists: !!session,
+    userIdExists: !!supabaseUser?.id,
+    userDataExists: !!userData,
+    userDataError
+  });
+
   return {
     user,
     session,
     isLoading: isLoading || userDataLoading || !hasInitialized,
     isAuthenticated: !!session,
-    error: null,
+    error: userDataError,
     signOut,
   };
 }
