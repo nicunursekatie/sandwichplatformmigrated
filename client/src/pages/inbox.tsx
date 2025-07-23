@@ -15,6 +15,8 @@ import { useMessaging } from "@/hooks/useMessaging";
 import { supabase } from "@/lib/supabase";
 
 import { formatDistanceToNow } from "date-fns";
+import { groupMessagesIntoThreads, ThreadedMessage } from "@/lib/message-threads";
+import { InboxMessageThread } from "@/components/inbox-message-thread";
 import { 
   Inbox as InboxIcon, 
   MessageCircle, 
@@ -228,6 +230,9 @@ export default function InboxPage() {
     }
   });
 
+  // Group filtered messages into threads
+  const threadedMessages = groupMessagesIntoThreads(filteredMessages);
+
   // Calculate unread count for RECEIVED messages only (exclude sent messages)
   const unreadMessages = messages.filter(msg => 
     !msg.is_read && // Message is not read
@@ -325,14 +330,16 @@ export default function InboxPage() {
           message_type: 'direct',
           recipient_id: selectedMessage.is_sent_by_user ? selectedMessage.recipient_id : selectedMessage.user_id,
           subject: selectedMessage.subject ? `Re: ${selectedMessage.subject}` : undefined,
-          priority: selectedMessage.priority
+          priority: selectedMessage.priority,
+          reply_to_id: selectedMessage.id // Add reply_to_id for threading
         });
       } else if (selectedMessage.conversation_id) {
         await sendMessage({
           content: replyContent,
           message_type: 'group',
           conversation_id: selectedMessage.conversation_id,
-          priority: selectedMessage.priority
+          priority: selectedMessage.priority,
+          reply_to_id: selectedMessage.id // Add reply_to_id for threading
         });
       }
 
@@ -595,7 +602,7 @@ export default function InboxPage() {
                 <div className="space-y-2">
                   {isLoading ? (
                     <div className="text-center py-8 text-gray-500">Loading messages...</div>
-                  ) : filteredMessages.length === 0 ? (
+                  ) : threadedMessages.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <InboxIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                       <div className="text-lg font-medium mb-2">No messages</div>
@@ -604,6 +611,17 @@ export default function InboxPage() {
                       </div>
                     </div>
                   ) : (
+                    threadedMessages.map((thread) => (
+                      <InboxMessageThread
+                        key={thread.id}
+                        thread={thread}
+                        selectedMessageId={selectedMessage?.id || null}
+                        onSelectMessage={setSelectedMessage}
+                        getUserDisplayName={getUserDisplayName}
+                        currentUserId={user?.id || ''}
+                      />
+                    ))
+                    /* OLD MESSAGE DISPLAY - replaced with threaded view
                     filteredMessages.map((message) => (
                       <Card 
                         key={message.id}

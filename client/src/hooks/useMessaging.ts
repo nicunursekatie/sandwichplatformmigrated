@@ -206,6 +206,7 @@ export function useMessaging() {
         message_type: params.message_type || 'direct',
         priority: params.priority || 'normal',
         is_read: false, // New messages start as unread
+        reply_to_id: params.reply_to_id || null, // Include reply_to_id for threading
       };
 
       console.log('Sending message with data:', messageData);
