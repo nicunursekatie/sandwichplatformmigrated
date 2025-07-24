@@ -244,6 +244,31 @@
   .badge-completed {
     @apply px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full;
   }
+
+  /* Gold/Orange accent styles */
+  .gold-accent-card {
+    @apply bg-gradient-to-br from-white to-brand-orange-light/10 hover:shadow-lg hover:shadow-brand-orange/20;
+  }
+
+  .gold-accent-button {
+    @apply bg-brand-orange hover:bg-brand-orange/90 text-white shadow-md;
+  }
+
+  .gold-accent-border {
+    border-color: var(--tsp-orange);
+  }
+
+  .gold-accent-text {
+    color: var(--tsp-orange);
+  }
+
+  .gold-accent-bg {
+    background-color: var(--tsp-orange);
+  }
+
+  .gold-accent-bg-light {
+    background-color: rgba(251, 173, 63, 0.1);
+  }
 }
 
 /* Mobile-first responsive optimizations */

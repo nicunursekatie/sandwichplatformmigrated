@@ -92,26 +92,30 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case "active":
-        return "badge-available";
+      case "in_progress":
+        return "bg-brand-orange text-white";
       case "completed":
-        return "badge-completed";
+        return "bg-brand-teal text-white";
       case "planning":
-        return "badge-planning";
+        return "bg-brand-orange-light text-brand-orange";
       case "available":
-        return "badge-available";
+        return "bg-green-100 text-green-800";
+      case "waiting":
+      case "on_hold":
+        return "bg-brand-burgundy-light text-brand-burgundy";
       default:
-        return "badge-planning";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getPriorityBadgeClass = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-800";
+        return "bg-brand-orange text-white font-medium";
       case "low":
         return "bg-gray-100 text-gray-800";
       default:
-        return "bg-blue-100 text-blue-800";
+        return "bg-brand-orange-light text-brand-orange";
     }
   };
 
@@ -320,13 +324,15 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return { border: "border-green-500", progress: "bg-green-500" };
+      case "in_progress":
+        return { border: "#FBAD3F", progress: "#FBAD3F" }; // Gold for active
       case "completed":
-        return { border: "border-blue-500", progress: "bg-blue-500" };
+        return { border: "#236383", progress: "#236383" }; // Teal for completed
       case "on_hold":
-        return { border: "border-yellow-500", progress: "bg-yellow-500" };
+      case "waiting":
+        return { border: "#A31C41", progress: "#A31C41" }; // Burgundy for waiting
       default:
-        return { border: "border-gray-500", progress: "bg-gray-500" };
+        return { border: "#646464", progress: "#646464" }; // Gray for default
     }
   };
 
@@ -473,10 +479,10 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header with TSP Brand Styling */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-gradient-to-r from-brand-orange-light to-white p-6 rounded-xl shadow-sm">
         <div>
           <h1 className="text-2xl sm:text-3xl font-main-heading text-primary flex items-center gap-3">
-            <FolderOpen className="h-8 w-8 text-brand-teal" />
+            <FolderOpen className="h-8 w-8 text-brand-orange" />
             Projects
           </h1>
           <p className="text-base sm:text-lg font-body text-muted-foreground mt-2">
@@ -485,7 +491,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
         </div>
         <Button 
           onClick={() => setShowCreateDialog(true)}
-          className="btn-tsp-primary font-sub-heading"
+          className="bg-brand-orange hover:bg-brand-orange/90 text-white font-sub-heading shadow-md"
         >
           <Plus className="h-4 w-4 mr-2" />
           New Project
@@ -517,7 +523,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             {category !== "all" && (
               <Badge 
                 variant="secondary" 
-                className="badge-planning font-body text-xs cursor-pointer hover:bg-brand-teal-light"
+                className="bg-brand-orange-light text-brand-orange font-body text-xs cursor-pointer hover:bg-brand-orange hover:text-white transition-colors"
                 onClick={() => setCategory("all")}
               >
                 {category.charAt(0).toUpperCase() + category.slice(1)} ×
@@ -560,7 +566,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             <Switch
               checked={myProjectsOnly}
               onCheckedChange={setMyProjectsOnly}
-              className="data-[state=checked]:bg-brand-teal"
+              className="data-[state=checked]:bg-brand-orange"
             />
             <Label className="font-body text-sm">My Projects Only</Label>
           </div>
@@ -569,28 +575,28 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
 
       {/* Status Tabs with TSP Branding */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-muted">
+        <TabsList className="grid w-full grid-cols-4 bg-brand-orange-light/30 border-2 border-brand-orange/20">
           <TabsTrigger 
             value="all" 
-            className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white"
+            className="font-sub-heading data-[state=active]:bg-brand-orange data-[state=active]:text-white data-[state=active]:shadow-md"
           >
             All ({filteredProjects.length})
           </TabsTrigger>
           <TabsTrigger 
             value="active" 
-            className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white"
+            className="font-sub-heading data-[state=active]:bg-brand-orange data-[state=active]:text-white data-[state=active]:shadow-md"
           >
             Active ({statusCounts.active})
           </TabsTrigger>
           <TabsTrigger 
             value="available" 
-            className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white"
+            className="font-sub-heading data-[state=active]:bg-brand-orange data-[state=active]:text-white data-[state=active]:shadow-md"
           >
             Available ({statusCounts.available})
           </TabsTrigger>
           <TabsTrigger 
             value="completed" 
-            className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white"
+            className="font-sub-heading data-[state=active]:bg-brand-orange data-[state=active]:text-white data-[state=active]:shadow-md"
           >
             Completed ({statusCounts.done})
           </TabsTrigger>
@@ -599,7 +605,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
         <TabsContent value={statusFilter} className="mt-6">
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-teal mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-orange mx-auto"></div>
               <p className="font-body text-muted-foreground mt-4">Loading projects...</p>
             </div>
           ) : filteredProjects.length === 0 ? (
@@ -614,7 +620,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
               {statusFilter === "all" && (
                 <Button 
                   onClick={() => setShowCreateDialog(true)}
-                  className="btn-tsp-primary mt-4 font-sub-heading"
+                  className="bg-brand-orange hover:bg-brand-orange/90 text-white mt-4 font-sub-heading shadow-md"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Create Project
@@ -626,9 +632,9 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
               {filteredProjects.map((project) => (
                 <Card 
                   key={project.id} 
-                  className="project-card hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4"
+                  className="project-card hover:shadow-lg hover:shadow-brand-orange/20 transition-all duration-200 cursor-pointer border-l-4 bg-gradient-to-br from-white to-brand-orange-light/10"
                   style={{
-                    borderLeftColor: getStatusColor(project.status).border
+                    borderLeftColor: project.priority === 'high' ? '#FBAD3F' : getStatusColor(project.status).border
                   }}
                   onClick={() => onProjectSelect(project.id)}
                 >
@@ -744,7 +750,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="font-body text-xs text-brand-teal hover:text-brand-teal-hover hover:bg-brand-teal-light"
+                          className="font-body text-xs text-brand-orange hover:text-white hover:bg-brand-orange transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             onProjectSelect(project.id);
@@ -882,7 +888,7 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             <Button 
               onClick={() => createProjectMutation.mutate(newProject)}
               disabled={!newProject.title.trim()}
-              className="btn-tsp-primary font-sub-heading"
+              className="bg-brand-orange hover:bg-brand-orange/90 text-white font-sub-heading shadow-md"
             >
               Create Project
             </Button>
