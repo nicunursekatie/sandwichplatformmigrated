@@ -61,8 +61,12 @@ export default {
         },
         brand: {
           'teal': 'hsl(197 100% 37%)', /* #007EBC */
+          'teal-hover': 'hsl(197 100% 32%)', /* Darker teal for hover */
+          'teal-light': 'hsl(197 45% 95%)', /* Light teal for backgrounds */
           'orange': 'hsl(27 92% 62%)', /* #FBAD3F */
+          'orange-light': 'hsl(27 92% 95%)', /* Light orange for backgrounds */
           'burgundy': 'hsl(342 63% 38%)', /* #A31C41 */
+          'burgundy-light': 'hsl(342 63% 95%)', /* Light burgundy for backgrounds */
           'dark-gray': 'hsl(24 5% 38%)', /* #605251 */
           'light-blue': 'hsl(197 45% 56%)', /* #47B3CB */
           'light-gray': 'hsl(0 0% 82%)', /* #D1D3D4 */

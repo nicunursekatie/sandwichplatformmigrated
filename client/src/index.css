@@ -10,6 +10,7 @@
     /* TSP Brand Colors */
     --tsp-teal: #236383; /* Primary brand color */
     --tsp-teal-hover: #1e5470; /* Darker shade for hover */
+    --tsp-teal-dark: #1a4a5f; /* Darker teal for active states */
     --tsp-teal-light: #e6f3f7; /* Light teal for backgrounds */
     --tsp-orange: #FBAD3F; /* Secondary brand color */
     --tsp-gray: #646464; /* Accent color */

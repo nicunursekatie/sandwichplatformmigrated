@@ -162,15 +162,12 @@ export default function AnalyticsDashboard() {
 
       {/* Tabs with TSP Branding */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-muted">
+        <TabsList className="grid w-full grid-cols-2 bg-muted">
           <TabsTrigger value="highlights" className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">
             Highlights
           </TabsTrigger>
           <TabsTrigger value="trends" className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">
             Trends
-          </TabsTrigger>
-          <TabsTrigger value="performance" className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">
-            Performance
           </TabsTrigger>
         </TabsList>
 
@@ -228,10 +225,10 @@ export default function AnalyticsDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-main-heading text-foreground mb-1">
-                    {analyticsData.recordWeek ? analyticsData.recordWeek[1].total.toLocaleString() : '0'}
+                    {analyticsData.recordWeek ? analyticsData.recordWeek.total.toLocaleString() : '0'}
                   </div>
                   <p className="text-sm font-body text-muted-foreground">
-                    {analyticsData.recordWeek ? new Date(analyticsData.recordWeek[1].date).toLocaleDateString() : 'No data'}
+                    {analyticsData.recordWeek ? new Date(analyticsData.recordWeek.date).toLocaleDateString() : 'No data'}
                   </p>
                 </CardContent>
               </Card>
@@ -246,10 +243,10 @@ export default function AnalyticsDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-lg font-sub-heading text-foreground mb-1">
-                    {analyticsData.topPerformer ? analyticsData.topPerformer[0] : 'N/A'}
+                    {analyticsData.topPerformer ? analyticsData.topPerformer.name : 'N/A'}
                   </div>
                   <p className="text-sm font-body text-muted-foreground">
-                    {analyticsData.topPerformer ? `${analyticsData.topPerformer[1].total.toLocaleString()} sandwiches` : 'No data'}
+                    {analyticsData.topPerformer ? `${analyticsData.topPerformer.total.toLocaleString()} sandwiches` : 'No data'}
                   </p>
                 </CardContent>
               </Card>
@@ -313,65 +310,6 @@ export default function AnalyticsDashboard() {
               <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="font-sub-heading text-lg text-foreground mb-2">No trend data</h3>
               <p className="font-body text-muted-foreground">Collect more data to see trends</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="performance" className="mt-6">
-          {analyticsData && analyticsData.hostStats && Object.keys(analyticsData.hostStats).length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-sub-heading text-lg text-foreground">Host Performance</CardTitle>
-                <CardDescription className="font-body text-muted-foreground">
-                  Top performing hosts by sandwich count
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={Object.entries(analyticsData.hostStats).map(([host, stats]) => ({
-                      host,
-                      sandwiches: stats.total,
-                      collections: stats.collections
-                    })).sort((a, b) => b.sandwiches - a.sandwiches).slice(0, 10)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis 
-                        dataKey="host" 
-                        stroke="#6b7280"
-                        fontSize={12}
-                        fontFamily="Roboto"
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis 
-                        stroke="#6b7280"
-                        fontSize={12}
-                        fontFamily="Roboto"
-                      />
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontFamily: 'Roboto'
-                        }}
-                      />
-                      <Bar 
-                        dataKey="sandwiches" 
-                        fill="#007EBC"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="text-center py-12">
-              <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="font-sub-heading text-lg text-foreground mb-2">No performance data</h3>
-              <p className="font-body text-muted-foreground">Host performance data will appear here</p>
             </div>
           )}
         </TabsContent>
