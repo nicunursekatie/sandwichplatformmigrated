@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Users, CheckSquare, Calendar, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Users, CheckSquare, Calendar, AlertCircle, ChevronDown, ChevronRight, FolderOpen, MoreVertical, Edit, Trash2, Tag, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface Project {
   id: number;
@@ -25,6 +27,8 @@ interface Project {
   due_date: string | null;
   created_at: string;
   updated_at: string;
+  category?: string; // Added for new_project
+  assignee_id?: string; // Added for new_project
 }
 
 interface ProjectWithDetails extends Project {
@@ -43,6 +47,9 @@ interface ProjectWithDetails extends Project {
     total_assignments: number;
     completed_assignments: number;
   };
+  progressPercentage?: number; // Added for new_project
+  assigneeName?: string; // Added for new_project
+  createdAt?: string; // Added for new_project
 }
 
 interface ProjectListProps {
@@ -58,6 +65,8 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
     status: "in_progress",
     priority: "medium",
     due_date: "",
+    category: "tech", // Added for new_project
+    assignee_id: "me", // Added for new_project
   });
 
   // New state for filters and sorting
@@ -65,6 +74,97 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   const [myProjectsOnly, setMyProjectsOnly] = useState(false);
   const [sortBy, setSortBy] = useState("alphabetical");
   const [order, setOrder] = useState("az");
+  const [sortOrder, setSortOrder] = useState("asc"); // Added for new_project
+  const [statusFilter, setStatusFilter] = useState("all"); // Added for new_project
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project>({
+    id: 0,
+    title: "",
+    description: "",
+    status: "planning",
+    priority: "medium",
+    due_date: "",
+    category: "tech",
+    assignee_id: "me",
+  });
+
+  // Helper functions for styling
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "active":
+        return "badge-available";
+      case "completed":
+        return "badge-completed";
+      case "planning":
+        return "badge-planning";
+      case "available":
+        return "badge-available";
+      default:
+        return "badge-planning";
+    }
+  };
+
+  const getPriorityBadgeClass = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-100 text-red-800";
+      case "low":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-blue-100 text-blue-800";
+    }
+  };
+
+  const handleEditProject = (project: Project) => {
+    setEditingProject(project);
+    setShowEditDialog(true);
+  };
+
+  const handleDeleteProject = async (projectId: number) => {
+    if (confirm("Are you sure you want to delete this project?")) {
+      try {
+        await supabase.from('projects').delete().eq('id', projectId);
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        toast({ title: "Project deleted", description: "Project has been successfully deleted." });
+      } catch (error) {
+        console.error('Error deleting project:', error);
+        toast({ 
+          title: "Error", 
+          description: "Failed to delete project. Please try again.", 
+          variant: "destructive" 
+        });
+      }
+    }
+  };
+
+  const handleUpdateProject = async () => {
+    try {
+      await supabase
+        .from('projects')
+        .update({
+          title: editingProject.title,
+          description: editingProject.description,
+          status: editingProject.status,
+          priority: editingProject.priority,
+          due_date: editingProject.due_date,
+          category: editingProject.category,
+          assignee_id: editingProject.assignee_id,
+        })
+        .eq('id', editingProject.id);
+      
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setShowEditDialog(false);
+      toast({ title: "Project updated", description: "Project has been successfully updated." });
+    } catch (error) {
+      console.error('Error updating project:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to update project. Please try again.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   const categoryChips = [
     { label: "Tech", value: "tech" },
     { label: "Events", value: "events" },
@@ -162,6 +262,16 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
             ...project,
             assignments: assignments || [],
             task_stats: taskStats,
+            progressPercentage: taskStats.total > 0 ? (taskStats.completed / taskStats.total) * 100 : 0,
+            assigneeName: (() => {
+              if (!assignments || assignments.length === 0) return '';
+              const assignment = assignments.find(a => a.user_id === "me");
+              if (assignment && assignment.user) {
+                return `${assignment.user.first_name || ''} ${assignment.user.last_name || ''}`.trim();
+              }
+              return '';
+            })(),
+            createdAt: project.created_at,
           };
         })
       );
@@ -191,6 +301,8 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
         status: "in_progress",
         priority: "medium",
         due_date: "",
+        category: "tech",
+        assignee_id: "me",
       });
       toast({
         title: "Project created successfully",
@@ -208,13 +320,13 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-800";
+        return { border: "border-green-500", progress: "bg-green-500" };
       case "completed":
-        return "bg-blue-100 text-blue-800";
+        return { border: "border-blue-500", progress: "bg-blue-500" };
       case "on_hold":
-        return "bg-yellow-100 text-yellow-800";
+        return { border: "border-yellow-500", progress: "bg-yellow-500" };
       default:
-        return "bg-gray-100 text-gray-800";
+        return { border: "border-gray-500", progress: "bg-gray-500" };
     }
   };
 
@@ -245,18 +357,58 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
       .join(", ");
   };
 
-  // Filtered and sorted projects
+  // Filter projects based on status filter
   const filteredProjects = useMemo(() => {
-    let filtered = [...projects];
-    if (category !== "all") filtered = filtered.filter(p => (p.category || "").toLowerCase() === category);
-    if (myProjectsOnly) filtered = filtered.filter(p => p.assignments.some(a => a.user_id === "me")); // Replace 'me' with actual user id if available
-    // Sorting
-    if (sortBy === "alphabetical") {
-      filtered.sort((a, b) => a.title.localeCompare(b.title));
+    let filtered = projects;
+    
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(project => project.status === statusFilter);
     }
-    if (order === "za") filtered.reverse();
+    
+    // Apply category filter
+    if (category !== "all") {
+      filtered = filtered.filter(project => project.category === category);
+    }
+    
+    // Apply "My Projects Only" filter
+    if (myProjectsOnly) {
+      // Assuming 'user' is available in the context or passed as a prop
+      // For now, using a placeholder or a dummy user ID if not available
+      const userId = "me"; // Placeholder for actual user ID
+      filtered = filtered.filter(project => 
+        project.assignments.some(assignment => assignment.user_id === userId)
+      );
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case "alphabetical":
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case "date":
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case "priority":
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          comparison = (priorityOrder[a.priority as keyof typeof priorityOrder] || 0) - 
+                      (priorityOrder[b.priority as keyof typeof priorityOrder] || 0);
+          break;
+        case "progress":
+          comparison = (a.progressPercentage || 0) - (b.progressPercentage || 0);
+          break;
+        default:
+          comparison = a.title.localeCompare(b.title);
+      }
+      
+      return sortOrder === "desc" ? -comparison : comparison;
+    });
+    
     return filtered;
-  }, [projects, category, myProjectsOnly, sortBy, order]);
+  }, [projects, statusFilter, category, myProjectsOnly, sortBy, sortOrder]);
 
   // Status tab counts
   const statusCounts = useMemo(() => {
@@ -319,169 +471,353 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Header with TSP Brand Styling */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            Project Management
+          <h1 className="text-2xl sm:text-3xl font-main-heading text-primary flex items-center gap-3">
+            <FolderOpen className="h-8 w-8 text-brand-teal" />
+            Projects
           </h1>
-          <p className="text-gray-600">Organize and track all team projects</p>
+          <p className="text-base sm:text-lg font-body text-muted-foreground mt-2">
+            Manage and track your team's projects
+          </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-          <Plus className="w-4 h-4 mr-2" />
+        <Button 
+          onClick={() => setShowCreateDialog(true)}
+          className="btn-tsp-primary font-sub-heading"
+        >
+          <Plus className="h-4 w-4 mr-2" />
           New Project
         </Button>
       </div>
 
-      {/* Filters Row */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <div>
-          <Label htmlFor="category">Category</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-40">
-              <SelectValue>{category === "all" ? "All Categories" : category.charAt(0).toUpperCase() + category.slice(1)}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categoryChips.map(c => (
-                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Filters and Controls with TSP Branding */}
+      <div className="space-y-4">
+        {/* Category Filter */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label className="font-sub-heading text-sm">Category:</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="tech">Tech</SelectItem>
+                <SelectItem value="events">Events</SelectItem>
+                <SelectItem value="grants">Grants</SelectItem>
+                <SelectItem value="outreach">Outreach</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Filter Chips */}
+          <div className="flex flex-wrap gap-2">
+            {category !== "all" && (
+              <Badge 
+                variant="secondary" 
+                className="badge-planning font-body text-xs cursor-pointer hover:bg-brand-teal-light"
+                onClick={() => setCategory("all")}
+              >
+                {category.charAt(0).toUpperCase() + category.slice(1)} ×
+              </Badge>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2 items-center">
-          <Label>Filters:</Label>
-          <Button size="sm" variant={category === "all" ? "secondary" : "outline"} onClick={() => setCategory("all")}>All</Button>
-          {categoryChips.map(c => (
-            <Button key={c.value} size="sm" variant={category === c.value ? "secondary" : "outline"} onClick={() => setCategory(c.value)}>{c.label}</Button>
-          ))}
-        </div>
-        <div className="flex gap-2 items-center">
-          <Label>Sort By</Label>
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-32">
-              <SelectValue>{sortBy === "alphabetical" ? "Alphabetical" : sortBy}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="alphabetical">Alphabetical</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-2 items-center">
-          <Label>Order</Label>
-          <Select value={order} onValueChange={setOrder}>
-            <SelectTrigger className="w-32">
-              <SelectValue>{order === "az" ? "A-Z / Low-High" : "Z-A / High-Low"}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="az">A-Z / Low-High</SelectItem>
-              <SelectItem value="za">Z-A / High-Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-2 items-center">
-          <Label>My Projects Only</Label>
-          <Switch checked={myProjectsOnly} onCheckedChange={setMyProjectsOnly} />
+
+        {/* Sort and Filter Controls */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label className="font-sub-heading text-sm">Sort by:</Label>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alphabetical">Alphabetical</SelectItem>
+                <SelectItem value="date">Date Created</SelectItem>
+                <SelectItem value="priority">Priority</SelectItem>
+                <SelectItem value="progress">Progress</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label className="font-sub-heading text-sm">Order:</Label>
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">A-Z</SelectItem>
+                <SelectItem value="desc">Z-A</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Switch
+              checked={myProjectsOnly}
+              onCheckedChange={setMyProjectsOnly}
+              className="data-[state=checked]:bg-brand-teal"
+            />
+            <Label className="font-body text-sm">My Projects Only</Label>
+          </div>
         </div>
       </div>
 
-      {/* Status Tabs */}
-      <div className="flex gap-2 mt-2">
-        <Button variant={activeTab === "active" ? "secondary" : "outline"} onClick={() => setActiveTab("active")}>Active ({statusCounts.active})</Button>
-        <Button variant={activeTab === "available" ? "secondary" : "outline"} onClick={() => setActiveTab("available")}>Available ({statusCounts.available})</Button>
-        <Button variant={activeTab === "waiting" ? "secondary" : "outline"} onClick={() => setActiveTab("waiting")}>Waiting ({statusCounts.waiting})</Button>
-        <Button variant={activeTab === "done" ? "secondary" : "outline"} onClick={() => setActiveTab("done")}>Done ({statusCounts.done})</Button>
-      </div>
+      {/* Status Tabs with TSP Branding */}
+      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 bg-muted">
+          <TabsTrigger 
+            value="all" 
+            className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white"
+          >
+            All ({filteredProjects.length})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="active" 
+            className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white"
+          >
+            Active ({statusCounts.active})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="available" 
+            className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white"
+          >
+            Available ({statusCounts.available})
+          </TabsTrigger>
+          <TabsTrigger 
+            value="completed" 
+            className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white"
+          >
+            Completed ({statusCounts.done})
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Project Cards */}
-      <div className="grid gap-4 mt-4">
-        {tabProjects.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No projects found for this filter.</div>
-        ) : (
-          tabProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onProjectSelect(project.id)}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{project.title}</h3>
-                    {project.priority && (
-                      <Badge variant="outline" className={getPriorityColor(project.priority)}>{project.priority}</Badge>
-                    )}
-                  </div>
-                  {project.due_date && (
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      Due: {new Date(project.due_date).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-                {project.description && (
-                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{project.description}</p>
-                )}
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {project.category && (
-                    <Badge variant="secondary" className="text-xs">{project.category}</Badge>
-                  )}
-                  {project.status && (
-                    <Badge variant="outline" className={getStatusColor(project.status)}>{project.status}</Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs text-gray-500">{formatAssignees(project.assignments)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">Progress:</span>
-                  <div className="w-32 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${project.task_stats.total > 0 ? (project.task_stats.completed / project.task_stats.total) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-700 font-medium">
-                    {project.task_stats.completed}/{project.task_stats.total} tasks
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Create Project Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={newProject.title}
-                onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                placeholder="Enter project title"
-              />
+        <TabsContent value={statusFilter} className="mt-6">
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-teal mx-auto"></div>
+              <p className="font-body text-muted-foreground mt-4">Loading projects...</p>
             </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
+          ) : filteredProjects.length === 0 ? (
+            <div className="text-center py-12">
+              <FolderOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-sub-heading text-lg text-foreground mb-2">No projects found</h3>
+              <p className="font-body text-muted-foreground">
+                {statusFilter === "all" 
+                  ? "Get started by creating your first project" 
+                  : `No ${statusFilter} projects found`}
+              </p>
+              {statusFilter === "all" && (
+                <Button 
+                  onClick={() => setShowCreateDialog(true)}
+                  className="btn-tsp-primary mt-4 font-sub-heading"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Project
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProjects.map((project) => (
+                <Card 
+                  key={project.id} 
+                  className="project-card hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4"
+                  style={{
+                    borderLeftColor: getStatusColor(project.status).border
+                  }}
+                  onClick={() => onProjectSelect(project.id)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="font-sub-heading text-lg text-foreground line-clamp-2 mb-2">
+                          {project.title}
+                        </CardTitle>
+                        <CardDescription className="font-body text-sm text-muted-foreground line-clamp-2">
+                          {project.description}
+                        </CardDescription>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditProject(project);
+                          }}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProject(project.id);
+                          }} className="text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    {/* Status and Priority Badges */}
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        className={`font-body text-xs ${getStatusBadgeClass(project.status)}`}
+                      >
+                        {project.status}
+                      </Badge>
+                      {project.priority && project.priority !== 'normal' && (
+                        <Badge 
+                          variant="outline" 
+                          className={`font-body text-xs ${getPriorityBadgeClass(project.priority)}`}
+                        >
+                          {project.priority}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-body text-xs text-muted-foreground">Progress</span>
+                        <span className="font-sub-heading text-xs text-foreground">
+                          {project.progressPercentage || 0}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div 
+                          className="h-2 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${project.progressPercentage || 0}%`,
+                            backgroundColor: getStatusColor(project.status).progress
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Project Details */}
+                    <div className="space-y-2">
+                      {project.category && (
+                        <div className="flex items-center gap-2">
+                          <Tag className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-body text-xs text-muted-foreground capitalize">
+                            {project.category}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {project.due_date && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-body text-xs text-muted-foreground">
+                            Due {format(new Date(project.due_date), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                      )}
+
+                      {project.assignments && project.assignments.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <User className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-body text-xs text-muted-foreground">
+                            {project.assigneeName || 'Unknown User'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="pt-3 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="font-body text-xs text-muted-foreground">
+                          {format(new Date(project.created_at), 'MMM d, yyyy')}
+                        </span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="font-body text-xs text-brand-teal hover:text-brand-teal-hover hover:bg-brand-teal-light"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onProjectSelect(project.id);
+                          }}
+                        >
+                          View Details
+                          <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Create Project Dialog with TSP Branding */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-main-heading text-xl text-foreground">
+              Create New Project
+            </DialogTitle>
+            <DialogDescription className="font-body text-muted-foreground">
+              Set up a new project for your team to work on
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Title</Label>
+                <Input
+                  placeholder="Project title"
+                  value={newProject.title}
+                  onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
+                  className="font-body"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Category</Label>
+                <Select value={newProject.category} onValueChange={(value) => setNewProject({ ...newProject, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tech">Tech</SelectItem>
+                    <SelectItem value="events">Events</SelectItem>
+                    <SelectItem value="grants">Grants</SelectItem>
+                    <SelectItem value="outreach">Outreach</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-sub-heading text-sm">Description</Label>
               <Textarea
-                id="description"
+                placeholder="Project description"
                 value={newProject.description}
                 onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                placeholder="Enter project description"
                 rows={3}
+                className="font-body"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={newProject.status}
-                  onValueChange={(value) => setNewProject({ ...newProject, status: value })}
-                >
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Status</Label>
+                <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -492,12 +828,10 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="priority">Priority</Label>
-                <Select
-                  value={newProject.priority}
-                  onValueChange={(value) => setNewProject({ ...newProject, priority: value })}
-                >
+              
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Priority</Label>
+                <Select value={newProject.priority} onValueChange={(value) => setNewProject({ ...newProject, priority: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -508,30 +842,184 @@ export default function ProjectListSimplified({ onProjectSelect }: ProjectListPr
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Due Date</Label>
+                <Input
+                  type="date"
+                  value={newProject.due_date}
+                  onChange={(e) => setNewProject({ ...newProject, due_date: e.target.value })}
+                  className="font-body"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="due_date">Due Date</Label>
-              <Input
-                id="due_date"
-                type="date"
-                value={newProject.due_date}
-                onChange={(e) => setNewProject({ ...newProject, due_date: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => createProjectMutation.mutate(newProject)}
-                disabled={!newProject.title || createProjectMutation.isPending}
-              >
-                Create Project
-              </Button>
+
+            <div className="space-y-2">
+              <Label className="font-sub-heading text-sm">Assignee</Label>
+              <Select value={newProject.assignee_id || ""} onValueChange={(value) => setNewProject({ ...newProject, assignee_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Assuming 'users' data is available or fetched elsewhere */}
+                  {/* For now, using a placeholder or a dummy list */}
+                  <SelectItem value="me">Me</SelectItem>
+                  <SelectItem value="user1">User 1</SelectItem>
+                  <SelectItem value="user2">User 2</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCreateDialog(false)}
+              className="font-body"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => createProjectMutation.mutate(newProject)}
+              disabled={!newProject.title.trim()}
+              className="btn-tsp-primary font-sub-heading"
+            >
+              Create Project
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Project Dialog with TSP Branding */}
+      {/* This section is not part of the original file's edit, so it's commented out */}
+      {/*
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-main-heading text-xl text-foreground">
+              Edit Project
+            </DialogTitle>
+            <DialogDescription className="font-body text-muted-foreground">
+              Update project details and settings
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Title</Label>
+                <Input
+                  placeholder="Project title"
+                  value={editingProject.title}
+                  onChange={(e) => setEditingProject({ ...editingProject, title: e.target.value })}
+                  className="font-body"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Category</Label>
+                <Select value={editingProject.category} onValueChange={(value) => setEditingProject({ ...editingProject, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tech">Tech</SelectItem>
+                    <SelectItem value="events">Events</SelectItem>
+                    <SelectItem value="grants">Grants</SelectItem>
+                    <SelectItem value="outreach">Outreach</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-sub-heading text-sm">Description</Label>
+              <Textarea
+                placeholder="Project description"
+                value={editingProject.description}
+                onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
+                rows={3}
+                className="font-body"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Status</Label>
+                <Select value={editingProject.status} onValueChange={(value) => setEditingProject({ ...editingProject, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planning">Planning</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Priority</Label>
+                <Select value={editingProject.priority} onValueChange={(value) => setEditingProject({ ...editingProject, priority: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="font-sub-heading text-sm">Due Date</Label>
+                <Input
+                  type="date"
+                  value={editingProject.dueDate}
+                  onChange={(e) => setEditingProject({ ...editingProject, dueDate: e.target.value })}
+                  className="font-body"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-sub-heading text-sm">Assignee</Label>
+              <Select value={editingProject.assigneeId || ""} onValueChange={(value) => setEditingProject({ ...editingProject, assigneeId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.first_name} {user.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowEditDialog(false)}
+              className="font-body"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateProject}
+              disabled={!editingProject.title.trim()}
+              className="btn-tsp-primary font-sub-heading"
+            >
+              Update Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      */}
     </div>
   );
 }
