@@ -16,6 +16,17 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    target: "es2020",
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        drop_debugger: true,
+      },
+      format: {
+        comments: false,
+      },
+    },
   },
   server: {
     fs: {
