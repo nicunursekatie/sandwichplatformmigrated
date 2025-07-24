@@ -106,8 +106,8 @@ export default function SimpleNav({ onSectionChange }: { onSectionChange: (secti
         if (item.type === 'separator') {
           return (
             <div key={`sep-${index}`} className="pt-4 pb-2">
-              <div className="flex items-center text-xs font-medium text-slate-500 uppercase tracking-wider">
-                <div className="h-px bg-slate-200 flex-1 mr-3" />
+              <div className="flex items-center text-xs font-sub-heading text-muted-foreground uppercase tracking-wider">
+                <div className="h-px bg-border flex-1 mr-3" />
                 {getGroupLabel(item.group)}
               </div>
             </div>
@@ -124,8 +124,6 @@ export default function SimpleNav({ onSectionChange }: { onSectionChange: (secti
           unreadCount = unreadCounts?.general || 0;
         } else if (item.id === 'committee-chat') {
           unreadCount = unreadCounts?.committee || 0;
-        } else if (item.id === 'suggestions' && unreadCounts?.suggestion) {
-          unreadCount = unreadCounts.suggestion;
         }
         
         return (
@@ -133,10 +131,10 @@ export default function SimpleNav({ onSectionChange }: { onSectionChange: (secti
             key={item.id}
             variant={isCurrentlyActive ? "default" : "ghost"}
             className={`
-              w-full justify-start text-left h-10 px-3
+              w-full justify-start text-left h-10 px-3 font-body
               ${isCurrentlyActive 
-                ? "bg-primary text-primary-foreground shadow-sm" 
-                : "hover:bg-slate-100 text-slate-700"
+                ? "bg-brand-teal text-white shadow-sm hover:bg-brand-teal-hover" 
+                : "hover:bg-brand-teal-light hover:text-brand-teal text-foreground"
               }
             `}
             onClick={() => onSectionChange(item.href)}
@@ -146,7 +144,7 @@ export default function SimpleNav({ onSectionChange }: { onSectionChange: (secti
             {unreadCount > 0 && (
               <Badge 
                 variant={isCurrentlyActive ? "secondary" : "destructive"} 
-                className="ml-auto h-5 px-1.5 min-w-[20px] flex items-center justify-center"
+                className="ml-auto h-5 px-1.5 min-w-[20px] flex items-center justify-center font-body text-xs"
               >
                 {unreadCount > 99 ? '99+' : unreadCount}
               </Badge>

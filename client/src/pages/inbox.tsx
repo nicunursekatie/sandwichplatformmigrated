@@ -65,6 +65,7 @@ interface InboxMessage {
   priority: 'low' | 'normal' | 'high';
   status: string;
   created_at: string;
+  reply_to_id?: number; // Add missing property for threading
   sender?: {
     id: string;
     first_name: string;
@@ -487,11 +488,11 @@ export default function InboxPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with TSP Brand Styling */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-main-heading text-primary flex items-center gap-2">
-            <InboxIcon className="h-6 w-6" />
+            <InboxIcon className="h-6 w-6 text-brand-teal" />
             Inbox
           </h1>
           <p className="text-sm sm:text-base font-body text-muted-foreground">
@@ -500,7 +501,7 @@ export default function InboxPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-gray-500">
+          <span className="text-sm font-body text-gray-500">
             {isConnected ? 'Connected' : 'Disconnected'}
           </span>
         </div>
@@ -509,7 +510,7 @@ export default function InboxPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
         {/* Message List */}
         <div className="lg:col-span-1 space-y-4">
-          {/* Controls */}
+          {/* Controls with TSP Branding */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -517,34 +518,36 @@ export default function InboxPage() {
                 placeholder="Search messages..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 font-body"
               />
             </div>
             <Dialog open={showComposer} onOpenChange={setShowComposer}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="btn-tsp-primary font-sub-heading">
                   <Plus className="h-4 w-4 mr-2" />
                   New
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Compose Message</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="font-main-heading text-xl text-foreground">
+                    Compose Message
+                  </DialogTitle>
+                  <DialogDescription className="font-body text-muted-foreground">
                     Send a direct message or create a group conversation
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Message Type</Label>
+                      <Label className="font-sub-heading text-sm">Message Type</Label>
                       <Select
                         value={composeData.message_type}
                         onValueChange={(value: 'direct' | 'group') => 
                           setComposeData(prev => ({ ...prev, message_type: value }))
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="font-body">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -554,14 +557,14 @@ export default function InboxPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label>Priority</Label>
+                      <Label className="font-sub-heading text-sm">Priority</Label>
                       <Select
                         value={composeData.priority}
                         onValueChange={(value: 'low' | 'normal' | 'high') => 
                           setComposeData(prev => ({ ...prev, priority: value }))
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="font-body">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -574,7 +577,7 @@ export default function InboxPage() {
                   </div>
                   
                   <div>
-                    <Label>Recipients</Label>
+                    <Label className="font-sub-heading text-sm">Recipients</Label>
                     <Select
                       value=""
                       onValueChange={(value) => {
@@ -586,7 +589,7 @@ export default function InboxPage() {
                         }
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="font-body">
                         <SelectValue placeholder="Select recipients..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -602,7 +605,7 @@ export default function InboxPage() {
                         {composeData.recipients.map(recipientId => {
                           const recipient = users.find(u => u.id === recipientId);
                           return (
-                            <Badge key={recipientId} variant="secondary" className="flex items-center gap-1">
+                            <Badge key={recipientId} variant="secondary" className="flex items-center gap-1 font-body text-xs">
                               {getUserDisplayName(recipient)}
                               <button
                                 onClick={() => setComposeData(prev => ({
@@ -621,31 +624,34 @@ export default function InboxPage() {
                   </div>
 
                   <div>
-                    <Label>Subject</Label>
+                    <Label className="font-sub-heading text-sm">Subject</Label>
                     <Input
                       placeholder="Subject (optional)"
                       value={composeData.subject}
                       onChange={(e) => setComposeData(prev => ({ ...prev, subject: e.target.value }))}
+                      className="font-body"
                     />
                   </div>
 
                   <div>
-                    <Label>Message</Label>
+                    <Label className="font-sub-heading text-sm">Message</Label>
                     <Textarea
                       placeholder="Type your message..."
                       value={composeData.content}
                       onChange={(e) => setComposeData(prev => ({ ...prev, content: e.target.value }))}
                       rows={6}
+                      className="font-body"
                     />
                   </div>
 
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowComposer(false)}>
+                    <Button variant="outline" onClick={() => setShowComposer(false)} className="font-body">
                       Cancel
                     </Button>
                     <Button 
                       onClick={handleSendMessage}
                       disabled={!composeData.content.trim() || composeData.recipients.length === 0}
+                      className="btn-tsp-primary font-sub-heading"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       Send
@@ -656,10 +662,10 @@ export default function InboxPage() {
             </Dialog>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs with TSP Branding */}
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="all" className="text-xs">
+            <TabsList className="grid w-full grid-cols-5 bg-muted">
+              <TabsTrigger value="all" className="text-xs font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">
                 All
                 {unreadCount > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
@@ -667,7 +673,7 @@ export default function InboxPage() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="unread" className="text-xs">
+              <TabsTrigger value="unread" className="text-xs font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">
                 Unread
                 {unreadCount > 0 && (
                   <Badge variant="destructive" className="ml-1 text-xs">
@@ -675,23 +681,26 @@ export default function InboxPage() {
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="sent" className="text-xs">Sent</TabsTrigger>
-              <TabsTrigger value="direct" className="text-xs">Direct</TabsTrigger>
-              <TabsTrigger value="group" className="text-xs">Group</TabsTrigger>
+              <TabsTrigger value="sent" className="text-xs font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">Sent</TabsTrigger>
+              <TabsTrigger value="direct" className="text-xs font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">Direct</TabsTrigger>
+              <TabsTrigger value="group" className="text-xs font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">Group</TabsTrigger>
             </TabsList>
 
             <TabsContent value={selectedTab} className="mt-4">
               <ScrollArea className="h-[calc(100vh-400px)]">
                 <div className="space-y-2">
                   {isLoading ? (
-                    <div className="text-center py-8 text-gray-500">Loading messages...</div>
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-teal mx-auto"></div>
+                      <p className="font-body text-muted-foreground mt-4">Loading messages...</p>
+                    </div>
                   ) : sortedThreads.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <InboxIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <div className="text-lg font-medium mb-2">No messages</div>
-                      <div className="text-sm">
+                    <div className="text-center py-8">
+                      <InboxIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="font-sub-heading text-lg text-foreground mb-2">No messages</h3>
+                      <p className="font-body text-muted-foreground">
                         {selectedTab === 'unread' ? 'All caught up!' : 'Your inbox is empty'}
-                      </div>
+                      </p>
                     </div>
                   ) : (
                     sortedThreads.map((thread) => (
@@ -707,74 +716,6 @@ export default function InboxPage() {
                         currentUserId={user?.id || ''}
                       />
                     ))
-                    /* TEMP - old single message display
-                    sortedMessages.map((message) => (
-                      <Card 
-                        key={message.id}
-                        className={`cursor-pointer transition-colors hover:bg-gray-50 ${
-                          selectedMessage?.id === message.id ? 'ring-2 ring-primary' : ''
-                        } ${!message.is_read && !message.is_sent_by_user ? 'bg-blue-50 border-blue-200' : ''}`}
-                        onClick={() => setSelectedMessage(message)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <Avatar className="w-8 h-8">
-                              <AvatarFallback className="text-xs">
-                                {getUserDisplayName(message.sender).substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm">
-                                  {message.is_sent_by_user ? (
-                                    <>To: {getUserDisplayName(message.recipient)}</>
-                                  ) : (
-                                    getUserDisplayName(message.sender)
-                                  )}
-                                </span>
-                                
-                                <div className="flex items-center gap-1">
-                                  {message.message_type === 'group' && (
-                                    <Users className="h-3 w-3 text-gray-400" />
-                                  )}
-                                  {message.priority !== 'normal' && (
-                                    <Badge variant="outline" className={`text-xs ${getPriorityColor(message.priority)}`}>
-                                      {message.priority}
-                                    </Badge>
-                                  )}
-                                  {!message.is_read && !message.is_sent_by_user && (
-                                    <Circle className="h-2 w-2 fill-blue-500 text-blue-500" />
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {message.subject && (
-                                <div className="font-medium text-sm text-gray-900 mb-1">
-                                  {message.subject}
-                                </div>
-                              )}
-                              
-                              <div className="text-sm text-gray-600 line-clamp-2">
-                                {message.content}
-                              </div>
-                              
-                              <div className="text-xs text-gray-400 mt-2">
-                                {(() => {
-                                  const now = new Date();
-                                  const msgDate = new Date(message.created_at);
-                                  if (msgDate > now) {
-                                    return 'just now';
-                                  }
-                                  return formatDistanceToNow(msgDate, { addSuffix: true });
-                                })()}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                    */
                   )}
                 </div>
               </ScrollArea>
@@ -799,17 +740,17 @@ export default function InboxPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">
+                    <CardTitle className="font-sub-heading text-lg text-foreground">
                       {selectedMessage.subject || 'No Subject'}
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="font-body text-muted-foreground">
                       From: {getUserDisplayName(selectedMessage.sender)} • {' '}
                       {formatDistanceToNow(new Date(selectedMessage.created_at), { addSuffix: true })}
                     </CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" className="hover:bg-brand-teal-light">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -819,7 +760,7 @@ export default function InboxPage() {
                         Mark as Read
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-red-600">
+                      <DropdownMenuItem className="text-destructive">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
@@ -830,7 +771,7 @@ export default function InboxPage() {
               
               <CardContent className="flex-1 flex flex-col">
                 <div className="flex-1 mb-4">
-                  <div className="whitespace-pre-wrap text-sm">
+                  <div className="whitespace-pre-wrap text-sm font-body text-foreground">
                     {selectedMessage.content}
                   </div>
                 </div>
@@ -843,12 +784,14 @@ export default function InboxPage() {
                       value={replyContent}
                       onChange={(e) => setReplyContent(e.target.value)}
                       rows={3}
+                      className="font-body"
                     />
                     <div className="flex justify-end">
                       <Button 
                         onClick={handleReply}
                         disabled={!replyContent.trim()}
                         size="sm"
+                        className="btn-tsp-primary font-sub-heading"
                       >
                         <Reply className="h-4 w-4 mr-2" />
                         Reply
@@ -860,10 +803,10 @@ export default function InboxPage() {
             </Card>
           ) : (
             <Card className="h-full flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <div className="text-lg font-medium mb-2">Select a message</div>
-                <div className="text-sm">Choose a message to read and reply</div>
+              <div className="text-center">
+                <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-sub-heading text-lg text-foreground mb-2">Select a message</h3>
+                <p className="font-body text-muted-foreground">Choose a message to read and reply</p>
               </div>
             </Card>
           )}

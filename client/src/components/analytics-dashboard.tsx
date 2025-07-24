@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { Award, TrendingUp, Target, Lightbulb, Star, Crown, Calendar, ChevronUp } from "lucide-react";
+import { Award, TrendingUp, Target, Lightbulb, Star, Crown, Calendar, ChevronUp, Sandwich } from "lucide-react";
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
 import type { SandwichCollection } from "@shared/schema";
 
@@ -149,310 +149,231 @@ export default function AnalyticsDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-3xl font-main-heading text-primary mb-2">Strategic Impact Dashboard</h2>
-        <p className="text-lg font-body text-muted-foreground">
-          Celebrating achievements and identifying growth opportunities
-        </p>
+      {/* Header with TSP Branding */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center justify-center w-12 h-12 bg-brand-teal-light rounded-xl">
+          <BarChart className="w-6 h-6 text-brand-teal" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-main-heading text-primary">Analytics Dashboard</h1>
+          <p className="font-body text-muted-foreground">Data insights and performance metrics</p>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="highlights">Achievements</TabsTrigger>
-          <TabsTrigger value="trends">Growth Trends</TabsTrigger>
-          <TabsTrigger value="insights">Seasonal Insights</TabsTrigger>
-          <TabsTrigger value="opportunities">Strategic Ideas</TabsTrigger>
+      {/* Tabs with TSP Branding */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-muted">
+          <TabsTrigger value="highlights" className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">
+            Highlights
+          </TabsTrigger>
+          <TabsTrigger value="trends" className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">
+            Trends
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">
+            Performance
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="highlights" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="border-primary shadow-md">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-primary">
-                    <Award className="w-6 h-6" />
+        <TabsContent value="highlights" className="mt-6">
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-teal mx-auto"></div>
+              <p className="font-body text-muted-foreground mt-4">Loading analytics...</p>
+            </div>
+          ) : analyticsData ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Total Sandwiches Card */}
+              <Card className="border-l-4 border-brand-teal">
+                <CardHeader className="pb-3">
+                  <CardTitle className="font-sub-heading text-sm text-muted-foreground flex items-center gap-2">
+                    <Sandwich className="w-4 h-4" />
+                    Total Sandwiches
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-main-heading text-foreground mb-1">
+                    {analyticsData.totalSandwiches.toLocaleString()}
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    <Star className="w-3 h-3 mr-1" />
-                    Highlight
-                  </Badge>
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Total Impact</h3>
-                <div className="text-3xl font-bold text-primary mb-2">
-                  {analyticsData.totalSandwiches.toLocaleString()}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Sandwiches collected across all locations
-                </p>
-              </CardContent>
-            </Card>
+                  <p className="text-sm font-body text-muted-foreground">
+                    All time collections
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="border-primary shadow-md">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-primary">
-                    <TrendingUp className="w-6 h-6" />
+              {/* Weekly Average Card */}
+              <Card className="border-l-4 border-brand-orange">
+                <CardHeader className="pb-3">
+                  <CardTitle className="font-sub-heading text-sm text-muted-foreground flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    Weekly Average
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-main-heading text-foreground mb-1">
+                    {analyticsData.avgWeekly.toLocaleString()}
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    <Star className="w-3 h-3 mr-1" />
-                    Highlight
-                  </Badge>
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Weekly Average</h3>
-                <div className="text-3xl font-bold text-primary mb-2">
-                  {analyticsData.avgWeekly.toLocaleString()}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Average sandwiches per week
-                </p>
-              </CardContent>
-            </Card>
+                  <p className="text-sm font-body text-muted-foreground">
+                    Per week average
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="border-primary shadow-md">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-primary">
-                    <Crown className="w-6 h-6" />
+              {/* Record Week Card */}
+              <Card className="border-l-4 border-brand-burgundy">
+                <CardHeader className="pb-3">
+                  <CardTitle className="font-sub-heading text-sm text-muted-foreground flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    Record Week
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-main-heading text-foreground mb-1">
+                    {analyticsData.recordWeek ? analyticsData.recordWeek[1].total.toLocaleString() : '0'}
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    <Star className="w-3 h-3 mr-1" />
-                    Highlight
-                  </Badge>
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Record Week</h3>
-                <div className="text-3xl font-bold text-primary mb-2">
-                  {analyticsData.recordWeek ? analyticsData.recordWeek.total.toLocaleString() : '0'}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {analyticsData.recordWeek 
-                    ? `Outstanding performance on ${new Date(analyticsData.recordWeek.date).toLocaleDateString()}`
-                    : 'No record data'
-                  }
-                </p>
-              </CardContent>
-            </Card>
+                  <p className="text-sm font-body text-muted-foreground">
+                    {analyticsData.recordWeek ? new Date(analyticsData.recordWeek[1].date).toLocaleDateString() : 'No data'}
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-primary">
-                    <Target className="w-6 h-6" />
+              {/* Top Performer Card */}
+              <Card className="border-l-4 border-green-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="font-sub-heading text-sm text-muted-foreground flex items-center gap-2">
+                    <Crown className="w-4 h-4" />
+                    Top Performer
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-lg font-sub-heading text-foreground mb-1">
+                    {analyticsData.topPerformer ? analyticsData.topPerformer[0] : 'N/A'}
                   </div>
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Network Strength</h3>
-                <div className="text-3xl font-bold text-primary mb-2">
-                  {analyticsData.activeLocations}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Active collection locations in our network
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-primary">
-                    <Award className="w-6 h-6" />
-                  </div>
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Total Collections</h3>
-                <div className="text-3xl font-bold text-primary mb-2">
-                  {analyticsData.totalCollections.toLocaleString()}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Individual collection events completed
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+                  <p className="text-sm font-body text-muted-foreground">
+                    {analyticsData.topPerformer ? `${analyticsData.topPerformer[1].total.toLocaleString()} sandwiches` : 'No data'}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <BarChart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-sub-heading text-lg text-foreground mb-2">No data available</h3>
+              <p className="font-body text-muted-foreground">Start collecting sandwich data to see analytics</p>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="trends" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Monthly Collection Trends
-              </CardTitle>
-              <CardDescription>
-                Tracking our community's growing impact over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={analyticsData.trendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [value?.toLocaleString(), 'Sandwiches']}
-                      labelFormatter={(label) => `Month: ${label}`}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="sandwiches" 
-                      stroke="#3B82F6" 
-                      strokeWidth={3}
-                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Growth Pattern Analysis</CardTitle>
-              <CardDescription>Understanding our momentum cycles</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analyticsData.trendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="sandwiches" fill="#00C49F" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="trends" className="mt-6">
+          {analyticsData && analyticsData.trendData.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-sub-heading text-lg text-foreground">Monthly Trends</CardTitle>
+                <CardDescription className="font-body text-muted-foreground">
+                  Sandwich collection trends over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={analyticsData.trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="month" 
+                        stroke="#6b7280"
+                        fontSize={12}
+                        fontFamily="Roboto"
+                      />
+                      <YAxis 
+                        stroke="#6b7280"
+                        fontSize={12}
+                        fontFamily="Roboto"
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontFamily: 'Roboto'
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="sandwiches" 
+                        stroke="#007EBC" 
+                        strokeWidth={3}
+                        dot={{ fill: '#007EBC', strokeWidth: 2, r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="text-center py-12">
+              <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-sub-heading text-lg text-foreground mb-2">No trend data</h3>
+              <p className="font-body text-muted-foreground">Collect more data to see trends</p>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="insights" className="space-y-6">
-          <div className="grid gap-4">
+        <TabsContent value="performance" className="mt-6">
+          {analyticsData && analyticsData.hostStats && Object.keys(analyticsData.hostStats).length > 0 ? (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Back-to-School Season
-                </CardTitle>
+                <CardTitle className="font-sub-heading text-lg text-foreground">Host Performance</CardTitle>
+                <CardDescription className="font-body text-muted-foreground">
+                  Top performing hosts by sandwich count
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Historical Pattern</h4>
-                  <p className="text-sm text-muted-foreground">September traditionally shows strong community engagement</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Growth Opportunity</h4>
-                  <p className="text-sm text-primary">Early fall presents excellent momentum-building opportunities</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Strategic Context</h4>
-                  <p className="text-sm text-muted-foreground">Families returning from summer often seek ways to reconnect with community service</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Holiday Season
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Historical Pattern</h4>
-                  <p className="text-sm text-muted-foreground">November-December historically sees increased generosity</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Growth Opportunity</h4>
-                  <p className="text-sm text-primary">Holiday spirit creates natural partnership opportunities</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Strategic Context</h4>
-                  <p className="text-sm text-muted-foreground">Corporate giving programs and family traditions align with our mission</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Spring Awakening
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Historical Pattern</h4>
-                  <p className="text-sm text-muted-foreground">March-April shows renewed community activity</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Growth Opportunity</h4>
-                  <p className="text-sm text-primary">Spring energy provides natural growth momentum</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Strategic Context</h4>
-                  <p className="text-sm text-muted-foreground">Warmer weather and longer days boost volunteer engagement</p>
+              <CardContent>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={Object.entries(analyticsData.hostStats).map(([host, stats]) => ({
+                      host,
+                      sandwiches: stats.total,
+                      collections: stats.collections
+                    })).sort((a, b) => b.sandwiches - a.sandwiches).slice(0, 10)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="host" 
+                        stroke="#6b7280"
+                        fontSize={12}
+                        fontFamily="Roboto"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis 
+                        stroke="#6b7280"
+                        fontSize={12}
+                        fontFamily="Roboto"
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontFamily: 'Roboto'
+                        }}
+                      />
+                      <Bar 
+                        dataKey="sandwiches" 
+                        fill="#007EBC"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="opportunities" className="space-y-6">
-          <div className="grid gap-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="text-primary mt-1">
-                    <Lightbulb className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-2">Network Expansion</h3>
-                    <p className="text-muted-foreground mb-3">Our proven model could benefit additional communities</p>
-                    <div className="flex items-center gap-2 text-sm text-primary">
-                      <ChevronUp className="w-4 h-4" />
-                      <strong>Next Step:</strong> Identify 2-3 neighboring areas for pilot programs
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="text-primary mt-1">
-                    <Lightbulb className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-2">Partnership Development</h3>
-                    <p className="text-muted-foreground mb-3">Corporate partnerships could amplify our impact</p>
-                    <div className="flex items-center gap-2 text-sm text-primary">
-                      <ChevronUp className="w-4 h-4" />
-                      <strong>Next Step:</strong> Explore partnerships with local businesses for employee engagement
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className="text-primary mt-1">
-                    <Lightbulb className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-2">Recognition Programs</h3>
-                    <p className="text-muted-foreground mb-3">Celebrating successes builds momentum</p>
-                    <div className="flex items-center gap-2 text-sm text-primary">
-                      <ChevronUp className="w-4 h-4" />
-                      <strong>Next Step:</strong> Create quarterly recognition events for top contributors
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          ) : (
+            <div className="text-center py-12">
+              <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-sub-heading text-lg text-foreground mb-2">No performance data</h3>
+              <p className="font-body text-muted-foreground">Host performance data will appear here</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

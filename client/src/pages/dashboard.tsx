@@ -144,11 +144,11 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl">
-                <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="flex items-center justify-center w-12 h-12 bg-brand-teal-light rounded-xl">
+                <FileText className="w-6 h-6 text-brand-teal" />
               </div>
               <div>
-                <h1 className="text-2xl font-main-heading text-primary dark:text-secondary">Group Toolkit</h1>
+                <h1 className="text-2xl font-main-heading text-primary">Group Toolkit</h1>
                 <p className="font-body text-muted-foreground">Essential training documents and resources</p>
               </div>
             </div>
@@ -209,21 +209,21 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center space-x-3">
-                      <FileText className="w-8 h-8 text-primary" />
+                      <FileText className="w-8 h-8 text-brand-teal" />
                       <div>
-                        <h3 className="text-lg font-main-heading text-foreground">{doc.title}</h3>
-                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                          doc.category === 'Safety' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
-                          doc.category === 'Training' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
-                          doc.category === 'Resources' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
-                          'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
+                        <h3 className="text-lg font-sub-heading text-foreground">{doc.title}</h3>
+                        <span className={`inline-block px-2 py-1 text-xs font-body rounded-full ${
+                          doc.category === 'Safety' ? 'bg-red-100 text-red-800' :
+                          doc.category === 'Training' ? 'bg-brand-teal-light text-brand-teal' :
+                          doc.category === 'Resources' ? 'bg-green-100 text-green-800' :
+                          'bg-brand-orange-light text-brand-orange'
                         }`}>
                           {doc.category}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">{doc.description}</p>
+                  <p className="text-sm font-body text-muted-foreground mb-4">{doc.description}</p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
@@ -232,14 +232,14 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
                         link.download = doc.title;
                         link.click();
                       }}
-                      className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary bg-secondary/20 rounded-lg hover:bg-secondary/40 transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 text-sm font-sub-heading text-brand-teal bg-brand-teal-light rounded-lg hover:bg-brand-teal-hover hover:text-white transition-colors"
                     >
                       <FileText className="w-4 h-4" />
                       Download
                     </button>
                     <button
                       onClick={() => window.open(doc.path, '_blank')}
-                      className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 text-sm font-body text-muted-foreground bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                     >
                       View
                     </button>
@@ -263,13 +263,13 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
         return (
           <div className="p-6">
             <div className="mb-6">
-              <h1 className="text-2xl font-main-heading text-primary dark:text-secondary">Analytics Dashboard</h1>
+              <h1 className="text-2xl font-main-heading text-primary">Analytics Dashboard</h1>
               <p className="font-body text-muted-foreground">Data insights and impact visualization</p>
             </div>
             <Tabs defaultValue="data" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="data">Data Analytics</TabsTrigger>
-                <TabsTrigger value="impact">Impact Dashboard</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 bg-muted">
+                <TabsTrigger value="data" className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">Data Analytics</TabsTrigger>
+                <TabsTrigger value="impact" className="font-sub-heading data-[state=active]:bg-brand-teal data-[state=active]:text-white">Impact Dashboard</TabsTrigger>
               </TabsList>
               <TabsContent value="data" className="mt-6">
                 <AnalyticsDashboard />
@@ -296,12 +296,12 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl" style={{backgroundColor: 'var(--tsp-teal-light)'}}>
-                <MessageCircle className="w-6 h-6" style={{color: 'var(--tsp-teal)'}} />
+              <div className="flex items-center justify-center w-12 h-12 bg-brand-teal-light rounded-xl">
+                <MessageCircle className="w-6 h-6 text-brand-teal" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Committee Communications</h1>
-                <p className="text-gray-600 dark:text-gray-300">Internal committee discussions and collaboration</p>
+                <h1 className="text-2xl font-main-heading text-primary">Committee Communications</h1>
+                <p className="font-body text-muted-foreground">Internal committee discussions and collaboration</p>
               </div>
             </div>
             <CommitteeChat />
@@ -332,27 +332,27 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
       {/* Announcement Banner */}
       <AnnouncementBanner />
       
-      {/* Top Header */}
+      {/* Top Header with TSP Branding */}
       <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-3">
           {/* Mobile menu button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-brand-teal-light hover:text-brand-teal transition-colors"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <img src={sandwichLogo} alt="Sandwich Logo" className="w-6 h-6" />
-          <h1 className="text-lg font-semibold text-slate-900 hidden sm:block">The Sandwich Project</h1>
-          <h1 className="text-sm font-semibold text-slate-900 sm:hidden">TSP</h1>
+          <h1 className="text-lg font-main-heading text-primary hidden sm:block">The Sandwich Project</h1>
+          <h1 className="text-sm font-main-heading text-primary sm:hidden">TSP</h1>
         </div>
         <div className="flex items-center space-x-2 sm:space-x-4">
           <button
             onClick={() => setActiveSection("messages")}
             className={`p-2 rounded-lg transition-colors ${
               activeSection === "messages"
-                ? "bg-blue-50 text-blue-700 border border-blue-200"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-brand-teal-light text-brand-teal border border-brand-teal"
+                : "text-slate-600 hover:bg-brand-teal-light hover:text-brand-teal"
             }`}
             title="Messages"
           >
@@ -363,8 +363,8 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
             onClick={() => setActiveSection("profile")}
             className={`p-2 rounded-lg transition-colors ${
               activeSection === "profile"
-                ? "bg-blue-50 text-blue-700 border border-blue-200"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-brand-teal-light text-brand-teal border border-brand-teal"
+                : "text-slate-600 hover:bg-brand-teal-light hover:text-brand-teal"
             }`}
             title="Account Settings"
           >
@@ -387,7 +387,7 @@ export default function Dashboard({ initialSection = "dashboard", projectId: ini
                 window.location.href = "/";
               }
             }}
-            className="flex items-center space-x-2 px-2 sm:px-3 py-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-colors"
+            className="flex items-center space-x-2 px-2 sm:px-3 py-2 text-slate-600 hover:text-brand-teal rounded-lg hover:bg-brand-teal-light transition-colors font-body"
           >
             <LogOut className="w-4 h-4" />
             <span className="text-sm hidden sm:block">Logout</span>
