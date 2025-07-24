@@ -17,6 +17,7 @@ import { supabase } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { groupMessagesIntoThreads, ThreadedMessage } from "@/lib/message-threads";
 import { InboxMessageThread } from "@/components/inbox-message-thread";
+import { InboxMessageDetail } from "@/components/inbox-message-detail";
 import { 
   Inbox as InboxIcon, 
   MessageCircle, 
@@ -100,6 +101,7 @@ export default function InboxPage() {
   
   const [selectedTab, setSelectedTab] = useState("all");
   const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
+  const [selectedThread, setSelectedThread] = useState<ThreadedMessage | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showComposer, setShowComposer] = useState(false);
   const [replyContent, setReplyContent] = useState("");
@@ -212,6 +214,10 @@ export default function InboxPage() {
       if (!searchMatch) return false;
     }
 
+    // For threading, we need to include messages that are part of a conversation
+    // even if they were sent by the user
+    const isPartOfThread = msg.reply_to_id || messages.some(m => m.reply_to_id === msg.id);
+
     // Apply tab filter
     switch (selectedTab) {
       case "sent":
@@ -219,22 +225,61 @@ export default function InboxPage() {
       case "unread":
         return !msg.is_read && !msg.is_sent_by_user; // Show only received unread messages
       case "direct":
-        return msg.message_type === 'direct' && !msg.is_sent_by_user;
+        return msg.message_type === 'direct' && (!msg.is_sent_by_user || isPartOfThread);
       case "group":
-        return msg.message_type === 'group' && !msg.is_sent_by_user;
+        return msg.message_type === 'group' && (!msg.is_sent_by_user || isPartOfThread);
       default: // "all"
-        return !msg.is_sent_by_user; // Show only received messages in "All" tab
+        // Include sent messages if they're part of a thread
+        return !msg.is_sent_by_user || isPartOfThread;
     }
   });
 
-  // Group and sort messages: unread first (newest to oldest), then read (newest to oldest)
-  const sortedMessages = [
-    ...filteredMessages.filter(msg => !msg.is_read && !msg.is_sent_by_user).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    ...filteredMessages.filter(msg => msg.is_read || msg.is_sent_by_user).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  ];
-
   // Group filtered messages into threads
   const threadedMessages = groupMessagesIntoThreads(filteredMessages);
+  
+  // Update selected thread when messages change
+  useEffect(() => {
+    if (selectedThread && threadedMessages.length > 0) {
+      // Find the updated thread that matches our selected thread
+      const updatedThread = threadedMessages.find(t => t.id === selectedThread.id);
+      if (updatedThread) {
+        setSelectedThread(updatedThread);
+      }
+    }
+  }, [messages]); // Re-run when messages change
+  
+  // Sort threads: threads with unread messages first, then by most recent activity
+  const sortedThreads = threadedMessages.sort((a, b) => {
+    const aHasUnread = hasUnreadInThread(a);
+    const bHasUnread = hasUnreadInThread(b);
+    
+    // If one has unread and the other doesn't, unread comes first
+    if (aHasUnread && !bHasUnread) return -1;
+    if (!aHasUnread && bHasUnread) return 1;
+    
+    // Otherwise sort by most recent message time
+    const aMostRecent = getMostRecentMessageTime(a);
+    const bMostRecent = getMostRecentMessageTime(b);
+    return bMostRecent.getTime() - aMostRecent.getTime();
+  });
+  
+  // Helper function to check if thread has unread messages
+  function hasUnreadInThread(thread: ThreadedMessage): boolean {
+    if (!thread.is_read && !thread.is_sent_by_user) return true;
+    return thread.replies.some(reply => hasUnreadInThread(reply));
+  }
+  
+  // Helper function to get most recent message time in thread
+  function getMostRecentMessageTime(thread: ThreadedMessage): Date {
+    let mostRecent = new Date(thread.created_at);
+    thread.replies.forEach(reply => {
+      const replyTime = getMostRecentMessageTime(reply);
+      if (replyTime > mostRecent) {
+        mostRecent = replyTime;
+      }
+    });
+    return mostRecent;
+  }
 
   // Calculate unread count for RECEIVED messages only (exclude sent messages)
   const unreadMessages = messages.filter(msg => 
@@ -324,30 +369,65 @@ export default function InboxPage() {
   };
 
   const handleReply = async () => {
-    if (!replyContent.trim() || !selectedMessage) return;
+    if (!replyContent.trim() || (!selectedMessage && !selectedThread)) return;
+
+    const messageToReply = selectedThread || selectedMessage;
+    if (!messageToReply) return;
 
     try {
-      if (selectedMessage.message_type === 'direct') {
+      // Get the most recent message in the thread to reply to
+      const getMostRecentId = (msg: any): number => {
+        if (!msg.replies || msg.replies.length === 0) return msg.id;
+        let mostRecent = msg;
+        const findMostRecent = (m: any) => {
+          if (new Date(m.created_at) > new Date(mostRecent.created_at)) {
+            mostRecent = m;
+          }
+          m.replies?.forEach(findMostRecent);
+        };
+        msg.replies.forEach(findMostRecent);
+        return mostRecent.id;
+      };
+
+      const replyToId = getMostRecentId(messageToReply);
+
+      if (messageToReply.message_type === 'direct') {
+        // Determine the correct recipient for the reply
+        let recipientId;
+        if (messageToReply.is_sent_by_user) {
+          // If replying to our own message, send to the same recipient
+          recipientId = messageToReply.recipient_id;
+        } else {
+          // If replying to a received message, send back to the sender
+          recipientId = messageToReply.user_id;
+        }
+        
+        console.log('Sending reply to recipient:', recipientId, 'with reply_to_id:', replyToId);
+        
         await sendMessage({
           content: replyContent,
           message_type: 'direct',
-          recipient_id: selectedMessage.is_sent_by_user ? selectedMessage.recipient_id : selectedMessage.user_id,
-          subject: selectedMessage.subject ? `Re: ${selectedMessage.subject}` : undefined,
-          priority: selectedMessage.priority,
-          reply_to_id: selectedMessage.id // Add reply_to_id for threading
+          recipient_id: recipientId,
+          subject: messageToReply.subject ? `Re: ${messageToReply.subject}` : undefined,
+          priority: messageToReply.priority,
+          reply_to_id: replyToId // Reply to the most recent message in thread
         });
-      } else if (selectedMessage.conversation_id) {
+      } else if (messageToReply.conversation_id) {
         await sendMessage({
           content: replyContent,
           message_type: 'group',
-          conversation_id: selectedMessage.conversation_id,
-          priority: selectedMessage.priority,
-          reply_to_id: selectedMessage.id // Add reply_to_id for threading
+          conversation_id: messageToReply.conversation_id,
+          priority: messageToReply.priority,
+          reply_to_id: replyToId // Reply to the most recent message in thread
         });
       }
 
       setReplyContent("");
       toast({ title: "Reply sent", description: "Your reply has been delivered." });
+      
+      // Refetch messages to show the new reply
+      await refetch();
+      console.log('Reply sent and messages refetched');
       
     } catch (error) {
       console.error('Failed to send reply:', error);
@@ -605,7 +685,7 @@ export default function InboxPage() {
                 <div className="space-y-2">
                   {isLoading ? (
                     <div className="text-center py-8 text-gray-500">Loading messages...</div>
-                  ) : sortedMessages.length === 0 ? (
+                  ) : sortedThreads.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <InboxIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                       <div className="text-lg font-medium mb-2">No messages</div>
@@ -614,6 +694,20 @@ export default function InboxPage() {
                       </div>
                     </div>
                   ) : (
+                    sortedThreads.map((thread) => (
+                      <InboxMessageThread
+                        key={thread.id}
+                        thread={thread}
+                        selectedMessageId={selectedMessage?.id || null}
+                        onSelectMessage={(msg) => {
+                          setSelectedMessage(msg as any);
+                          setSelectedThread(thread);
+                        }}
+                        getUserDisplayName={getUserDisplayName}
+                        currentUserId={user?.id || ''}
+                      />
+                    ))
+                    /* TEMP - old single message display
                     sortedMessages.map((message) => (
                       <Card 
                         key={message.id}
@@ -680,6 +774,7 @@ export default function InboxPage() {
                         </CardContent>
                       </Card>
                     ))
+                    */
                   )}
                 </div>
               </ScrollArea>
@@ -689,7 +784,17 @@ export default function InboxPage() {
 
         {/* Message Detail */}
         <div className="lg:col-span-2">
-          {selectedMessage ? (
+          {selectedThread ? (
+            <InboxMessageDetail
+              thread={selectedThread}
+              replyContent={replyContent}
+              onReplyContentChange={setReplyContent}
+              onReply={handleReply}
+              onMarkAsRead={handleMarkAsRead}
+              getUserDisplayName={getUserDisplayName}
+              currentUserId={user?.id || ''}
+            />
+          ) : selectedMessage ? (
             <Card className="h-full">
               <CardHeader>
                 <div className="flex items-center justify-between">
