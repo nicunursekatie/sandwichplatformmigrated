@@ -214,6 +214,10 @@ export default function InboxPage() {
       if (!searchMatch) return false;
     }
 
+    // For threading, we need to include messages that are part of a conversation
+    // even if they were sent by the user
+    const isPartOfThread = msg.reply_to_id || messages.some(m => m.reply_to_id === msg.id);
+
     // Apply tab filter
     switch (selectedTab) {
       case "sent":
@@ -221,16 +225,28 @@ export default function InboxPage() {
       case "unread":
         return !msg.is_read && !msg.is_sent_by_user; // Show only received unread messages
       case "direct":
-        return msg.message_type === 'direct' && !msg.is_sent_by_user;
+        return msg.message_type === 'direct' && (!msg.is_sent_by_user || isPartOfThread);
       case "group":
-        return msg.message_type === 'group' && !msg.is_sent_by_user;
+        return msg.message_type === 'group' && (!msg.is_sent_by_user || isPartOfThread);
       default: // "all"
-        return !msg.is_sent_by_user; // Show only received messages in "All" tab
+        // Include sent messages if they're part of a thread
+        return !msg.is_sent_by_user || isPartOfThread;
     }
   });
 
   // Group filtered messages into threads
   const threadedMessages = groupMessagesIntoThreads(filteredMessages);
+  
+  // Update selected thread when messages change
+  useEffect(() => {
+    if (selectedThread && threadedMessages.length > 0) {
+      // Find the updated thread that matches our selected thread
+      const updatedThread = threadedMessages.find(t => t.id === selectedThread.id);
+      if (updatedThread) {
+        setSelectedThread(updatedThread);
+      }
+    }
+  }, [messages]); // Re-run when messages change
   
   // Sort threads: threads with unread messages first, then by most recent activity
   const sortedThreads = threadedMessages.sort((a, b) => {
@@ -376,10 +392,22 @@ export default function InboxPage() {
       const replyToId = getMostRecentId(messageToReply);
 
       if (messageToReply.message_type === 'direct') {
+        // Determine the correct recipient for the reply
+        let recipientId;
+        if (messageToReply.is_sent_by_user) {
+          // If replying to our own message, send to the same recipient
+          recipientId = messageToReply.recipient_id;
+        } else {
+          // If replying to a received message, send back to the sender
+          recipientId = messageToReply.user_id;
+        }
+        
+        console.log('Sending reply to recipient:', recipientId, 'with reply_to_id:', replyToId);
+        
         await sendMessage({
           content: replyContent,
           message_type: 'direct',
-          recipient_id: messageToReply.is_sent_by_user ? messageToReply.recipient_id : messageToReply.user_id,
+          recipient_id: recipientId,
           subject: messageToReply.subject ? `Re: ${messageToReply.subject}` : undefined,
           priority: messageToReply.priority,
           reply_to_id: replyToId // Reply to the most recent message in thread
@@ -396,6 +424,10 @@ export default function InboxPage() {
 
       setReplyContent("");
       toast({ title: "Reply sent", description: "Your reply has been delivered." });
+      
+      // Refetch messages to show the new reply
+      await refetch();
+      console.log('Reply sent and messages refetched');
       
     } catch (error) {
       console.error('Failed to send reply:', error);
