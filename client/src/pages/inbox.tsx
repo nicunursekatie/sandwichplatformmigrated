@@ -240,17 +240,18 @@ export default function InboxPage() {
   
   // Update selected thread when messages change
   useEffect(() => {
-    if (selectedThread && threadedMessages.length > 0) {
-      // Find the updated thread that matches our selected thread
-      const updatedThread = threadedMessages.find(t => t.id === selectedThread.id);
-      if (updatedThread) {
-        setSelectedThread(updatedThread);
+    if (selectedThread) {
+      // Find if the selected thread still exists in the current messages
+      const threadStillExists = messages.some(m => m.id === selectedThread.id);
+      if (!threadStillExists) {
+        // Thread was deleted, clear selection
+        setSelectedThread(null);
       }
     }
-  }, [messages]); // Re-run when messages change
+  }, [messages, selectedThread?.id]); // Re-run when messages change
   
   // Sort threads: threads with unread messages first, then by most recent activity
-  const sortedThreads = threadedMessages.sort((a, b) => {
+  const sortedThreads = [...threadedMessages].sort((a, b) => {
     const aHasUnread = hasUnreadInThread(a);
     const bHasUnread = hasUnreadInThread(b);
     
