@@ -767,7 +767,7 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
             onClick={() => setShowProjectEdit(true)}
             className="font-body hover:bg-brand-teal-light hover:text-brand-teal"
           >
-            <Edit className="w-4 h-4 mr-2" />
+            <Edit3 className="w-4 h-4 mr-2" />
             Edit
           </Button>
           <Button 
@@ -959,7 +959,7 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditTask(task)}>
-                            <Edit className="w-4 h-4 mr-2" />
+                            <Edit3 className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem 
