@@ -1,6 +1,19 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sandwich, Calendar, User, Users, Edit, Trash2, Upload, AlertTriangle, Scan, Square, CheckSquare, Filter, X, ArrowUp, ArrowDown, Download, Plus, Database } from "lucide-react";
+
+// Simple debounce function to prevent excessive API calls
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -89,6 +102,14 @@ export default function SandwichCollectionLog() {
     sandwich_count_max: "",
     collection_type: "all" as "all" | "individual" | "group" | "both"
   });
+  
+  // Create debounced filter change function
+  const debouncedFilterChange = useCallback(
+    debounce((filters: typeof searchFilters) => {
+      setSearchFilters(filters);
+    }, 300),
+    []
+  );
   
   // Debug log for filter changes
   useEffect(() => {
@@ -1158,8 +1179,26 @@ export default function SandwichCollectionLog() {
     setCurrentPage(1);
   };
 
+  // Updated filter change handlers with debouncing and event prevention
+  const handleDateInputChange = useCallback((field: keyof typeof searchFilters, value: string, event?: React.ChangeEvent<HTMLInputElement>) => {
+    // Prevent form submission and page refresh
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    const newFilters = {
+      ...searchFilters,
+      [field]: value
+    };
+    
+    // Use debounced function to prevent excessive API calls
+    debouncedFilterChange(newFilters);
+  }, [searchFilters, debouncedFilterChange]);
+
   const handleFilterChange = (filterUpdates: Partial<typeof searchFilters>) => {
-    setSearchFilters(prev => ({ ...prev, ...filterUpdates }));
+    const newFilters = { ...searchFilters, ...filterUpdates };
+    debouncedFilterChange(newFilters);
     setCurrentPage(1);
   };
 
@@ -1198,7 +1237,7 @@ export default function SandwichCollectionLog() {
   };
 
   const handleClearFilters = () => {
-    setSearchFilters({
+    const clearedFilters = {
       host_name: "",
       collection_date_from: "",
       collection_date_to: "",
@@ -1206,8 +1245,11 @@ export default function SandwichCollectionLog() {
       created_at_to: "",
       sandwich_count_min: "",
       sandwich_count_max: "",
-      collection_type: "all"
-    });
+      collection_type: "all" as "all" | "individual" | "group" | "both"
+    };
+    
+    // Use direct setState instead of debounced function for immediate clear
+    setSearchFilters(clearedFilters);
     setSortConfig({
       field: "collection_date",
       direction: "desc"
@@ -1613,7 +1655,15 @@ export default function SandwichCollectionLog() {
                 id="collectionFromDate"
                 type="date"
                 value={searchFilters.collection_date_from}
-                onChange={(e) => handleFilterChange({ collection_date_from: e.target.value })}
+                onChange={(e) => {
+                  e.preventDefault();
+                  handleDateInputChange('collection_date_from', e.target.value, e);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
                 className="mt-1"
               />
             </div>
@@ -1623,7 +1673,15 @@ export default function SandwichCollectionLog() {
                 id="collectionToDate"
                 type="date"
                 value={searchFilters.collection_date_to}
-                onChange={(e) => handleFilterChange({ collection_date_to: e.target.value })}
+                onChange={(e) => {
+                  e.preventDefault();
+                  handleDateInputChange('collection_date_to', e.target.value, e);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
                 className="mt-1"
               />
             </div>
@@ -1633,7 +1691,15 @@ export default function SandwichCollectionLog() {
                 id="createdFromDate"
                 type="date"
                 value={searchFilters.created_at_from}
-                onChange={(e) => handleFilterChange({ created_at_from: e.target.value })}
+                onChange={(e) => {
+                  e.preventDefault();
+                  handleDateInputChange('created_at_from', e.target.value, e);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
                 className="mt-1"
               />
             </div>
@@ -1643,7 +1709,15 @@ export default function SandwichCollectionLog() {
                 id="createdToDate"
                 type="date"
                 value={searchFilters.created_at_to}
-                onChange={(e) => handleFilterChange({ created_at_to: e.target.value })}
+                onChange={(e) => {
+                  e.preventDefault();
+                  handleDateInputChange('created_at_to', e.target.value, e);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
                 className="mt-1"
               />
             </div>
@@ -1654,7 +1728,14 @@ export default function SandwichCollectionLog() {
                 type="number"
                 placeholder="0"
                 value={searchFilters.sandwich_count_min}
-                onChange={(e) => handleFilterChange({ sandwich_count_min: e.target.value })}
+                onChange={(e) => {
+                  handleFilterChange({ sandwich_count_min: e.target.value });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
                 className="mt-1"
               />
             </div>
@@ -1665,7 +1746,14 @@ export default function SandwichCollectionLog() {
                 type="number"
                 placeholder="Any"
                 value={searchFilters.sandwich_count_max}
-                onChange={(e) => handleFilterChange({ sandwich_count_max: e.target.value })}
+                onChange={(e) => {
+                  handleFilterChange({ sandwich_count_max: e.target.value });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                  }
+                }}
                 className="mt-1"
               />
             </div>

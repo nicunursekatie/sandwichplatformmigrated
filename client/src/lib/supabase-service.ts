@@ -189,14 +189,38 @@ export const sandwichCollectionService = {
     individual_min?: number;
     individual_max?: number;
   }) {
+    console.log('🔍 Filtering with params:', filters);
+    
+    // Ensure proper date format
+    let collection_date_from = filters.collection_date_from;
+    let collection_date_to = filters.collection_date_to;
+    
+    if (collection_date_from) {
+      const fromDate = new Date(collection_date_from);
+      collection_date_from = fromDate.toISOString().split('T')[0];
+      console.log('📅 Added collection date filter from:', collection_date_from);
+    }
+    
+    if (collection_date_to) {
+      const toDate = new Date(collection_date_to);
+      collection_date_to = toDate.toISOString().split('T')[0];
+      console.log('📅 Added collection date filter to:', collection_date_to);
+    }
+    
     const { data, error } = await supabase.rpc('get_collection_stats_filtered', {
       host_name: filters.host_name || null,
-      collection_date_from: filters.collection_date_from || null,
-      collection_date_to: filters.collection_date_to || null,
+      collection_date_from: collection_date_from || null,
+      collection_date_to: collection_date_to || null,
       individual_min: filters.individual_min ?? null,
       individual_max: filters.individual_max ?? null,
     });
-    if (error) handleError(error, 'get filtered collection stats');
+    
+    if (error) {
+      console.error('❌ Filter query error:', error);
+      handleError(error, 'get filtered collection stats');
+    }
+    
+    console.log('✅ Filtered results:', { count: data?.length, data: data?.slice(0, 3) });
     return data;
   },
 
