@@ -2,18 +2,6 @@ import React, { useState, useRef, useMemo, useCallback, useEffect } from "react"
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Sandwich, Calendar, User, Users, Edit, Trash2, Upload, AlertTriangle, Scan, Square, CheckSquare, Filter, X, ArrowUp, ArrowDown, Download, Plus, Database } from "lucide-react";
 
-// Simple debounce function to prevent excessive API calls
-const debounce = (func: Function, wait: number) => {
-  let timeout: NodeJS.Timeout;
-  return function executedFunction(...args: any[]) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
 import sandwichLogo from "@assets/LOGOS/LOGOS/sandwich logo.png";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -103,13 +91,13 @@ export default function SandwichCollectionLog() {
     collection_type: "all" as "all" | "individual" | "group" | "both"
   });
   
-  // Create debounced filter change function
-  const debouncedFilterChange = useCallback(
-    debounce((filters: typeof searchFilters) => {
-      setSearchFilters(filters);
-    }, 300),
-    []
-  );
+  // Remove debouncing - not needed since we're updating state immediately
+  // const debouncedFilterChange = useCallback(
+  //   debounce((filters: typeof searchFilters) => {
+  //     setSearchFilters(filters);
+  //   }, 300),
+  //   []
+  // );
   
   // Debug log for filter changes
   useEffect(() => {
@@ -1209,17 +1197,17 @@ export default function SandwichCollectionLog() {
 
   const handleFilterChange = (filterUpdates: Partial<typeof searchFilters>) => {
     const newFilters = { ...searchFilters, ...filterUpdates };
-    // Use debounced function only for non-date filters
-    debouncedFilterChange(newFilters);
+    // Apply filters immediately without debouncing
+    setSearchFilters(newFilters);
     setCurrentPage(1);
   };
 
   // Handler for text inputs that benefit from debouncing
   const handleTextFilterChange = useCallback((filterUpdates: Partial<typeof searchFilters>) => {
     const newFilters = { ...searchFilters, ...filterUpdates };
-    debouncedFilterChange(newFilters);
+    setSearchFilters(newFilters);
     setCurrentPage(1);
-  }, [searchFilters, debouncedFilterChange]);
+  }, [searchFilters]);
 
   const handleHostFilterSelect = (hostName: string) => {
     handleFilterChange({ host_name: hostName });
@@ -1659,11 +1647,13 @@ export default function SandwichCollectionLog() {
 
       {/* Filter Panel */}
       {showFilters && (
+        <form onSubmit={(e) => e.preventDefault()}>
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
           {/* Quick Filter Presets */}
           <div className="mb-4 pb-4 border-b border-slate-200">
             <div className="flex flex-wrap gap-2">
               <button
+                type="button"
                 onClick={() => handleFilterChange({ host_name: "Groups" })}
                 className={`px-3 py-1 text-xs rounded-full transition-colors ${
                   searchFilters.host_name === "Groups" 
@@ -1674,6 +1664,7 @@ export default function SandwichCollectionLog() {
                 👥 Groups Only
               </button>
               <button
+                type="button"
                 onClick={() => handleFilterChange({ collection_type: "group" })}
                 className={`px-3 py-1 text-xs rounded-full transition-colors ${
                   searchFilters.collection_type === "group" 
@@ -1684,6 +1675,7 @@ export default function SandwichCollectionLog() {
                 📦 Group Collections
               </button>
               <button
+                type="button"
                 onClick={() => handleFilterChange({ collection_type: "individual" })}
                 className={`px-3 py-1 text-xs rounded-full transition-colors ${
                   searchFilters.collection_type === "individual" 
@@ -1694,6 +1686,7 @@ export default function SandwichCollectionLog() {
                 🥪 Individual Only
               </button>
               <button
+                type="button"
                 onClick={() => handleFilterChange({ collection_type: "both" })}
                 className={`px-3 py-1 text-xs rounded-full transition-colors ${
                   searchFilters.collection_type === "both" 
@@ -1704,6 +1697,7 @@ export default function SandwichCollectionLog() {
                 🎯 Mixed Collections
               </button>
               <button
+                type="button"
                 onClick={() => {
                   const lastWeek = new Date();
                   lastWeek.setDate(lastWeek.getDate() - 7);
@@ -1717,6 +1711,7 @@ export default function SandwichCollectionLog() {
                 📅 Last 7 Days
               </button>
               <button
+                type="button"
                 onClick={() => {
                   const lastMonth = new Date();
                   lastMonth.setMonth(lastMonth.getMonth() - 1);
@@ -1937,6 +1932,7 @@ export default function SandwichCollectionLog() {
             </Button>
           </div>
         </div>
+        </form>
       )}
 
       {/* Top Pagination Controls */}
