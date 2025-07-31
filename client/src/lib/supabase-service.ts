@@ -196,35 +196,85 @@ export const sandwichCollectionService = {
       let collection_date_from = filters.collection_date_from;
       let collection_date_to = filters.collection_date_to;
       
-      // Validate and fix date formats
+      // Validate and fix date formats with better validation
       if (collection_date_from) {
-        // Check if it's already in YYYY-MM-DD format
+        console.log('🔍 Raw collection_date_from:', collection_date_from, typeof collection_date_from);
+        
+        // Check if it's already in YYYY-MM-DD format and valid
         if (collection_date_from.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          console.log('📅 Collection date from already in correct format:', collection_date_from);
-        } else {
-          const fromDate = new Date(collection_date_from);
-          if (!isNaN(fromDate.getTime())) {
-            collection_date_from = fromDate.toISOString().split('T')[0];
-            console.log('📅 Added collection date filter from:', collection_date_from);
+          // Additional check to ensure it's not a malformed date like "0002-09-15"
+          const year = parseInt(collection_date_from.split('-')[0]);
+          if (year >= 1900 && year <= 2100) {
+            console.log('📅 Collection date from already in correct format:', collection_date_from);
           } else {
-            console.warn('Invalid date format for collection_date_from:', filters.collection_date_from);
-            collection_date_from = null;
+            console.warn('Invalid year in collection_date_from:', collection_date_from);
+            collection_date_from = undefined;
+          }
+        } else {
+          // Try to parse the date more carefully
+          const dateStr = String(collection_date_from).trim();
+          
+          // Handle common date formats
+          let parsedDate = null;
+          if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+            // MM/DD/YYYY or M/D/YYYY format
+            const [month, day, year] = dateStr.split('/');
+            parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          } else if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+            // YYYY-MM-DD or similar
+            parsedDate = new Date(dateStr);
+          } else {
+            // Try standard parsing as last resort
+            parsedDate = new Date(dateStr);
+          }
+          
+          if (parsedDate && !isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 1900) {
+            collection_date_from = parsedDate.toISOString().split('T')[0];
+            console.log('📅 Converted collection date from:', dateStr, '->', collection_date_from);
+          } else {
+            console.warn('Failed to parse collection_date_from:', dateStr);
+            collection_date_from = undefined;
           }
         }
       }
       
       if (collection_date_to) {
-        // Check if it's already in YYYY-MM-DD format
+        console.log('🔍 Raw collection_date_to:', collection_date_to, typeof collection_date_to);
+        
+        // Check if it's already in YYYY-MM-DD format and valid
         if (collection_date_to.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          console.log('📅 Collection date to already in correct format:', collection_date_to);
-        } else {
-          const toDate = new Date(collection_date_to);
-          if (!isNaN(toDate.getTime())) {
-            collection_date_to = toDate.toISOString().split('T')[0];
-            console.log('📅 Added collection date filter to:', collection_date_to);
+          // Additional check to ensure it's not a malformed date like "0002-09-15"
+          const year = parseInt(collection_date_to.split('-')[0]);
+          if (year >= 1900 && year <= 2100) {
+            console.log('📅 Collection date to already in correct format:', collection_date_to);
           } else {
-            console.warn('Invalid date format for collection_date_to:', filters.collection_date_to);
-            collection_date_to = null;
+            console.warn('Invalid year in collection_date_to:', collection_date_to);
+            collection_date_to = undefined;
+          }
+        } else {
+          // Try to parse the date more carefully
+          const dateStr = String(collection_date_to).trim();
+          
+          // Handle common date formats
+          let parsedDate = null;
+          if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+            // MM/DD/YYYY or M/D/YYYY format
+            const [month, day, year] = dateStr.split('/');
+            parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          } else if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+            // YYYY-MM-DD or similar
+            parsedDate = new Date(dateStr);
+          } else {
+            // Try standard parsing as last resort
+            parsedDate = new Date(dateStr);
+          }
+          
+          if (parsedDate && !isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 1900) {
+            collection_date_to = parsedDate.toISOString().split('T')[0];
+            console.log('📅 Converted collection date to:', dateStr, '->', collection_date_to);
+          } else {
+            console.warn('Failed to parse collection_date_to:', dateStr);
+            collection_date_to = undefined;
           }
         }
       }
@@ -303,7 +353,7 @@ export const sandwichCollectionService = {
           if (collection.group_collections && collection.group_collections !== "[]") {
             const matches = collection.group_collections.match(/(\d+)/g);
             if (matches) {
-              groupTotal += matches.reduce((sum, num) => sum + parseInt(num), 0);
+              groupTotal += matches.reduce((sum: number, num: string) => sum + parseInt(num), 0);
             }
           }
         }
