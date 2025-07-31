@@ -191,111 +191,96 @@ export const sandwichCollectionService = {
   }) {
     console.log('🔍 Filtering with params:', filters);
     
-    try {
-      // Try RPC function first
-      let collection_date_from = filters.collection_date_from;
-      let collection_date_to = filters.collection_date_to;
+    // Validate and fix date formats
+    let collection_date_from = filters.collection_date_from;
+    let collection_date_to = filters.collection_date_to;
+    
+    if (collection_date_from) {
+      console.log('🔍 Raw collection_date_from:', collection_date_from, typeof collection_date_from);
       
-      // Validate and fix date formats with better validation
-      if (collection_date_from) {
-        console.log('🔍 Raw collection_date_from:', collection_date_from, typeof collection_date_from);
-        
-        // Check if it's already in YYYY-MM-DD format and valid
-        if (collection_date_from.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          // Additional check to ensure it's not a malformed date like "0002-09-15"
-          const year = parseInt(collection_date_from.split('-')[0]);
-          if (year >= 1900 && year <= 2100) {
-            console.log('📅 Collection date from already in correct format:', collection_date_from);
-          } else {
-            console.warn('Invalid year in collection_date_from:', collection_date_from);
-            collection_date_from = undefined;
-          }
+      // Check if it's already in YYYY-MM-DD format and valid
+      if (collection_date_from.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Additional check to ensure it's not a malformed date like "0002-09-15"
+        const year = parseInt(collection_date_from.split('-')[0]);
+        if (year >= 1900 && year <= 2100) {
+          console.log('📅 Collection date from already in correct format:', collection_date_from);
         } else {
-          // Try to parse the date more carefully
-          const dateStr = String(collection_date_from).trim();
-          
-          // Handle common date formats
-          let parsedDate = null;
-          if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
-            // MM/DD/YYYY or M/D/YYYY format
-            const [month, day, year] = dateStr.split('/');
-            parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-          } else if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
-            // YYYY-MM-DD or similar
-            parsedDate = new Date(dateStr);
-          } else {
-            // Try standard parsing as last resort
-            parsedDate = new Date(dateStr);
-          }
-          
-          if (parsedDate && !isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 1900) {
-            collection_date_from = parsedDate.toISOString().split('T')[0];
-            console.log('📅 Converted collection date from:', dateStr, '->', collection_date_from);
-          } else {
-            console.warn('Failed to parse collection_date_from:', dateStr);
-            collection_date_from = undefined;
-          }
+          console.warn('Invalid year in collection_date_from:', collection_date_from);
+          collection_date_from = undefined;
+        }
+      } else {
+        // Try to parse the date more carefully
+        const dateStr = String(collection_date_from).trim();
+        
+        // Handle common date formats
+        let parsedDate: Date | null = null;
+        if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+          // MM/DD/YYYY or M/D/YYYY format
+          const [month, day, year] = dateStr.split('/');
+          parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        } else if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+          // YYYY-MM-DD or similar
+          parsedDate = new Date(dateStr);
+        } else {
+          // Try standard parsing as last resort
+          parsedDate = new Date(dateStr);
+        }
+        
+        if (parsedDate && !isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 1900) {
+          collection_date_from = parsedDate.toISOString().split('T')[0];
+          console.log('📅 Converted collection date from:', dateStr, '->', collection_date_from);
+        } else {
+          console.warn('Failed to parse collection_date_from:', dateStr);
+          collection_date_from = undefined;
         }
       }
+    }
+    
+    if (collection_date_to) {
+      console.log('🔍 Raw collection_date_to:', collection_date_to, typeof collection_date_to);
       
-      if (collection_date_to) {
-        console.log('🔍 Raw collection_date_to:', collection_date_to, typeof collection_date_to);
-        
-        // Check if it's already in YYYY-MM-DD format and valid
-        if (collection_date_to.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          // Additional check to ensure it's not a malformed date like "0002-09-15"
-          const year = parseInt(collection_date_to.split('-')[0]);
-          if (year >= 1900 && year <= 2100) {
-            console.log('📅 Collection date to already in correct format:', collection_date_to);
-          } else {
-            console.warn('Invalid year in collection_date_to:', collection_date_to);
-            collection_date_to = undefined;
-          }
+      // Check if it's already in YYYY-MM-DD format and valid
+      if (collection_date_to.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Additional check to ensure it's not a malformed date like "0002-09-15"
+        const year = parseInt(collection_date_to.split('-')[0]);
+        if (year >= 1900 && year <= 2100) {
+          console.log('📅 Collection date to already in correct format:', collection_date_to);
         } else {
-          // Try to parse the date more carefully
-          const dateStr = String(collection_date_to).trim();
-          
-          // Handle common date formats
-          let parsedDate = null;
-          if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
-            // MM/DD/YYYY or M/D/YYYY format
-            const [month, day, year] = dateStr.split('/');
-            parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-          } else if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
-            // YYYY-MM-DD or similar
-            parsedDate = new Date(dateStr);
-          } else {
-            // Try standard parsing as last resort
-            parsedDate = new Date(dateStr);
-          }
-          
-          if (parsedDate && !isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 1900) {
-            collection_date_to = parsedDate.toISOString().split('T')[0];
-            console.log('📅 Converted collection date to:', dateStr, '->', collection_date_to);
-          } else {
-            console.warn('Failed to parse collection_date_to:', dateStr);
-            collection_date_to = undefined;
-          }
+          console.warn('Invalid year in collection_date_to:', collection_date_to);
+          collection_date_to = undefined;
+        }
+      } else {
+        // Try to parse the date more carefully
+        const dateStr = String(collection_date_to).trim();
+        
+        // Handle common date formats
+        let parsedDate: Date | null = null;
+        if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+          // MM/DD/YYYY or M/D/YYYY format
+          const [month, day, year] = dateStr.split('/');
+          parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        } else if (dateStr.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+          // YYYY-MM-DD or similar
+          parsedDate = new Date(dateStr);
+        } else {
+          // Try standard parsing as last resort
+          parsedDate = new Date(dateStr);
+        }
+        
+        if (parsedDate && !isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 1900) {
+          collection_date_to = parsedDate.toISOString().split('T')[0];
+          console.log('📅 Converted collection date to:', dateStr, '->', collection_date_to);
+        } else {
+          console.warn('Failed to parse collection_date_to:', dateStr);
+          collection_date_to = undefined;
         }
       }
+    }
 
-      const { data, error } = await supabase.rpc('get_collection_stats_filtered', {
-        host_name: filters.host_name || null,
-        collection_date_from: collection_date_from || null,
-        collection_date_to: collection_date_to || null,
-        individual_min: filters.individual_min ?? null,
-        individual_max: filters.individual_max ?? null,
-      });
-      
-      if (error) throw error;
-      
-      console.log('✅ RPC Filtered results:', { count: data?.length, data: data?.slice(0, 3) });
-      return data;
-      
-    } catch (error) {
-      console.warn('RPC function not available, using direct query fallback:', error);
-      
-      // Fallback: Use direct database queries to calculate stats
+    // Use direct database queries to calculate stats (skip RPC entirely)
+    console.log('🔄 Using direct query for filtering (RPC functions not available)');
+    
+    try {
       let query = supabase.from('sandwich_collections').select('*');
       
       // Apply filters
@@ -304,14 +289,14 @@ export const sandwichCollectionService = {
         console.log('🏠 Added host name filter:', filters.host_name.trim());
       }
       
-      if (filters.collection_date_from && filters.collection_date_from.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        query = query.gte('collection_date', filters.collection_date_from);
-        console.log('📅 Added collection date from filter:', filters.collection_date_from);
+      if (collection_date_from && collection_date_from.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        query = query.gte('collection_date', collection_date_from);
+        console.log('📅 Added collection date from filter:', collection_date_from);
       }
       
-      if (filters.collection_date_to && filters.collection_date_to.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        query = query.lte('collection_date', filters.collection_date_to);
-        console.log('📅 Added collection date to filter:', filters.collection_date_to);
+      if (collection_date_to && collection_date_to.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        query = query.lte('collection_date', collection_date_to);
+        console.log('📅 Added collection date to filter:', collection_date_to);
       }
       
       if (filters.individual_min !== undefined && filters.individual_min !== null) {
@@ -328,7 +313,7 @@ export const sandwichCollectionService = {
       
       if (queryError) {
         console.error('❌ Direct query error:', queryError);
-        handleError(queryError, 'get filtered collection stats (fallback)');
+        handleError(queryError, 'get filtered collection stats');
       }
       
       // Calculate stats from filtered collections
@@ -365,8 +350,13 @@ export const sandwichCollectionService = {
         group_sandwiches: groupTotal
       }];
       
-      console.log('✅ Fallback filtered results:', { count: result.length, data: result });
+      console.log('✅ Direct query filtered results:', { count: result.length, data: result });
       return result;
+      
+    } catch (error) {
+      console.error('❌ Error in getFilteredCollectionStats:', error);
+      handleError(error, 'get filtered collection stats');
+      return [];
     }
   },
 
@@ -745,4 +735,4 @@ export const supabaseService = {
   meeting: meetingService,
   weeklyReport: weeklyReportService,
   driveLink: driveLinkService
-}; 
+}
