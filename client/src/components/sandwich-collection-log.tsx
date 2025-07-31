@@ -162,6 +162,7 @@ export default function SandwichCollectionLog() {
     queryKey,
     queryFn: useCallback(async () => {
       console.log('Query function called with:', { currentPage, itemsPerPage, searchFilters, sortConfig, hasActiveFilters });
+      console.log('📅 Raw searchFilters.collection_date_from:', searchFilters.collection_date_from);
       
       if (hasActiveFilters) {
         // When filters are active, fetch all collections for accurate client-side filtering
@@ -182,6 +183,13 @@ export default function SandwichCollectionLog() {
         if (searchFilters.collection_date_from && searchFilters.collection_date_from.trim() !== '') {
           console.log('🔍 Frontend filtering - collection_date_from:', searchFilters.collection_date_from);
           const fromDate = searchFilters.collection_date_from.trim();
+          
+          // Debug: Check if the date format is correct
+          const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+          if (!datePattern.test(fromDate)) {
+            console.warn('⚠️ Invalid date format for collection_date_from:', fromDate, 'Expected: YYYY-MM-DD');
+          }
+          
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
             if (!c.collection_date || c.collection_date.trim() === '') return false;
             const collectionDate = c.collection_date.trim();
@@ -1120,6 +1128,8 @@ export default function SandwichCollectionLog() {
       event.stopPropagation();
     }
     
+    console.log(`📅 handleDateInputChange - ${field}:`, value, 'type:', typeof value);
+    
     // Update state immediately for date inputs to prevent reset while typing
     setSearchFilters(prev => ({
       ...prev,
@@ -1687,6 +1697,7 @@ export default function SandwichCollectionLog() {
               <Input
                 id="collectionFromDate"
                 type="date"
+                placeholder="YYYY-MM-DD"
                 value={searchFilters.collection_date_from}
                 onChange={(e) => {
                   e.preventDefault();
@@ -1705,6 +1716,7 @@ export default function SandwichCollectionLog() {
               <Input
                 id="collectionToDate"
                 type="date"
+                placeholder="YYYY-MM-DD"
                 value={searchFilters.collection_date_to}
                 onChange={(e) => {
                   e.preventDefault();
