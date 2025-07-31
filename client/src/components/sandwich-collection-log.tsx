@@ -1179,7 +1179,7 @@ export default function SandwichCollectionLog() {
     setCurrentPage(1);
   };
 
-  // Updated filter change handlers with debouncing and event prevention
+  // Updated filter change handlers with immediate state update for date inputs
   const handleDateInputChange = useCallback((field: keyof typeof searchFilters, value: string, event?: React.ChangeEvent<HTMLInputElement>) => {
     // Prevent form submission and page refresh
     if (event) {
@@ -1187,20 +1187,27 @@ export default function SandwichCollectionLog() {
       event.stopPropagation();
     }
     
-    const newFilters = {
-      ...searchFilters,
+    // Update state immediately for date inputs to prevent reset while typing
+    setSearchFilters(prev => ({
+      ...prev,
       [field]: value
-    };
-    
-    // Use debounced function to prevent excessive API calls
-    debouncedFilterChange(newFilters);
-  }, [searchFilters, debouncedFilterChange]);
+    }));
+    setCurrentPage(1);
+  }, []);
 
   const handleFilterChange = (filterUpdates: Partial<typeof searchFilters>) => {
     const newFilters = { ...searchFilters, ...filterUpdates };
+    // Use debounced function only for non-date filters
     debouncedFilterChange(newFilters);
     setCurrentPage(1);
   };
+
+  // Handler for text inputs that benefit from debouncing
+  const handleTextFilterChange = useCallback((filterUpdates: Partial<typeof searchFilters>) => {
+    const newFilters = { ...searchFilters, ...filterUpdates };
+    debouncedFilterChange(newFilters);
+    setCurrentPage(1);
+  }, [searchFilters, debouncedFilterChange]);
 
   const handleHostFilterSelect = (hostName: string) => {
     handleFilterChange({ host_name: hostName });
@@ -1235,6 +1242,92 @@ export default function SandwichCollectionLog() {
     
     return 0;
   };
+
+  // Reusable pagination component
+  const PaginationControls = ({ className = "" }: { className?: string }) => (
+    <div className={`flex items-center justify-between px-6 py-4 border-slate-200 ${className}`}>
+      <div className="flex items-center space-x-4">
+        <Select value={itemsPerPage.toString()} onValueChange={(value) => {
+          setItemsPerPage(Number(value));
+          setCurrentPage(1);
+        }}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="25">25 per page</SelectItem>
+            <SelectItem value="50">50 per page</SelectItem>
+            <SelectItem value="100">100 per page</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {totalPages > 1 ? (
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+          >
+            First
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+              if (pageNumber > totalPages) return null;
+
+              return (
+                <Button
+                  key={pageNumber}
+                  variant={pageNumber === currentPage ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNumber)}
+                  className="w-10"
+                >
+                  {pageNumber}
+                </Button>
+              );
+            })}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            Last
+          </Button>
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500">
+          All {totalItems} entries shown on this page
+        </div>
+      )}
+
+      <div className="text-sm text-slate-600 text-center sm:text-left">
+        Page {currentPage} of {totalPages} | Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
+      </div>
+    </div>
+  );
 
   const handleClearFilters = () => {
     const clearedFilters = {
@@ -1729,7 +1822,12 @@ export default function SandwichCollectionLog() {
                 placeholder="0"
                 value={searchFilters.sandwich_count_min}
                 onChange={(e) => {
-                  handleFilterChange({ sandwich_count_min: e.target.value });
+                  // Use immediate state update for number inputs too
+                  setSearchFilters(prev => ({
+                    ...prev,
+                    sandwich_count_min: e.target.value
+                  }));
+                  setCurrentPage(1);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -1747,7 +1845,12 @@ export default function SandwichCollectionLog() {
                 placeholder="Any"
                 value={searchFilters.sandwich_count_max}
                 onChange={(e) => {
-                  handleFilterChange({ sandwich_count_max: e.target.value });
+                  // Use immediate state update for number inputs too
+                  setSearchFilters(prev => ({
+                    ...prev,
+                    sandwich_count_max: e.target.value
+                  }));
+                  setCurrentPage(1);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -1823,6 +1926,12 @@ export default function SandwichCollectionLog() {
           </div>
         </div>
       )}
+
+      {/* Top Pagination Controls */}
+      {collections.length > 0 && totalPages > 1 && (
+        <PaginationControls className="border-b" />
+      )}
+
       <div className="p-6">
         {paginatedCollections.length > 0 && (
           <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-200">
@@ -1989,105 +2098,9 @@ export default function SandwichCollectionLog() {
           )}
         </div>
 
-        {/* Pagination Controls */}
+        {/* Bottom Pagination Controls */}
         {collections.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
-            <div className="flex items-center space-x-4">
-              <Select value={itemsPerPage.toString()} onValueChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="25">25 per page</SelectItem>
-                  <SelectItem value="50">50 per page</SelectItem>
-                  <SelectItem value="100">100 per page</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {totalPages > 1 ? (
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    console.log('Clicking First page');
-                    setCurrentPage(1);
-                  }}
-                  disabled={currentPage === 1}
-                >
-                  First
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    console.log('Clicking Previous page, current:', currentPage);
-                    setCurrentPage(currentPage - 1);
-                  }}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-                    if (pageNumber > totalPages) return null;
-
-                    return (
-                      <Button
-                        key={pageNumber}
-                        variant={pageNumber === currentPage ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                          console.log('Clicking page:', pageNumber, 'current:', currentPage);
-                          setCurrentPage(pageNumber);
-                        }}
-                        className="w-10"
-                      >
-                        {pageNumber}
-                      </Button>
-                    );
-                  })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    console.log('Clicking Next page, current:', currentPage, 'total:', totalPages);
-                    setCurrentPage(currentPage + 1);
-                  }}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    console.log('Clicking Last page, total:', totalPages);
-                    setCurrentPage(totalPages);
-                  }}
-                  disabled={currentPage === totalPages}
-                >
-                  Last
-                </Button>
-              </div>
-            ) : (
-              <div className="text-sm text-gray-500">
-                All {totalItems} entries shown on this page
-              </div>
-            )}
-
-            <div className="text-sm text-slate-600 text-center sm:text-left">
-              Page {currentPage} of {totalPages} | Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
-            </div>
-          </div>
+          <PaginationControls className="border-t" />
         )}
       </div>
 
