@@ -1358,6 +1358,57 @@ export default function SandwichCollectionLog() {
         </div>
       </div>
       
+      {/* Always visible sort controls */}
+      <div className="px-6 py-3 bg-slate-50 border-b border-slate-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <span className="text-sm font-medium text-slate-700">Sort by:</span>
+            <Select
+              value={sortConfig.field}
+              onValueChange={(value) => handleSortChange(value as keyof SandwichCollection | "total_sandwiches")}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="collection_date">Collection Date</SelectItem>
+                <SelectItem value="host_name">Host Location</SelectItem>
+                <SelectItem value="individual_sandwiches">Individual Amount</SelectItem>
+                <SelectItem value="total_sandwiches">Total Amount</SelectItem>
+                <SelectItem value="submitted_at">Submitted Date</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSortDirectionChange}
+              className="flex items-center space-x-1"
+            >
+              {sortConfig.direction === 'asc' ? (
+                <>
+                  <ArrowUp className="w-4 h-4" />
+                  <span>Ascending</span>
+                </>
+              ) : (
+                <>
+                  <ArrowDown className="w-4 h-4" />
+                  <span>Descending</span>
+                </>
+              )}
+            </Button>
+          </div>
+          <div className="text-sm text-slate-500">
+            Sorted by: <span className="font-medium">
+              {sortConfig.field === 'collection_date' && 'Collection Date'}
+              {sortConfig.field === 'host_name' && 'Host Location'}
+              {sortConfig.field === 'individual_sandwiches' && 'Individual Amount'}
+              {sortConfig.field === 'total_sandwiches' && 'Total Amount'}
+              {sortConfig.field === 'submitted_at' && 'Submitted Date'}
+            </span>
+          </div>
+        </div>
+      </div>
+      
       <div className="px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
