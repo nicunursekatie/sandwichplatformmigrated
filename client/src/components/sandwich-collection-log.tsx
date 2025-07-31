@@ -481,77 +481,10 @@ export default function SandwichCollectionLog() {
     }
   });
 
-  // Filter and sort collections
-  const filteredCollections = collections
-    .filter((collection: SandwichCollection) => {
-      // Host name filter
-      if (searchFilters.host_name && !collection.host_name.toLowerCase().includes(searchFilters.host_name.toLowerCase())) {
-        return false;
-      }
-
-      // Collection date range filter
-      if (searchFilters.collection_date_from) {
-        const collectionDate = new Date(collection.collection_date);
-        const fromDate = new Date(searchFilters.collection_date_from);
-        if (collectionDate < fromDate) return false;
-      }
-
-      if (searchFilters.collection_date_to) {
-        const collectionDate = new Date(collection.collection_date);
-        const toDate = new Date(searchFilters.collection_date_to);
-        if (collectionDate > toDate) return false;
-      }
-
-      // Created at date range filter
-      if (searchFilters.created_at_from) {
-        const createdDate = new Date(collection.submitted_at);
-        const fromDate = new Date(searchFilters.created_at_from);
-        if (createdDate < fromDate) return false;
-      }
-
-      if (searchFilters.created_at_to) {
-        const createdDate = new Date(collection.submitted_at);
-        const toDate = new Date(searchFilters.created_at_to);
-        // Add 23:59:59 to include the entire day
-        toDate.setHours(23, 59, 59, 999);
-        if (createdDate > toDate) return false;
-      }
-
-      return true;
-    })
-    .sort((a: SandwichCollection, b: SandwichCollection) => {
-      let aValue: any, bValue: any;
-      
-      // Handle special case for total sandwiches
-      if (sortConfig.field === 'total_sandwiches') {
-        aValue = (a.individual_sandwiches || 0) + calculateGroupTotal(a.group_collections);
-        bValue = (b.individual_sandwiches || 0) + calculateGroupTotal(b.group_collections);
-      } else {
-        const field: keyof SandwichCollection = sortConfig.field;
-        aValue = a[field];
-        bValue = b[field];
-      }
-
-      // Handle different data types
-      let comparison = 0;
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        comparison = aValue.localeCompare(bValue);
-      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-        comparison = aValue - bValue;
-      } else {
-        // Handle date strings
-        const aDate = new Date(aValue as string);
-        const bDate = new Date(bValue as string);
-        comparison = aDate.getTime() - bDate.getTime();
-      }
-
-      return sortConfig.direction === 'asc' ? comparison : -comparison;
-    });
-
-  // Use server-side pagination data
+  // Collections are already filtered and sorted by the query
+  // No need for additional client-side filtering
   const totalItems = pagination?.totalItems || 0;
   const totalPages = pagination?.totalPages || 1;
-  const paginatedCollections = collections;
 
 
 
@@ -951,7 +884,7 @@ export default function SandwichCollectionLog() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedCollections(new Set(paginatedCollections.map((c: SandwichCollection) => c.id)));
+      setSelectedCollections(new Set(collections.map((c: SandwichCollection) => c.id)));
     } else {
       setSelectedCollections(new Set());
     }
@@ -1941,13 +1874,13 @@ export default function SandwichCollectionLog() {
       )}
 
       <div className="p-6">
-        {paginatedCollections.length > 0 && (
+        {collections.length > 0 && (
           <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-slate-200">
             <button
-              onClick={() => handleSelectAll(!selectedCollections.size || selectedCollections.size < paginatedCollections.length)}
+              onClick={() => handleSelectAll(!selectedCollections.size || selectedCollections.size < collections.length)}
               className="flex items-center space-x-2 text-sm text-slate-600 hover:text-slate-900"
             >
-              {selectedCollections.size === paginatedCollections.length ? (
+              {selectedCollections.size === collections.length ? (
                 <CheckSquare className="w-4 h-4" />
               ) : (
                 <Square className="w-4 h-4" />
@@ -1956,13 +1889,13 @@ export default function SandwichCollectionLog() {
             </button>
             {selectedCollections.size > 0 && (
               <span className="text-sm text-slate-500">
-                {selectedCollections.size} of {paginatedCollections.length} selected
+                {selectedCollections.size} of {collections.length} selected
               </span>
             )}
           </div>
         )}
         <div className="space-y-4">
-          {paginatedCollections.map((collection: SandwichCollection) => {
+          {collections.map((collection: SandwichCollection) => {
             const groupData = parseGroupCollections(collection.group_collections);
             const totalSandwiches = calculateTotal(collection);
             const isSelected = selectedCollections.has(collection.id);
@@ -2095,13 +2028,9 @@ export default function SandwichCollectionLog() {
 
           {collections.length === 0 && (
             <div className="text-center py-8 text-slate-500">
-              No collection entries found. Use the form above to record sandwich collections.
-            </div>
-          )}
-
-          {collections.length > 0 && paginatedCollections.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
-              No entries match the current filters. Try adjusting your search criteria.
+              {hasActiveFilters 
+                ? "No entries match the current filters. Try adjusting your search criteria."
+                : "No collection entries found. Use the form above to record sandwich collections."}
             </div>
           )}
         </div>
