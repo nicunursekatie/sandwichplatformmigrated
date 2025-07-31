@@ -1361,21 +1361,21 @@ export default function SandwichCollectionLog() {
       {/* Always visible sort controls */}
       <div className="px-6 py-3 bg-slate-50 border-b border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium text-slate-700">Sort by:</span>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <span className="text-sm font-medium text-slate-700">Sort:</span>
             <Select
               value={sortConfig.field}
               onValueChange={(value) => handleSortChange(value as keyof SandwichCollection | "total_sandwiches")}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[140px] sm:w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="collection_date">Collection Date</SelectItem>
+                <SelectItem value="collection_date">Date</SelectItem>
                 <SelectItem value="host_name">Host Location</SelectItem>
-                <SelectItem value="individual_sandwiches">Individual Amount</SelectItem>
+                <SelectItem value="individual_sandwiches">Individual</SelectItem>
                 <SelectItem value="total_sandwiches">Total Amount</SelectItem>
-                <SelectItem value="submitted_at">Submitted Date</SelectItem>
+                <SelectItem value="submitted_at">Submitted</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -1383,28 +1383,31 @@ export default function SandwichCollectionLog() {
               size="sm"
               onClick={handleSortDirectionChange}
               className="flex items-center space-x-1"
+              title={`Sort ${sortConfig.direction === 'asc' ? 'ascending' : 'descending'}`}
             >
               {sortConfig.direction === 'asc' ? (
                 <>
                   <ArrowUp className="w-4 h-4" />
-                  <span>Ascending</span>
+                  <span className="hidden sm:inline">Ascending</span>
+                  <span className="sm:hidden">Asc</span>
                 </>
               ) : (
                 <>
                   <ArrowDown className="w-4 h-4" />
-                  <span>Descending</span>
+                  <span className="hidden sm:inline">Descending</span>
+                  <span className="sm:hidden">Desc</span>
                 </>
               )}
             </Button>
           </div>
-          <div className="text-sm text-slate-500">
-            Sorted by: <span className="font-medium">
-              {sortConfig.field === 'collection_date' && 'Collection Date'}
-              {sortConfig.field === 'host_name' && 'Host Location'}
-              {sortConfig.field === 'individual_sandwiches' && 'Individual Amount'}
-              {sortConfig.field === 'total_sandwiches' && 'Total Amount'}
-              {sortConfig.field === 'submitted_at' && 'Submitted Date'}
-            </span>
+          <div className="text-xs sm:text-sm text-slate-500 hidden sm:block">
+            Currently: <span className="font-medium">
+              {sortConfig.field === 'collection_date' && 'Date'}
+              {sortConfig.field === 'host_name' && 'Host'}
+              {sortConfig.field === 'individual_sandwiches' && 'Individual'}
+              {sortConfig.field === 'total_sandwiches' && 'Total'}
+              {sortConfig.field === 'submitted_at' && 'Submitted'}
+            </span> ({sortConfig.direction === 'asc' ? '↑' : '↓'})
           </div>
         </div>
       </div>
@@ -1885,35 +1888,6 @@ export default function SandwichCollectionLog() {
             <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
               <div className="text-sm text-slate-600">
                 Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                <Label className="text-sm font-medium text-slate-700">Sort by:</Label>
-                <div className="flex items-center space-x-2">
-                  <Select
-                    value={sortConfig.field}
-                    onValueChange={(value) => handleSortChange(value as keyof SandwichCollection)}
-                  >
-                    <SelectTrigger className="w-full sm:w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="collection_date">Collection Date</SelectItem>
-                      <SelectItem value="host_name">Host Name</SelectItem>
-                      <SelectItem value="individual_sandwiches">Individual Count</SelectItem>
-                      <SelectItem value="total_sandwiches">Total Sandwiches</SelectItem>
-                      <SelectItem value="submitted_at">Submitted Date</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSortDirectionChange}
-                    className="flex items-center space-x-1"
-                  >
-                    {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                    <span className="hidden sm:inline">{sortConfig.direction === 'asc' ? 'Asc' : 'Desc'}</span>
-                  </Button>
-                </div>
               </div>
             </div>
             <Button
