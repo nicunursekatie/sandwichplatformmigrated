@@ -177,9 +177,11 @@ export default function SandwichCollectionLog() {
       
       if (hasActiveFilters) {
         // When filters are active, fetch all collections for accurate client-side filtering
+        console.log('🔍 Fetching collections with active filters:', searchFilters);
         const collections = await supabaseService.sandwichCollection.getAllCollections();
         
         let filteredCollections = collections || [];
+        console.log('🔍 Total collections before filtering:', filteredCollections.length);
         
         // Apply filters
         if (searchFilters.host_name) {
@@ -190,17 +192,27 @@ export default function SandwichCollectionLog() {
         }
         
         if (searchFilters.collection_date_from && searchFilters.collection_date_from.trim() !== '') {
+          console.log('🔍 Frontend filtering - collection_date_from:', searchFilters.collection_date_from);
+          const fromDate = searchFilters.collection_date_from.trim();
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
             if (!c.collection_date || c.collection_date.trim() === '') return false;
-            return c.collection_date >= searchFilters.collection_date_from;
+            const collectionDate = c.collection_date.trim();
+            console.log('🔍 Comparing:', collectionDate, '>=', fromDate, '→', collectionDate >= fromDate);
+            return collectionDate >= fromDate;
           });
+          console.log('🔍 After collection_date_from filter:', filteredCollections.length, 'collections');
         }
         
         if (searchFilters.collection_date_to && searchFilters.collection_date_to.trim() !== '') {
+          console.log('🔍 Frontend filtering - collection_date_to:', searchFilters.collection_date_to);
+          const toDate = searchFilters.collection_date_to.trim();
           filteredCollections = filteredCollections.filter((c: SandwichCollection) => {
             if (!c.collection_date || c.collection_date.trim() === '') return false;
-            return c.collection_date <= searchFilters.collection_date_to;
+            const collectionDate = c.collection_date.trim();
+            console.log('🔍 Comparing:', collectionDate, '<=', toDate, '→', collectionDate <= toDate);
+            return collectionDate <= toDate;
           });
+          console.log('🔍 After collection_date_to filter:', filteredCollections.length, 'collections');
         }
         
         if (searchFilters.created_at_from && searchFilters.created_at_from.trim() !== '') {
