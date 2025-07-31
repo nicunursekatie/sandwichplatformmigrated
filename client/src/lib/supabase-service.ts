@@ -191,37 +191,133 @@ export const sandwichCollectionService = {
   }) {
     console.log('🔍 Filtering with params:', filters);
     
-    // Ensure proper date format
-    let collection_date_from = filters.collection_date_from;
-    let collection_date_to = filters.collection_date_to;
-    
-    if (collection_date_from) {
-      const fromDate = new Date(collection_date_from);
-      collection_date_from = fromDate.toISOString().split('T')[0];
-      console.log('📅 Added collection date filter from:', collection_date_from);
+    try {
+      // Try RPC function first
+      let collection_date_from = filters.collection_date_from;
+      let collection_date_to = filters.collection_date_to;
+      
+      // Validate and fix date formats
+      if (collection_date_from) {
+        // Check if it's already in YYYY-MM-DD format
+        if (collection_date_from.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          console.log('📅 Collection date from already in correct format:', collection_date_from);
+        } else {
+          const fromDate = new Date(collection_date_from);
+          if (!isNaN(fromDate.getTime())) {
+            collection_date_from = fromDate.toISOString().split('T')[0];
+            console.log('📅 Added collection date filter from:', collection_date_from);
+          } else {
+            console.warn('Invalid date format for collection_date_from:', filters.collection_date_from);
+            collection_date_from = null;
+          }
+        }
+      }
+      
+      if (collection_date_to) {
+        // Check if it's already in YYYY-MM-DD format
+        if (collection_date_to.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          console.log('📅 Collection date to already in correct format:', collection_date_to);
+        } else {
+          const toDate = new Date(collection_date_to);
+          if (!isNaN(toDate.getTime())) {
+            collection_date_to = toDate.toISOString().split('T')[0];
+            console.log('📅 Added collection date filter to:', collection_date_to);
+          } else {
+            console.warn('Invalid date format for collection_date_to:', filters.collection_date_to);
+            collection_date_to = null;
+          }
+        }
+      }
+
+      const { data, error } = await supabase.rpc('get_collection_stats_filtered', {
+        host_name: filters.host_name || null,
+        collection_date_from: collection_date_from || null,
+        collection_date_to: collection_date_to || null,
+        individual_min: filters.individual_min ?? null,
+        individual_max: filters.individual_max ?? null,
+      });
+      
+      if (error) throw error;
+      
+      console.log('✅ RPC Filtered results:', { count: data?.length, data: data?.slice(0, 3) });
+      return data;
+      
+    } catch (error) {
+      console.warn('RPC function not available, using direct query fallback:', error);
+      
+      // Fallback: Use direct database queries to calculate stats
+      let query = supabase.from('sandwich_collections').select('*');
+      
+      // Apply filters
+      if (filters.host_name && filters.host_name.trim() !== '') {
+        query = query.ilike('host_name', `%${filters.host_name.trim()}%`);
+        console.log('🏠 Added host name filter:', filters.host_name.trim());
+      }
+      
+      if (filters.collection_date_from && filters.collection_date_from.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        query = query.gte('collection_date', filters.collection_date_from);
+        console.log('📅 Added collection date from filter:', filters.collection_date_from);
+      }
+      
+      if (filters.collection_date_to && filters.collection_date_to.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        query = query.lte('collection_date', filters.collection_date_to);
+        console.log('📅 Added collection date to filter:', filters.collection_date_to);
+      }
+      
+      if (filters.individual_min !== undefined && filters.individual_min !== null) {
+        query = query.gte('individual_sandwiches', filters.individual_min);
+        console.log('📊 Added individual min filter:', filters.individual_min);
+      }
+      
+      if (filters.individual_max !== undefined && filters.individual_max !== null) {
+        query = query.lte('individual_sandwiches', filters.individual_max);
+        console.log('📊 Added individual max filter:', filters.individual_max);
+      }
+      
+      const { data: collections, error: queryError } = await query;
+      
+      if (queryError) {
+        console.error('❌ Direct query error:', queryError);
+        handleError(queryError, 'get filtered collection stats (fallback)');
+      }
+      
+      // Calculate stats from filtered collections
+      let individualTotal = 0;
+      let groupTotal = 0;
+      
+      collections?.forEach((collection) => {
+        individualTotal += collection.individual_sandwiches || 0;
+        
+        // Calculate group collections total
+        try {
+          if (collection.group_collections && collection.group_collections !== "[]" && collection.group_collections !== "") {
+            const groupData = JSON.parse(collection.group_collections);
+            if (Array.isArray(groupData)) {
+              groupTotal += groupData.reduce((sum: number, group: any) => 
+                sum + (Number(group.sandwichCount) || Number(group.sandwich_count) || Number(group.count) || 0), 0
+              );
+            }
+          }
+        } catch (e) {
+          // Handle text format like "Marketing Team: 8, Development: 6"
+          if (collection.group_collections && collection.group_collections !== "[]") {
+            const matches = collection.group_collections.match(/(\d+)/g);
+            if (matches) {
+              groupTotal += matches.reduce((sum, num) => sum + parseInt(num), 0);
+            }
+          }
+        }
+      });
+      
+      const result = [{
+        complete_total_sandwiches: individualTotal + groupTotal,
+        individual_sandwiches: individualTotal,
+        group_sandwiches: groupTotal
+      }];
+      
+      console.log('✅ Fallback filtered results:', { count: result.length, data: result });
+      return result;
     }
-    
-    if (collection_date_to) {
-      const toDate = new Date(collection_date_to);
-      collection_date_to = toDate.toISOString().split('T')[0];
-      console.log('📅 Added collection date filter to:', collection_date_to);
-    }
-    
-    const { data, error } = await supabase.rpc('get_collection_stats_filtered', {
-      host_name: filters.host_name || null,
-      collection_date_from: collection_date_from || null,
-      collection_date_to: collection_date_to || null,
-      individual_min: filters.individual_min ?? null,
-      individual_max: filters.individual_max ?? null,
-    });
-    
-    if (error) {
-      console.error('❌ Filter query error:', error);
-      handleError(error, 'get filtered collection stats');
-    }
-    
-    console.log('✅ Filtered results:', { count: data?.length, data: data?.slice(0, 3) });
-    return data;
   },
 
   async batchUpdateCollections(ids: number[], updates: UpdateSandwichCollection): Promise<{ updatedCount: number }> {
