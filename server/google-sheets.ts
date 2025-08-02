@@ -2,11 +2,13 @@ import { google } from 'googleapis';
 import type { 
   User, InsertUser, Project, InsertProject, Message, InsertMessage,
   WeeklyReport, InsertWeeklyReport, SandwichCollection, InsertSandwichCollection,
-  MeetingMinutes, InsertMeetingMinutes, DriveLink, InsertDriveLink, UpsertUser
+  MeetingMinutes, InsertMeetingMinutes, DriveLink, InsertDriveLink, UpsertUser,
+  ProjectTask, InsertProjectTask, TaskCompletion, InsertTaskCompletion,
+  ProjectComment, InsertProjectComment
 } from '@shared/schema';
 import type { IStorage } from './storage';
 
-export class GoogleSheetsStorage implements IStorage {
+export class GoogleSheetsStorage {
   private sheets: any;
   private spreadsheetId: string;
 
@@ -33,7 +35,8 @@ export class GoogleSheetsStorage implements IStorage {
       const existingSheets = response.data.sheets?.map((sheet: any) => sheet.properties.title) || [];
       const requiredSheets = [
         'Users', 'Projects', 'Messages', 'WeeklyReports', 
-        'SandwichCollections', 'MeetingMinutes', 'DriveLinks'
+        'SandwichCollections', 'MeetingMinutes', 'DriveLinks', 'ProjectTasks', 'TaskCompletions',
+        'ProjectComments'
       ];
 
       const sheetsToCreate = requiredSheets.filter(sheet => !existingSheets.includes(sheet));
@@ -69,7 +72,10 @@ export class GoogleSheetsStorage implements IStorage {
       'WeeklyReports': ['id', 'weekEnding', 'sandwichCount', 'notes', 'submittedBy', 'submittedAt'],
       'SandwichCollections': ['Date Collected', 'Host Group', 'Solo Sandwiches', 'Group Contributors', 'Logged At'],
       'MeetingMinutes': ['id', 'title', 'date', 'summary', 'color'],
-      'DriveLinks': ['id', 'title', 'description', 'url', 'icon', 'iconColor']
+      'DriveLinks': ['id', 'title', 'description', 'url', 'icon', 'iconColor'],
+      'ProjectTasks': ['id', 'projectId', 'title', 'description', 'status', 'order', 'assigneeId', 'createdAt', 'updatedAt'],
+      'TaskCompletions': ['id', 'taskId', 'userId', 'completedAt'],
+      'ProjectComments': ['id', 'projectId', 'userId', 'content', 'createdAt']
     };
 
     if (headers[sheetName]) {
@@ -92,9 +98,18 @@ export class GoogleSheetsStorage implements IStorage {
       });
 
       const values = response.data.values || [];
-      if (values.length <= 1) return 1; // First row is header
+      if (values.length <= 1) return 1;
 
-      const ids = values.slice(1).map((row: any[]) => parseInt(row[0]) || 0).filter(id => id > 0);
+      const ids = values.slice(1)
+        .map((row: unknown[]) => {
+          if (Array.isArray(row) && typeof row[0] === 'string') {
+            const parsed = parseInt(row[0], 10);
+            return isNaN(parsed) ? 0 : parsed;
+          }
+          return 0;
+        })
+        .filter((id: number) => id > 0);
+
       return ids.length > 0 ? Math.max(...ids) + 1 : 1;
     } catch (error) {
       console.error(`Error getting next ID for ${sheetName}:`, error);
@@ -115,7 +130,7 @@ export class GoogleSheetsStorage implements IStorage {
       const userRow = rows.find((row: any[]) => parseInt(row[0]) === numericId);
       if (userRow) {
         return {
-          id: parseInt(userRow[0]),
+          id: String(userRow[0]),
           username: userRow[1],
           email: userRow[2],
           fullName: userRow[3]
@@ -141,11 +156,24 @@ export class GoogleSheetsStorage implements IStorage {
       const userRow = rows.find((row: any[]) => row[1] === username);
       
       if (userRow) {
+        const [firstName, lastName] = (userRow[3] || '').split(' ', 2);
         return {
-          id: parseInt(userRow[0]),
-          username: userRow[1],
-          email: userRow[2],
-          fullName: userRow[3]
+          id: String(userRow[0]),
+          email: userRow[2] || null,
+          firstName: firstName || null,
+          lastName: lastName || null,
+          password: null,
+          displayName: null,
+          createdAt: null,
+          updatedAt: null,
+          profileImageUrl: null,
+          role: 'user',
+          deletedAt: null,
+          deletedBy: null,
+          permissions: [],
+          metadata: {},
+          isActive: true,
+          lastLoginAt: null,
         };
       }
       return undefined;
@@ -166,7 +194,7 @@ export class GoogleSheetsStorage implements IStorage {
       const userRow = rows.find((row: any[]) => row[2] === email);
       if (userRow) {
         return {
-          id: parseInt(userRow[0]),
+          id: String(userRow[0]),
           username: userRow[1],
           email: userRow[2],
           fullName: userRow[3]
@@ -315,9 +343,29 @@ export class GoogleSheetsStorage implements IStorage {
     }
   }
 
-  async getProject(id: number): Promise<Project | undefined> {
+  async getProject(id: string): Promise<Project | undefined> {
+    const numericId = parseInt(id, 10);
     const projects = await this.getAllProjects();
-    return projects.find(p => p.id === id);
+    return projects.find(p => p.id === numericId);
+  }
+
+  async deleteProject(id: number): Promise<boolean> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'Projects!A:G',
+    });
+    const rows = response.data.values || [];
+    const projectIndex = rows.findIndex((row: any[]) => parseInt(row[0]) === id);
+    if (projectIndex === -1) return false;
+    // Remove the row by overwriting it with empty values
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `Projects!A${projectIndex + 1}:G${projectIndex + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [['', '', '', '', '', '', '']] }
+    });
+    return true;
   }
 
   async createProject(insertProject: InsertProject): Promise<Project> {
@@ -890,5 +938,294 @@ export class GoogleSheetsStorage implements IStorage {
       console.error('Error creating drive link:', error);
       throw error;
     }
+  }
+
+  async getProjectTasks(projectId: number): Promise<ProjectTask[]> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectTasks!A:I',
+    });
+    const rows = response.data.values || [];
+    return rows
+      .slice(1)
+      .filter((row: any[]) => parseInt(row[1]) === projectId)
+      .map((row: any[]) => ({
+        id: parseInt(row[0]),
+        projectId: parseInt(row[1]),
+        title: row[2],
+        description: row[3],
+        status: row[4],
+        order: parseInt(row[5]),
+        assigneeId: row[6],
+        createdAt: row[7],
+        updatedAt: row[8],
+      }));
+  }
+
+  async getTaskById(id: number): Promise<ProjectTask | undefined> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectTasks!A:I',
+    });
+    const rows = response.data.values || [];
+    const row = rows.find((row: any[]) => parseInt(row[0]) === id);
+    if (!row) return undefined;
+    return {
+      id: parseInt(row[0]),
+      projectId: parseInt(row[1]),
+      title: row[2],
+      description: row[3],
+      status: row[4],
+      order: parseInt(row[5]),
+      assigneeId: row[6],
+      createdAt: row[7],
+      updatedAt: row[8],
+    };
+  }
+
+  async getProjectTask(taskId: number): Promise<ProjectTask | undefined> {
+    return this.getTaskById(taskId);
+  }
+
+  async createProjectTask(task: InsertProjectTask): Promise<ProjectTask> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectTasks!A:A',
+    });
+    const rows = response.data.values || [];
+    const id = rows.length;
+    const newTask = {
+      id,
+      ...task,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await this.sheets.spreadsheets.values.append({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectTasks!A:I',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          newTask.id,
+          newTask.projectId,
+          newTask.title,
+          newTask.description,
+          newTask.status,
+          newTask.order,
+          newTask.assigneeId,
+          newTask.createdAt,
+          newTask.updatedAt,
+        ]],
+      },
+    });
+    return newTask;
+  }
+
+  async updateProjectTask(id: number, updates: Partial<ProjectTask>): Promise<ProjectTask | undefined> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectTasks!A:I',
+    });
+    const rows = response.data.values || [];
+    const taskIndex = rows.findIndex((row: any[]) => parseInt(row[0]) === id);
+    if (taskIndex === -1) return undefined;
+    const row = rows[taskIndex];
+    const updatedTask = {
+      id: parseInt(row[0]),
+      projectId: parseInt(row[1]),
+      title: updates.title || row[2],
+      description: updates.description || row[3],
+      status: updates.status || row[4],
+      order: updates.order !== undefined ? updates.order : parseInt(row[5]),
+      assigneeId: updates.assigneeId || row[6],
+      createdAt: row[7],
+      updatedAt: new Date().toISOString(),
+    };
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `ProjectTasks!A${taskIndex + 1}:I${taskIndex + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          updatedTask.id,
+          updatedTask.projectId,
+          updatedTask.title,
+          updatedTask.description,
+          updatedTask.status,
+          updatedTask.order,
+          updatedTask.assigneeId,
+          updatedTask.createdAt,
+          updatedTask.updatedAt,
+        ]],
+      },
+    });
+    return updatedTask;
+  }
+
+  async updateTaskStatus(id: number, status: string): Promise<boolean> {
+    const task = await this.getTaskById(id);
+    if (!task) return false;
+    await this.updateProjectTask(id, { status });
+    return true;
+  }
+
+  async deleteProjectTask(id: number): Promise<boolean> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectTasks!A:I',
+    });
+    const rows = response.data.values || [];
+    const taskIndex = rows.findIndex((row: any[]) => parseInt(row[0]) === id);
+    if (taskIndex === -1) return false;
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `ProjectTasks!A${taskIndex + 1}:I${taskIndex + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [['', '', '', '', '', '', '', '', '']] },
+    });
+    return true;
+  }
+
+  async getProjectCongratulations(projectId: number): Promise<any[]> {
+    throw new Error('getProjectCongratulations is not supported in GoogleSheetsStorage');
+  }
+
+  async createTaskCompletion(completion: InsertTaskCompletion): Promise<TaskCompletion> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'TaskCompletions!A:A',
+    });
+    const rows = response.data.values || [];
+    const id = rows.length;
+    const newCompletion = {
+      id,
+      ...completion,
+      completedAt: new Date().toISOString(),
+    };
+    await this.sheets.spreadsheets.values.append({
+      spreadsheetId: this.spreadsheetId,
+      range: 'TaskCompletions!A:D',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          newCompletion.id,
+          newCompletion.taskId,
+          newCompletion.userId,
+          newCompletion.completedAt,
+        ]],
+      },
+    });
+    return newCompletion;
+  }
+
+  async getTaskCompletions(taskId: number): Promise<TaskCompletion[]> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'TaskCompletions!A:D',
+    });
+    const rows = response.data.values || [];
+    return rows
+      .slice(1)
+      .filter((row: any[]) => parseInt(row[1]) === taskId)
+      .map((row: any[]) => ({
+        id: parseInt(row[0]),
+        taskId: parseInt(row[1]),
+        userId: row[2],
+        completedAt: row[3],
+      }));
+  }
+
+  async removeTaskCompletion(taskId: number, userId: string): Promise<boolean> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'TaskCompletions!A:D',
+    });
+    const rows = response.data.values || [];
+    const completionIndex = rows.findIndex(
+      (row: any[]) => parseInt(row[1]) === taskId && row[2] === userId
+    );
+    if (completionIndex === -1) return false;
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `TaskCompletions!A${completionIndex + 1}:D${completionIndex + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [['', '', '', '']] },
+    });
+    return true;
+  }
+
+  async getProjectComments(projectId: number): Promise<ProjectComment[]> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectComments!A:E',
+    });
+    const rows = response.data.values || [];
+    return rows
+      .slice(1)
+      .filter((row: any[]) => parseInt(row[1]) === projectId)
+      .map((row: any[]) => ({
+        id: parseInt(row[0]),
+        projectId: parseInt(row[1]),
+        userId: row[2],
+        content: row[3],
+        createdAt: row[4],
+      }));
+  }
+
+  async createProjectComment(comment: InsertProjectComment): Promise<ProjectComment> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectComments!A:A',
+    });
+    const rows = response.data.values || [];
+    const id = rows.length;
+    const newComment = {
+      id,
+      ...comment,
+      createdAt: new Date().toISOString(),
+    };
+    await this.sheets.spreadsheets.values.append({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectComments!A:E',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          newComment.id,
+          newComment.projectId,
+          newComment.userId,
+          newComment.content,
+          newComment.createdAt,
+        ]],
+      },
+    });
+    return newComment;
+  }
+
+  async deleteProjectComment(id: number): Promise<boolean> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'ProjectComments!A:E',
+    });
+    const rows = response.data.values || [];
+    const commentIndex = rows.findIndex((row: any[]) => parseInt(row[0]) === id);
+    if (commentIndex === -1) return false;
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `ProjectComments!A${commentIndex + 1}:E${commentIndex + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [['', '', '', '', '']] },
+    });
+    return true;
   }
 }
