@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import type { 
   User, InsertUser, Project, InsertProject, Message, InsertMessage,
   WeeklyReport, InsertWeeklyReport, SandwichCollection, InsertSandwichCollection,
-  MeetingMinutes, InsertMeetingMinutes, DriveLink, InsertDriveLink
+  MeetingMinutes, InsertMeetingMinutes, DriveLink, InsertDriveLink, UpsertUser
 } from '@shared/schema';
 import type { IStorage } from './storage';
 
@@ -103,18 +103,16 @@ export class GoogleSheetsStorage implements IStorage {
   }
 
   // User methods
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     await this.ensureWorksheets();
-    
+    const numericId = parseInt(id, 10);
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: 'Users!A:D',
       });
-
       const rows = response.data.values || [];
-      const userRow = rows.find((row: any[]) => parseInt(row[0]) === id);
-      
+      const userRow = rows.find((row: any[]) => parseInt(row[0]) === numericId);
       if (userRow) {
         return {
           id: parseInt(userRow[0]),
@@ -157,6 +155,30 @@ export class GoogleSheetsStorage implements IStorage {
     }
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    await this.ensureWorksheets();
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: 'Users!A:D',
+      });
+      const rows = response.data.values || [];
+      const userRow = rows.find((row: any[]) => row[2] === email);
+      if (userRow) {
+        return {
+          id: parseInt(userRow[0]),
+          username: userRow[1],
+          email: userRow[2],
+          fullName: userRow[3]
+        };
+      }
+      return undefined;
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      throw error;
+    }
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     await this.ensureWorksheets();
     
@@ -178,6 +200,91 @@ export class GoogleSheetsStorage implements IStorage {
       console.error('Error creating user:', error);
       throw error;
     }
+  }
+
+  async upsertUser(user: UpsertUser): Promise<User> {
+    await this.ensureWorksheets();
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'Users!A:D',
+    });
+    const rows = response.data.values || [];
+    let userIndex = -1;
+    let userRow = rows.find((row: any[], idx: number) => {
+      if (row[0] && user.id && parseInt(row[0]) === parseInt(user.id as any)) {
+        userIndex = idx;
+        return true;
+      }
+      if (row[2] && user.email && row[2] === user.email) {
+        userIndex = idx;
+        return true;
+      }
+      return false;
+    });
+
+    if (userRow) {
+      // Update existing user
+      const updatedUser = {
+        id: parseInt(userRow[0]),
+        username: user.username || userRow[1],
+        email: user.email || userRow[2],
+        fullName: user.fullName || userRow[3],
+      };
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: this.spreadsheetId,
+        range: `Users!A${userIndex + 1}:D${userIndex + 1}`,
+        valueInputOption: 'RAW',
+        requestBody: {
+          values: [[
+            updatedUser.id,
+            updatedUser.username,
+            updatedUser.email,
+            updatedUser.fullName
+          ]]
+        }
+      });
+      return updatedUser;
+    } else {
+      // Create new user
+      return this.createUser(user as InsertUser);
+    }
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    await this.ensureWorksheets();
+    const numericId = parseInt(id, 10);
+    const response = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: 'Users!A:D',
+    });
+    const rows = response.data.values || [];
+    const userIndex = rows.findIndex((row: any[]) => parseInt(row[0]) === numericId);
+
+    if (userIndex === -1) return undefined;
+
+    const userRow = rows[userIndex];
+    const updatedUser = {
+      id: parseInt(userRow[0]),
+      username: updates.username || userRow[1],
+      email: updates.email || userRow[2],
+      fullName: updates.fullName || userRow[3],
+    };
+
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `Users!A${userIndex + 1}:D${userIndex + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          updatedUser.id,
+          updatedUser.username,
+          updatedUser.email,
+          updatedUser.fullName
+        ]]
+      }
+    });
+
+    return updatedUser;
   }
 
   // Project methods
