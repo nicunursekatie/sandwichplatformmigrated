@@ -39,7 +39,7 @@ export function MessageThread({
     <div className={`flex items-start gap-3 ${isReply ? 'ml-12' : ''}`}>
       <Avatar className="w-8 h-8 mt-1">
         <AvatarFallback className="text-xs">
-          {getUserDisplayName(msg).substring(0, 2).toUpperCase()}
+          🥪
         </AvatarFallback>
       </Avatar>
       

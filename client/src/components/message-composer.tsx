@@ -307,7 +307,7 @@ export function MessageComposer({
               <Badge key={recipient.id} variant="secondary" className="gap-1">
                 <Avatar className="h-4 w-4">
                   <AvatarFallback className="text-xs">
-                    {recipient.name?.charAt(0) || "?"}
+                    🥪
                   </AvatarFallback>
                 </Avatar>
                 {recipient.name}

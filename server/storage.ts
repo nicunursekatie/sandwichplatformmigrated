@@ -536,7 +536,7 @@ export class MemStorage implements IStorage {
   // Message methods
   async getAllMessages(): Promise<Message[]> {
     return Array.from(this.messages.values()).sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
     );
   }
 
@@ -547,19 +547,19 @@ export class MemStorage implements IStorage {
 
   async getMessagesByCommittee(committee: string): Promise<Message[]> {
     return Array.from(this.messages.values())
-      .filter(message => message.committee === committee)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      .filter(message => message.contextType === committee)
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   async getDirectMessages(userId1: string, userId2: string): Promise<Message[]> {
     return Array.from(this.messages.values())
       .filter(message => 
-        message.committee === "direct" && (
+        message.messageType === "direct" && (
           (message.userId === userId1 && message.recipientId === userId2) ||
           (message.userId === userId2 && message.recipientId === userId1)
         )
       )
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
   }
 
   async getMessageById(id: number): Promise<Message | undefined> {
@@ -568,14 +568,28 @@ export class MemStorage implements IStorage {
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     const id = this.currentIds.message++;
+    const now = new Date();
     const message: Message = { 
-      ...insertMessage, 
-      id, 
-      timestamp: new Date(),
-      parentId: insertMessage.parentId || null,
-      threadId: insertMessage.threadId || id,
-      replyCount: 0,
-      committee: insertMessage.committee || "general"
+      id,
+      conversationId: insertMessage.conversationId || null,
+      userId: insertMessage.userId,
+      senderId: insertMessage.senderId || null,
+      recipientId: insertMessage.recipientId || null,
+      content: insertMessage.content,
+      sender: insertMessage.sender || null,
+      subject: insertMessage.subject || null,
+      messageType: insertMessage.messageType || 'direct',
+      priority: insertMessage.priority || 'normal',
+      contextType: insertMessage.contextType || null,
+      contextId: insertMessage.contextId || null,
+      isRead: insertMessage.isRead || false,
+      readAt: insertMessage.readAt || null,
+      editedAt: insertMessage.editedAt || null,
+      editedContent: insertMessage.editedContent || null,
+      deletedAt: insertMessage.deletedAt || null,
+      deletedBy: insertMessage.deletedBy || null,
+      createdAt: now,
+      updatedAt: now
     };
     this.messages.set(id, message);
     return message;
@@ -583,8 +597,8 @@ export class MemStorage implements IStorage {
 
   async getThreadMessages(threadId: number): Promise<Message[]> {
     return Array.from(this.messages.values())
-      .filter(message => message.threadId === threadId)
-      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      .filter(message => message.conversationId === threadId)
+      .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
   }
 
   async createReply(insertMessage: InsertMessage, parentId: number): Promise<Message> {
@@ -593,31 +607,12 @@ export class MemStorage implements IStorage {
       throw new Error("Parent message not found");
     }
 
-    const id = this.currentIds.message++;
-    const message: Message = { 
-      ...insertMessage, 
-      id,
-      timestamp: new Date(),
-      parentId: parentId,
-      threadId: parentMessage.threadId,
-      replyCount: 0
-    };
+    const reply = await this.createMessage({
+      ...insertMessage,
+      conversationId: parentMessage.conversationId || parentMessage.id
+    });
     
-    this.messages.set(id, message);
-    await this.updateReplyCount(parentMessage.threadId === parentMessage.id ? parentMessage.id : parentMessage.threadId);
-    
-    return message;
-  }
-
-  async updateReplyCount(messageId: number): Promise<void> {
-    const message = this.messages.get(messageId);
-    if (message) {
-      const replyCount = Array.from(this.messages.values())
-        .filter(m => m.threadId === message.threadId && m.id !== message.id).length;
-      
-      const updatedMessage = { ...message, replyCount };
-      this.messages.set(messageId, updatedMessage);
-    }
+    return reply;
   }
 
   async deleteMessage(id: number): Promise<boolean> {

@@ -1012,7 +1012,7 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                   <div key={assignment.user_id} className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${assignment.user_id}`} />
-                      <AvatarFallback>{getInitials(assignment.user)}</AvatarFallback>
+                      <AvatarFallback>🥪</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{formatUserName(assignment.user)}</p>

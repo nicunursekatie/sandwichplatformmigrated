@@ -66,9 +66,9 @@ export class GoogleSheetsStorage {
 
   private async addHeaders(sheetName: string) {
     const headers: { [key: string]: string[] } = {
-      'Users': ['id', 'username', 'email', 'fullName'],
+      'Users': ['id', 'email', 'firstName', 'lastName', 'displayName'],
       'Projects': ['id', 'title', 'description', 'status', 'assigneeId', 'assigneeName', 'color'],
-      'Messages': ['id', 'sender', 'content', 'timestamp', 'parentId', 'threadId', 'replyCount', 'committee'],
+      'Messages': ['id', 'conversationId', 'userId', 'senderId', 'recipientId', 'content', 'sender', 'subject', 'messageType', 'priority', 'contextType', 'contextId', 'isRead', 'readAt', 'editedAt', 'editedContent', 'deletedAt', 'deletedBy', 'createdAt', 'updatedAt'],
       'WeeklyReports': ['id', 'weekEnding', 'sandwichCount', 'notes', 'submittedBy', 'submittedAt'],
       'SandwichCollections': ['Date Collected', 'Host Group', 'Solo Sandwiches', 'Group Contributors', 'Logged At'],
       'MeetingMinutes': ['id', 'title', 'date', 'summary', 'color'],
@@ -124,16 +124,28 @@ export class GoogleSheetsStorage {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Users!A:D',
+        range: 'Users!A:E',
       });
       const rows = response.data.values || [];
       const userRow = rows.find((row: any[]) => parseInt(row[0]) === numericId);
       if (userRow) {
         return {
           id: String(userRow[0]),
-          username: userRow[1],
-          email: userRow[2],
-          fullName: userRow[3]
+          email: userRow[1] || null,
+          firstName: userRow[2] || null,
+          lastName: userRow[3] || null,
+          displayName: userRow[4] || null,
+          password: null,
+          createdAt: null,
+          updatedAt: null,
+          profileImageUrl: null,
+          role: 'user',
+          deletedAt: null,
+          deletedBy: null,
+          permissions: [],
+          metadata: {},
+          isActive: true,
+          lastLoginAt: null,
         };
       }
       return undefined;
@@ -149,21 +161,21 @@ export class GoogleSheetsStorage {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Users!A:D',
+        range: 'Users!A:E',
       });
 
       const rows = response.data.values || [];
-      const userRow = rows.find((row: any[]) => row[1] === username);
+      // Search by displayName (column E) as closest equivalent to username
+      const userRow = rows.find((row: any[]) => row[4] === username);
       
       if (userRow) {
-        const [firstName, lastName] = (userRow[3] || '').split(' ', 2);
         return {
           id: String(userRow[0]),
-          email: userRow[2] || null,
-          firstName: firstName || null,
-          lastName: lastName || null,
+          email: userRow[1] || null,
+          firstName: userRow[2] || null,
+          lastName: userRow[3] || null,
+          displayName: userRow[4] || null,
           password: null,
-          displayName: null,
           createdAt: null,
           updatedAt: null,
           profileImageUrl: null,
@@ -188,16 +200,28 @@ export class GoogleSheetsStorage {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Users!A:D',
+        range: 'Users!A:E',
       });
       const rows = response.data.values || [];
-      const userRow = rows.find((row: any[]) => row[2] === email);
+      const userRow = rows.find((row: any[]) => row[1] === email);
       if (userRow) {
         return {
           id: String(userRow[0]),
-          username: userRow[1],
-          email: userRow[2],
-          fullName: userRow[3]
+          email: userRow[1] || null,
+          firstName: userRow[2] || null,
+          lastName: userRow[3] || null,
+          displayName: userRow[4] || null,
+          password: null,
+          createdAt: null,
+          updatedAt: null,
+          profileImageUrl: null,
+          role: 'user',
+          deletedAt: null,
+          deletedBy: null,
+          permissions: [],
+          metadata: {},
+          isActive: true,
+          lastLoginAt: null,
         };
       }
       return undefined;
@@ -211,15 +235,38 @@ export class GoogleSheetsStorage {
     await this.ensureWorksheets();
     
     const id = await this.getNextId('Users');
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      id: String(id),
+      email: insertUser.email ?? null,
+      password: insertUser.password ?? null,
+      firstName: insertUser.firstName ?? null,
+      lastName: insertUser.lastName ?? null,
+      displayName: insertUser.displayName ?? null,
+      profileImageUrl: insertUser.profileImageUrl ?? null,
+      role: insertUser.role ?? 'user',
+      permissions: insertUser.permissions ?? [],
+      metadata: insertUser.metadata ?? {},
+      isActive: insertUser.isActive ?? true,
+      lastLoginAt: insertUser.lastLoginAt ?? null,
+      deletedAt: insertUser.deletedAt ?? null,
+      deletedBy: insertUser.deletedBy ?? null,
+      createdAt: null,
+      updatedAt: null
+    };
 
     try {
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: 'Users!A:D',
+        range: 'Users!A:E',
         valueInputOption: 'RAW',
         requestBody: {
-          values: [[user.id, user.username, user.email, user.fullName]]
+          values: [[
+            user.id, 
+            user.email || '', 
+            user.firstName || '', 
+            user.lastName || '', 
+            user.displayName || ''
+          ]]
         }
       });
 
@@ -234,7 +281,7 @@ export class GoogleSheetsStorage {
     await this.ensureWorksheets();
     const response = await this.sheets.spreadsheets.values.get({
       spreadsheetId: this.spreadsheetId,
-      range: 'Users!A:D',
+      range: 'Users!A:E',
     });
     const rows = response.data.values || [];
     let userIndex = -1;
@@ -243,7 +290,7 @@ export class GoogleSheetsStorage {
         userIndex = idx;
         return true;
       }
-      if (row[2] && user.email && row[2] === user.email) {
+      if (row[1] && user.email && row[1] === user.email) {
         userIndex = idx;
         return true;
       }
@@ -252,22 +299,35 @@ export class GoogleSheetsStorage {
 
     if (userRow) {
       // Update existing user
-      const updatedUser = {
-        id: parseInt(userRow[0]),
-        username: user.username || userRow[1],
-        email: user.email || userRow[2],
-        fullName: user.fullName || userRow[3],
+      const updatedUser: User = {
+        id: String(userRow[0]),
+        email: user.email || userRow[1] || null,
+        firstName: user.firstName || userRow[2] || null,
+        lastName: user.lastName || userRow[3] || null,
+        displayName: user.displayName || userRow[4] || null,
+        password: user.password || null,
+        profileImageUrl: user.profileImageUrl || null,
+        role: user.role || 'user',
+        permissions: user.permissions || [],
+        metadata: user.metadata || {},
+        isActive: user.isActive !== undefined ? user.isActive : true,
+        lastLoginAt: user.lastLoginAt || null,
+        deletedAt: user.deletedAt || null,
+        deletedBy: user.deletedBy || null,
+        createdAt: null,
+        updatedAt: null,
       };
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `Users!A${userIndex + 1}:D${userIndex + 1}`,
+        range: `Users!A${userIndex + 1}:E${userIndex + 1}`,
         valueInputOption: 'RAW',
         requestBody: {
           values: [[
             updatedUser.id,
-            updatedUser.username,
-            updatedUser.email,
-            updatedUser.fullName
+            updatedUser.email || '',
+            updatedUser.firstName || '',
+            updatedUser.lastName || '',
+            updatedUser.displayName || ''
           ]]
         }
       });
@@ -283,7 +343,7 @@ export class GoogleSheetsStorage {
     const numericId = parseInt(id, 10);
     const response = await this.sheets.spreadsheets.values.get({
       spreadsheetId: this.spreadsheetId,
-      range: 'Users!A:D',
+      range: 'Users!A:E',
     });
     const rows = response.data.values || [];
     const userIndex = rows.findIndex((row: any[]) => parseInt(row[0]) === numericId);
@@ -291,23 +351,36 @@ export class GoogleSheetsStorage {
     if (userIndex === -1) return undefined;
 
     const userRow = rows[userIndex];
-    const updatedUser = {
-      id: parseInt(userRow[0]),
-      username: updates.username || userRow[1],
-      email: updates.email || userRow[2],
-      fullName: updates.fullName || userRow[3],
+    const updatedUser: User = {
+      id: String(userRow[0]),
+      email: updates.email || userRow[1] || null,
+      firstName: updates.firstName || userRow[2] || null,
+      lastName: updates.lastName || userRow[3] || null,
+      displayName: updates.displayName || userRow[4] || null,
+      password: updates.password || null,
+      profileImageUrl: updates.profileImageUrl || null,
+      role: updates.role || 'user',
+      permissions: updates.permissions || [],
+      metadata: updates.metadata || {},
+      isActive: updates.isActive !== undefined ? updates.isActive : true,
+      lastLoginAt: updates.lastLoginAt || null,
+      deletedAt: updates.deletedAt || null,
+      deletedBy: updates.deletedBy || null,
+      createdAt: null,
+      updatedAt: null,
     };
 
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      range: `Users!A${userIndex + 1}:D${userIndex + 1}`,
+      range: `Users!A${userIndex + 1}:E${userIndex + 1}`,
       valueInputOption: 'RAW',
       requestBody: {
         values: [[
           updatedUser.id,
-          updatedUser.username,
-          updatedUser.email,
-          updatedUser.fullName
+          updatedUser.email || '',
+          updatedUser.firstName || '',
+          updatedUser.lastName || '',
+          updatedUser.displayName || ''
         ]]
       }
     });
@@ -336,7 +409,7 @@ export class GoogleSheetsStorage {
         assigneeId: row[4] ? parseInt(row[4]) : null,
         assigneeName: row[5] || null,
         color: row[6] || 'blue'
-      })).filter(project => project.id > 0);
+      })).filter((project: Project) => project.id > 0);
     } catch (error) {
       console.error('Error getting projects:', error);
       throw error;
@@ -372,12 +445,36 @@ export class GoogleSheetsStorage {
     await this.ensureWorksheets();
     
     const id = await this.getNextId('Projects');
-    const project: Project = { 
-      ...insertProject, 
+    const now = new Date();
+    const project: Project = {
       id,
-      assigneeId: insertProject.assigneeId || null,
-      assigneeName: insertProject.assigneeName || null,
-      color: insertProject.color || 'blue'
+      title: insertProject.title ?? '',
+      description: insertProject.description ?? null,
+      status: insertProject.status ?? 'available',
+      priority: insertProject.priority ?? 'medium',
+      category: insertProject.category ?? 'general',
+      assigneeId: insertProject.assigneeId ?? null,
+      assigneeName: insertProject.assigneeName ?? null,
+      assigneeIds: insertProject.assigneeIds ?? [],
+      assigneeNames: insertProject.assigneeNames ?? null,
+      dueDate: insertProject.dueDate ?? null,
+      startDate: insertProject.startDate ?? null,
+      completionDate: insertProject.completionDate ?? null,
+      progressPercentage: insertProject.progressPercentage ?? 0,
+      notes: insertProject.notes ?? null,
+      requirements: insertProject.requirements ?? null,
+      deliverables: insertProject.deliverables ?? null,
+      resources: insertProject.resources ?? null,
+      blockers: insertProject.blockers ?? null,
+      tags: insertProject.tags ?? null,
+      estimatedHours: insertProject.estimatedHours ?? null,
+      actualHours: insertProject.actualHours ?? null,
+      budget: insertProject.budget ?? null,
+      color: insertProject.color ?? 'blue',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      deletedBy: null,
     };
 
     try {
@@ -456,7 +553,7 @@ export class GoogleSheetsStorage {
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: 'Messages!A:H',
+        range: 'Messages!A:T',
       });
 
       const rows = response.data.values || [];
@@ -464,14 +561,26 @@ export class GoogleSheetsStorage {
 
       return rows.slice(1).map((row: any[]) => ({
         id: parseInt(row[0]) || 0,
-        sender: row[1] || '',
-        content: row[2] || '',
-        timestamp: new Date(row[3] || Date.now()),
-        parentId: row[4] ? parseInt(row[4]) : null,
-        threadId: row[5] ? parseInt(row[5]) : null,
-        replyCount: parseInt(row[6]) || 0,
-        committee: row[7] || 'general'
-      })).filter(message => message.id > 0);
+        conversationId: row[1] ? parseInt(row[1]) : null,
+        userId: row[2] || '',
+        senderId: row[3] || null,
+        recipientId: row[4] || null,
+        content: row[5] || '',
+        sender: row[6] || null,
+        subject: row[7] || null,
+        messageType: row[8] || 'direct',
+        priority: row[9] || 'normal',
+        contextType: row[10] || null,
+        contextId: row[11] || null,
+        isRead: row[12] === 'true' || row[12] === true || false,
+        readAt: row[13] ? new Date(row[13]) : null,
+        editedAt: row[14] ? new Date(row[14]) : null,
+        editedContent: row[15] || null,
+        deletedAt: row[16] ? new Date(row[16]) : null,
+        deletedBy: row[17] || null,
+        createdAt: row[18] ? new Date(row[18]) : null,
+        updatedAt: row[19] ? new Date(row[19]) : new Date()
+      })).filter((message: Message) => message.id > 0);
     } catch (error) {
       console.error('Error getting messages:', error);
       throw error;
@@ -485,8 +594,8 @@ export class GoogleSheetsStorage {
 
   async getMessagesByCommittee(committee: string): Promise<Message[]> {
     const messages = await this.getAllMessages();
-    return messages.filter(m => m.committee === committee).sort((a, b) => 
-      b.timestamp.getTime() - a.timestamp.getTime()
+    return messages.filter(m => m.contextType === committee).sort((a, b) => 
+      (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
     );
   }
 
@@ -494,31 +603,57 @@ export class GoogleSheetsStorage {
     await this.ensureWorksheets();
     
     const id = await this.getNextId('Messages');
+    const now = new Date();
     const message: Message = { 
-      ...insertMessage, 
       id,
-      timestamp: new Date(),
-      parentId: insertMessage.parentId || null,
-      threadId: insertMessage.threadId || id,
-      replyCount: 0,
-      committee: insertMessage.committee || "general"
+      conversationId: insertMessage.conversationId || null,
+      userId: insertMessage.userId,
+      senderId: insertMessage.senderId || null,
+      recipientId: insertMessage.recipientId || null,
+      content: insertMessage.content,
+      sender: insertMessage.sender || null,
+      subject: insertMessage.subject || null,
+      messageType: insertMessage.messageType || 'direct',
+      priority: insertMessage.priority || 'normal',
+      contextType: insertMessage.contextType || null,
+      contextId: insertMessage.contextId || null,
+      isRead: insertMessage.isRead || false,
+      readAt: insertMessage.readAt || null,
+      editedAt: insertMessage.editedAt || null,
+      editedContent: insertMessage.editedContent || null,
+      deletedAt: insertMessage.deletedAt || null,
+      deletedBy: insertMessage.deletedBy || null,
+      createdAt: now,
+      updatedAt: now
     };
 
     try {
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: 'Messages!A:H',
+        range: 'Messages!A:T',
         valueInputOption: 'RAW',
         requestBody: {
           values: [[
             message.id,
-            message.sender,
+            message.conversationId || '',
+            message.userId,
+            message.senderId || '',
+            message.recipientId || '',
             message.content,
-            message.timestamp.toISOString(),
-            message.parentId || '',
-            message.threadId || '',
-            message.replyCount,
-            message.committee
+            message.sender || '',
+            message.subject || '',
+            message.messageType,
+            message.priority,
+            message.contextType || '',
+            message.contextId || '',
+            message.isRead,
+            message.readAt ? message.readAt.toISOString() : '',
+            message.editedAt ? message.editedAt.toISOString() : '',
+            message.editedContent || '',
+            message.deletedAt ? message.deletedAt.toISOString() : '',
+            message.deletedBy || '',
+            message.createdAt.toISOString(),
+            message.updatedAt.toISOString()
           ]]
         }
       });
@@ -532,8 +667,8 @@ export class GoogleSheetsStorage {
 
   async getThreadMessages(threadId: number): Promise<Message[]> {
     const messages = await this.getAllMessages();
-    return messages.filter(m => m.threadId === threadId).sort((a, b) => 
-      a.timestamp.getTime() - b.timestamp.getTime()
+    return messages.filter(m => m.conversationId === threadId).sort((a, b) => 
+      (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0)
     );
   }
 
@@ -547,37 +682,10 @@ export class GoogleSheetsStorage {
 
     const reply = await this.createMessage({
       ...insertMessage,
-      parentId: parentId,
-      threadId: parentMessage.threadId || parentMessage.id
+      conversationId: parentMessage.conversationId || parentMessage.id
     });
 
-    await this.updateReplyCount(parentMessage.threadId || parentMessage.id);
     return reply;
-  }
-
-  async updateReplyCount(messageId: number): Promise<void> {
-    const messages = await this.getAllMessages();
-    const message = messages.find(m => m.id === messageId);
-    
-    if (message) {
-      const replyCount = messages.filter(m => m.threadId === message.threadId && m.id !== message.id).length;
-      
-      const messageIndex = messages.findIndex(m => m.id === messageId);
-      if (messageIndex !== -1) {
-        try {
-          await this.sheets.spreadsheets.values.update({
-            spreadsheetId: this.spreadsheetId,
-            range: `Messages!G${messageIndex + 2}`, // +2 for header and 0-based index
-            valueInputOption: 'RAW',
-            requestBody: {
-              values: [[replyCount]]
-            }
-          });
-        } catch (error) {
-          console.error('Error updating reply count:', error);
-        }
-      }
-    }
   }
 
   async deleteMessage(id: number): Promise<boolean> {
