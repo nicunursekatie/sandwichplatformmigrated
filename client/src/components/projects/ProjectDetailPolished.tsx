@@ -1241,7 +1241,7 @@ export default function ProjectDetailPolished({ projectId, onBack }: ProjectDeta
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} />
-                    <AvatarFallback>{getInitials(user)}</AvatarFallback>
+                    <AvatarFallback>🥪</AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="font-medium">{formatUserName(user)}</p>
