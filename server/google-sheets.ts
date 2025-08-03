@@ -652,8 +652,8 @@ export class GoogleSheetsStorage {
             message.editedContent || '',
             message.deletedAt ? message.deletedAt.toISOString() : '',
             message.deletedBy || '',
-            message.createdAt.toISOString(),
-            message.updatedAt.toISOString()
+            message.createdAt ? message.createdAt.toISOString() : '',
+            message.updatedAt ? message.updatedAt.toISOString() : ''
           ]]
         }
       });
@@ -701,7 +701,7 @@ export class GoogleSheetsStorage {
       });
       
       const messagesSheet = spreadsheetInfo.data.sheets?.find(
-        sheet => sheet.properties?.title === 'Messages'
+        (sheet: { properties?: { title?: string } }) => sheet.properties?.title === 'Messages'
       );
       
       if (!messagesSheet || !messagesSheet.properties) {
@@ -754,8 +754,8 @@ export class GoogleSheetsStorage {
         sandwichCount: parseInt(row[2]) || 0,
         notes: row[3] || null,
         submittedBy: row[4] || '',
-        submittedAt: new Date(row[5] || Date.now())
-      })).filter(report => report.id > 0);
+        submittedAt: row[5] ? new Date(row[5]) : new Date()
+      })).filter((report: WeeklyReport) => report.id > 0);
     } catch (error) {
       console.error('Error getting weekly reports:', error);
       return [];
@@ -764,13 +764,15 @@ export class GoogleSheetsStorage {
 
   async createWeeklyReport(insertReport: InsertWeeklyReport): Promise<WeeklyReport> {
     await this.ensureWorksheets();
-    
+
     const id = await this.getNextId('WeeklyReports');
     const report: WeeklyReport = { 
       ...insertReport, 
       id, 
       submittedAt: new Date(),
-      notes: insertReport.notes || null
+      notes: insertReport.notes ?? null,
+      deletedAt: null,
+      deletedBy: null
     };
 
     try {
