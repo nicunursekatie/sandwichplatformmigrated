@@ -925,9 +925,9 @@ export class GoogleSheetsStorage {
     const response = await this.sheets.spreadsheets.get({
       spreadsheetId: this.spreadsheetId
     });
-    
-    const sheet = response.data.sheets?.find(s => s.properties?.title === sheetName);
-    return sheet?.properties?.sheetId || 0;
+
+    const sheet = response.data.sheets?.find((s: { properties?: { title?: string } }) => s.properties?.title === sheetName);
+    return sheet?.properties?.sheetId ?? 0;
   }
 
   // Meeting Minutes methods
@@ -949,7 +949,7 @@ export class GoogleSheetsStorage {
         date: row[2] || '',
         summary: row[3] || '',
         color: row[4] || 'blue'
-      })).filter(minutes => minutes.id > 0);
+      })).filter((minutes: MeetingMinutes) => minutes.id > 0);
     } catch (error) {
       console.error('Error getting meeting minutes:', error);
       return [];
@@ -1003,24 +1003,23 @@ export class GoogleSheetsStorage {
   // Drive Links methods
   async getAllDriveLinks(): Promise<DriveLink[]> {
     await this.ensureWorksheets();
-    
     try {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: 'DriveLinks!A:F',
       });
-
       const rows = response.data.values || [];
       if (rows.length <= 1) return [];
-
       return rows.slice(1).map((row: any[]) => ({
         id: parseInt(row[0]) || 0,
         title: row[1] || '',
         description: row[2] || '',
         url: row[3] || '',
         icon: row[4] || '',
-        iconColor: row[5] || ''
-      })).filter(link => link.id > 0);
+        iconColor: row[5] || '',
+        deletedAt: null,
+        deletedBy: null
+      })).filter((link: DriveLink) => link.id > 0);
     } catch (error) {
       console.error('Error getting drive links:', error);
       return [];
@@ -1098,13 +1097,22 @@ export class GoogleSheetsStorage {
     return {
       id: parseInt(row[0]),
       projectId: parseInt(row[1]),
-      title: row[2],
-      description: row[3],
-      status: row[4],
-      order: parseInt(row[5]),
-      assigneeId: row[6],
-      createdAt: row[7],
-      updatedAt: row[8],
+      title: row[2] || '',
+      description: row[3] ?? null,
+      status: row[4] || 'pending',
+      order: row[5] ? parseInt(row[5]) : 0,
+      assigneeId: row[6] ?? null,
+      assigneeName: null,
+      assigneeIds: [],
+      assigneeNames: null,
+      priority: 'medium',
+      createdAt: row[7] ? new Date(row[7]) : new Date(),
+      updatedAt: row[8] ? new Date(row[8]) : new Date(),
+      deletedAt: null,
+      deletedBy: null,
+      attachments: null,
+      dueDate: null,
+      completedAt: null
     };
   }
 
@@ -1130,6 +1138,8 @@ export class GoogleSheetsStorage {
       order: task.order ?? 0,
       assigneeId: task.assigneeId ?? null,
       assigneeName: task.assigneeName ?? null,
+      assigneeIds: [],
+      assigneeNames: null,
       priority: task.priority ?? 'medium',
       createdAt: now,
       updatedAt: now,
@@ -1137,8 +1147,7 @@ export class GoogleSheetsStorage {
       deletedBy: null,
       attachments: null,
       dueDate: null,
-      completedAt: null,
-      notes: null
+      completedAt: null
     };
     await this.sheets.spreadsheets.values.append({
       spreadsheetId: this.spreadsheetId,
@@ -1171,16 +1180,25 @@ export class GoogleSheetsStorage {
     const taskIndex = rows.findIndex((row: any[]) => parseInt(row[0]) === id);
     if (taskIndex === -1) return undefined;
     const row = rows[taskIndex];
-    const updatedTask = {
+    const updatedTask: ProjectTask = {
       id: parseInt(row[0]),
       projectId: parseInt(row[1]),
-      title: updates.title || row[2],
-      description: updates.description || row[3],
-      status: updates.status || row[4],
-      order: updates.order !== undefined ? updates.order : parseInt(row[5]),
-      assigneeId: updates.assigneeId || row[6],
-      createdAt: row[7],
-      updatedAt: new Date().toISOString(),
+      title: updates.title ?? row[2] ?? '',
+      description: updates.description ?? row[3] ?? null,
+      status: updates.status ?? row[4] ?? 'pending',
+      order: updates.order !== undefined ? updates.order : (row[5] ? parseInt(row[5]) : 0),
+      assigneeId: updates.assigneeId ?? row[6] ?? null,
+      assigneeName: updates.assigneeName ?? null,
+      assigneeIds: [],
+      assigneeNames: null,
+      priority: updates.priority ?? 'medium',
+      createdAt: row[7] ? new Date(row[7]) : new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+      deletedBy: null,
+      attachments: null,
+      dueDate: null,
+      completedAt: null
     };
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
@@ -1195,8 +1213,8 @@ export class GoogleSheetsStorage {
           updatedTask.status,
           updatedTask.order,
           updatedTask.assigneeId,
-          updatedTask.createdAt,
-          updatedTask.updatedAt,
+          updatedTask.createdAt.toISOString(),
+          updatedTask.updatedAt.toISOString(),
         ]],
       },
     });
