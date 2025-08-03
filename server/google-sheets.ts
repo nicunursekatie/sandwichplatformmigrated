@@ -828,24 +828,26 @@ export class GoogleSheetsStorage {
 
   async createSandwichCollection(insertCollection: InsertSandwichCollection): Promise<SandwichCollection> {
     await this.ensureWorksheets();
-    
     const id = await this.getNextId('SandwichCollections');
-    const collection: SandwichCollection = { 
-      ...insertCollection, 
-      id, 
-      submittedAt: new Date() 
+    const collection: SandwichCollection = {
+      id,
+      collectionDate: insertCollection.collectionDate,
+      hostName: insertCollection.hostName,
+      individualSandwiches: insertCollection.individualSandwiches,
+      groupCollections: insertCollection.groupCollections,
+      submittedAt: new Date(),
+      deletedAt: null,
+      deletedBy: null
     };
-
     try {
       // Format the new row according to the specified structure
       const newRow = [
-        collection.collectionDate,      // Date Collected
-        collection.hostName,            // Host Group
-        collection.individualSandwiches, // Solo Sandwiches
-        collection.groupCollections,    // Group Contributors
-        collection.submittedAt.toISOString() // Logged At
+        collection.collectionDate,
+        collection.hostName,
+        collection.individualSandwiches,
+        collection.groupCollections,
+        collection.submittedAt.toISOString()
       ];
-
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
         range: 'SandwichCollections!A:E',
@@ -854,7 +856,6 @@ export class GoogleSheetsStorage {
           values: [newRow]
         }
       });
-
       return collection;
     } catch (error) {
       console.error('Error creating sandwich collection:', error);
@@ -962,14 +963,21 @@ export class GoogleSheetsStorage {
 
   async createMeetingMinutes(insertMinutes: InsertMeetingMinutes): Promise<MeetingMinutes> {
     await this.ensureWorksheets();
-    
     const id = await this.getNextId('MeetingMinutes');
-    const minutes: MeetingMinutes = { 
-      ...insertMinutes, 
-      id, 
-      color: insertMinutes.color || 'blue' 
+    const minutes: MeetingMinutes = {
+      id,
+      title: insertMinutes.title,
+      date: insertMinutes.date,
+      summary: insertMinutes.summary,
+      color: insertMinutes.color || 'blue',
+      fileName: insertMinutes.fileName ?? null,
+      filePath: insertMinutes.filePath ?? null,
+      fileType: insertMinutes.fileType ?? null,
+      mimeType: insertMinutes.mimeType ?? null,
+      committeeType: insertMinutes.committeeType ?? null,
+      deletedAt: null,
+      deletedBy: null
     };
-
     try {
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
@@ -985,7 +993,6 @@ export class GoogleSheetsStorage {
           ]]
         }
       });
-
       return minutes;
     } catch (error) {
       console.error('Error creating meeting minutes:', error);
@@ -1022,10 +1029,17 @@ export class GoogleSheetsStorage {
 
   async createDriveLink(insertLink: InsertDriveLink): Promise<DriveLink> {
     await this.ensureWorksheets();
-    
     const id = await this.getNextId('DriveLinks');
-    const link: DriveLink = { ...insertLink, id };
-
+    const link: DriveLink = {
+      id,
+      title: insertLink.title,
+      description: insertLink.description,
+      url: insertLink.url,
+      icon: insertLink.icon,
+      iconColor: insertLink.iconColor,
+      deletedAt: null,
+      deletedBy: null
+    };
     try {
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
@@ -1042,7 +1056,6 @@ export class GoogleSheetsStorage {
           ]]
         }
       });
-
       return link;
     } catch (error) {
       console.error('Error creating drive link:', error);
@@ -1107,11 +1120,25 @@ export class GoogleSheetsStorage {
     });
     const rows = response.data.values || [];
     const id = rows.length;
-    const newTask = {
+    const now = new Date();
+    const newTask: ProjectTask = {
       id,
-      ...task,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      projectId: task.projectId,
+      title: task.title,
+      description: task.description ?? null,
+      status: task.status ?? 'pending',
+      order: task.order ?? 0,
+      assigneeId: task.assigneeId ?? null,
+      assigneeName: task.assigneeName ?? null,
+      priority: task.priority ?? 'medium',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      deletedBy: null,
+      attachments: null,
+      dueDate: null,
+      completedAt: null,
+      notes: null
     };
     await this.sheets.spreadsheets.values.append({
       spreadsheetId: this.spreadsheetId,
@@ -1126,8 +1153,8 @@ export class GoogleSheetsStorage {
           newTask.status,
           newTask.order,
           newTask.assigneeId,
-          newTask.createdAt,
-          newTask.updatedAt,
+          newTask.createdAt.toISOString(),
+          newTask.updatedAt.toISOString(),
         ]],
       },
     });
@@ -1213,10 +1240,16 @@ export class GoogleSheetsStorage {
     });
     const rows = response.data.values || [];
     const id = rows.length;
-    const newCompletion = {
+    const now = new Date();
+    const newCompletion: TaskCompletion = {
       id,
-      ...completion,
-      completedAt: new Date().toISOString(),
+      taskId: completion.taskId,
+      userId: completion.userId,
+      userName: completion.userName ?? '',
+      completedAt: now,
+      notes: completion.notes ?? null,
+      deletedAt: null,
+      deletedBy: null
     };
     await this.sheets.spreadsheets.values.append({
       spreadsheetId: this.spreadsheetId,
@@ -1227,7 +1260,7 @@ export class GoogleSheetsStorage {
           newCompletion.id,
           newCompletion.taskId,
           newCompletion.userId,
-          newCompletion.completedAt,
+          newCompletion.completedAt.toISOString(),
         ]],
       },
     });
@@ -1299,10 +1332,16 @@ export class GoogleSheetsStorage {
     });
     const rows = response.data.values || [];
     const id = rows.length;
-    const newComment = {
+    const now = new Date();
+    const newComment: ProjectComment = {
       id,
-      ...comment,
-      createdAt: new Date().toISOString(),
+      projectId: comment.projectId,
+      content: comment.content,
+      authorName: comment.authorName ?? '',
+      commentType: comment.commentType ?? '',
+      createdAt: now,
+      deletedAt: null,
+      deletedBy: null
     };
     await this.sheets.spreadsheets.values.append({
       spreadsheetId: this.spreadsheetId,
@@ -1312,9 +1351,9 @@ export class GoogleSheetsStorage {
         values: [[
           newComment.id,
           newComment.projectId,
-          newComment.userId,
+          newComment.authorName,
           newComment.content,
-          newComment.createdAt,
+          newComment.createdAt.toISOString(),
         ]],
       },
     });
